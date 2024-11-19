@@ -1,14 +1,7 @@
-"""Add columns for user, courses and studentcourses tables
-
-Revision ID: 2d124cb9eaee
-Revises: 21f3364b195b
-Create Date: 2024-11-19 15:41:00.021868
-"""
 from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
-import uuid
 
 revision: str = '2d124cb9eaee'
 down_revision: Union[str, None] = '21f3364b195b'
@@ -16,23 +9,15 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
-    # First create the enum type
     userrole = postgresql.ENUM('student', 'professor', 'admin', name='userrole')
     userrole.create(op.get_bind())
 
-    # Handle the users table
-    # Add new UUID column
     op.execute('ALTER TABLE users ADD COLUMN new_id UUID DEFAULT gen_random_uuid()')
-    # Drop primary key and other constraints
     op.execute('ALTER TABLE users DROP CONSTRAINT users_pkey CASCADE')
-    # Drop old id column
     op.drop_column('users', 'id')
-    # Rename new_id to id
     op.execute('ALTER TABLE users RENAME COLUMN new_id TO id')
-    # Create new primary key
     op.execute('ALTER TABLE users ADD PRIMARY KEY (id)')
     
-    # Update user table with new columns
     op.alter_column('users', 'created_at', 
                     existing_type=postgresql.TIMESTAMP(timezone=True), 
                     type_=sa.DateTime(), 
@@ -42,8 +27,6 @@ def upgrade() -> None:
     op.add_column('users', sa.Column('role', userrole, nullable=False))
     op.create_unique_constraint(None, 'users', ['email'])
 
-    # Rest of the upgrade function remains the same...
-    # Handle the courses table
     op.execute('ALTER TABLE courses ADD COLUMN new_id UUID DEFAULT gen_random_uuid()')
     op.execute('ALTER TABLE courses DROP CONSTRAINT courses_pkey CASCADE')
     op.drop_column('courses', 'id')
@@ -57,7 +40,6 @@ def upgrade() -> None:
     op.add_column('courses', sa.Column('status', sa.String(length=50), nullable=False))
     op.add_column('courses', sa.Column('image_url', sa.String(), nullable=True))
 
-    # Handle the student_courses table
     op.execute('ALTER TABLE student_courses DROP CONSTRAINT IF EXISTS student_courses_course_id_fkey')
     op.execute('ALTER TABLE student_courses DROP CONSTRAINT IF EXISTS student_courses_student_id_fkey')
     
@@ -76,12 +58,10 @@ def upgrade() -> None:
     op.create_foreign_key(None, 'courses', 'users', ['professor_id'], ['id'])
 
 def downgrade() -> None:
-    # Drop all foreign key constraints first
     op.drop_constraint(None, 'student_courses', type_='foreignkey')
     op.drop_constraint(None, 'courses', type_='foreignkey')
     op.drop_constraint(None, 'student_courses', type_='foreignkey')
 
-    # Revert users table changes
     op.drop_constraint('users_pkey', 'users', type_='primary')
     op.execute('ALTER TABLE users ADD COLUMN temp_id SERIAL PRIMARY KEY')
     op.drop_column('users', 'id')
@@ -94,10 +74,8 @@ def downgrade() -> None:
     op.drop_column('users', 'avatar_url')
     op.drop_column('users', 'email')
 
-    # Drop the enum type last
     op.execute('DROP TYPE userrole')
 
-    # Rest of the downgrade function remains the same...
     op.execute('ALTER TABLE student_courses ADD COLUMN id SERIAL PRIMARY KEY')
     op.execute('ALTER TABLE student_courses ADD COLUMN temp_student_id INTEGER')
     op.execute('ALTER TABLE student_courses ADD COLUMN temp_course_id INTEGER')

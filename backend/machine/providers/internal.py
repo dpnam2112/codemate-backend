@@ -15,13 +15,10 @@ class InternalProvider:
     This provider provides controllers related to internal services.
     """
 
-    # DB Session Keeper
     db_session_keeper = DB_MANAGER[Dialect.POSTGRES]
 
-    # Repositories
     user_repository = partial(repo.UserRepository, model=modl.User)
     
-    # Ensure to pass the `model` argument explicitly to StudentCoursesRepository
     student_courses_repository = partial(repo.StudentCoursesRepository, model=modl.StudentCourses)
 
     def get_user_controller(self, db_session=Depends(db_session_keeper.get_session)):

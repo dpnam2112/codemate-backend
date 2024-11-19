@@ -5,6 +5,5 @@ from machine.repositories import StudentCoursesRepository
 
 class DashboardController(BaseController[StudentCourses]):
     def __init__(self, student_courses_repository: StudentCoursesRepository):
-        # Initialize the parent controller with the model and repository
         super().__init__(model_class=StudentCourses, repository=student_courses_repository)
         self.student_courses_repository = student_courses_repository

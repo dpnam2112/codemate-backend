@@ -14,11 +14,9 @@ async def get_welcome_message(
     request: WelcomeMessageRequest,
     dashboard_controller: DashboardController = Depends(InternalProvider().get_dashboard_controller),
 ):
-    # Example of raising the BadRequestException
     if not request.student_id:
         raise BadRequestException(message="Student ID is required.")
 
-    # Example of raising the NotFoundException
     recent_course = await dashboard_controller.student_courses_repository.first(
         where_=[StudentCourses.student_id == request.student_id],
         order_={"desc": [{"field": "last_accessed", "model_class": StudentCourses}]},

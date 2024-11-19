@@ -7,7 +7,7 @@ from core.db.mixins import TimestampMixin
 class Courses(Base, TimestampMixin):
     __tablename__ = "courses"
 
-    id = Column(UUID, primary_key=True, default=func.gen_random_uuid())  # Use gen_random_uuid() for UUID
+    id = Column(UUID, primary_key=True, default=func.gen_random_uuid()) 
     name = Column(String(255), nullable=False)
     professor_id = Column(UUID, ForeignKey("users.id"), nullable=False)
     learning_outcomes = Column(ARRAY(Text), nullable=True)
