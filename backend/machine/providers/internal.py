@@ -20,6 +20,14 @@ class InternalProvider:
 
     # Repositories
     user_repository = partial(repo.UserRepository, model=modl.User)
+    
+    # Ensure to pass the `model` argument explicitly to StudentCoursesRepository
+    student_courses_repository = partial(repo.StudentCoursesRepository, model=modl.StudentCourses)
 
     def get_user_controller(self, db_session=Depends(db_session_keeper.get_session)):
         return ctrl.UserController(user_repository=self.user_repository(db_session=db_session))
+
+    def get_dashboard_controller(self, db_session=Depends(db_session_keeper.get_session)):
+        return ctrl.DashboardController(
+            student_courses_repository=self.student_courses_repository(db_session=db_session)
+        )
