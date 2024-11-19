@@ -559,4 +559,5 @@ class BaseRepository(Generic[ModelType]):
                 query = query.where(condition)
         query = query.execution_options(synchronize_session=synchronize_session.value)
         await self.session.execute(query)
+        
         return del_instances
