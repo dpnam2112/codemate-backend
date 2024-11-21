@@ -14,4 +14,3 @@ class StudentCourses(Base):
     assignments_done = Column(Integer, default=0, nullable=False)
 
     course = relationship("Courses", back_populates="student_courses")
-    #lessons = relationship("Lessons", secondary="student_lessons") 
