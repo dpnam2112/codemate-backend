@@ -7,6 +7,11 @@ class StudentList(BaseModel):
     student_id: UUID
     student_name: str
     student_email: str
+
+class ProfessorInformation(BaseModel):
+    professor_id: UUID
+    professor_name: str
+    professor_email: str
 class GetCoursesResponse(BaseModel):
     id: UUID
     name: str
@@ -14,7 +19,7 @@ class GetCoursesResponse(BaseModel):
     end_date: str
     student_list: List[StudentList]
     learning_outcomes: List[str]
-    professor_id: UUID
+    professor: ProfessorInformation
     status: StatusType
     image: str
     percentage_complete: str

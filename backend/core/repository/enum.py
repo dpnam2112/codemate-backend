@@ -8,12 +8,12 @@ class SynchronizeSessionEnum(Enum):
     from enum import Enum
 
 class ActivityType(str, Enum):
-    VIEW_COURSE = "view_course"
-    RESUME_ACTIVITY = "resume_activity"
-    COMPLETE_LESSON = "complete_lesson"
-    COMPLETE_ASSIGNMENT = "complete_assignment"
-    ENROLL_COURSE = "enroll_course"
-    BADGE_EARNED = "badge_earned"
+    view_course = "view_course"
+    resume_activity = "resume_activity"
+    complete_lesson = "complete_lesson"
+    complete_assignment = "complete_assignment"
+    enroll_course = "enroll_course"
+    badge_earned = "badge_earned"
 
 class StatusType(str, Enum):
     new = "New"

@@ -14,3 +14,4 @@ class StudentCourses(Base):
     assignments_done = Column(Integer, default=0, nullable=False)
 
     course = relationship("Courses", back_populates="student_courses")
+    student = relationship("User", back_populates="student_courses")

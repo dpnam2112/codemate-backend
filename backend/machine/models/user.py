@@ -14,6 +14,7 @@ class User(Base, TimestampMixin):
     avatar_url = Column(String, nullable=True)
     created_at = Column(DateTime, default=func.now(), nullable=False)
     role = Column(Enum(UserRole), nullable=False, default=UserRole.student) 
-
+    
     courses = relationship("Courses", back_populates="professor")
     activities = relationship("Activities", back_populates="student")
+    student_courses = relationship("StudentCourses", back_populates="student")

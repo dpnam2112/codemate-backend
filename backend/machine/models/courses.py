@@ -18,7 +18,9 @@ class Courses(Base, TimestampMixin):
     status = Column(Enum(StatusType, name="statustype"), default="New", nullable=False)
     image_url = Column(String, nullable=True)
 
-    professor = relationship("User", back_populates="courses")
+
     student_courses = relationship("StudentCourses", back_populates="course")
-    lessons = relationship("Lessons", back_populates="course", order_by="Lessons.order") 
+    professor = relationship("User", back_populates="courses")
+    lessons = relationship("Lessons", back_populates="course")
+
 

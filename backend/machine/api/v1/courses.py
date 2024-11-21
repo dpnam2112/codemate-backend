@@ -1,83 +1,136 @@
 from fastapi import APIRouter, Depends
-from machine.repositories import CoursesRepository
-from machine.models import *
-from machine.schemas.responses.courses import *
+from sqlalchemy.sql import func, case
+from typing import List
+from machine.models import Courses, StudentCourses, Lessons, User
+from machine.schemas.responses.courses import (
+    GetCoursesPaginatedResponse,
+    GetCoursesResponse,
+    StudentList,
+    ProfessorInformation,
+)
 from machine.schemas.requests import GetCoursesRequest
 from core.response import Ok
-from core.exceptions import BadRequestException, NotFoundException
+from core.exceptions import BadRequestException
 from machine.providers import InternalProvider
-from machine.controllers import *
+from machine.controllers.courses import CoursesController
+from sqlalchemy.types import Float
+from core.repository.enum import UserRole
+from sqlalchemy.orm import aliased
+
 router = APIRouter(prefix="/courses", tags=["courses"])
 
 
 @router.get("/", response_model=Ok[GetCoursesPaginatedResponse])
 async def get_courses(
     request: GetCoursesRequest,
-    dashboard_controller: DashboardController = Depends(InternalProvider().get_dashboard_controller),
     courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
 ):
     if not request.student_id:
         raise BadRequestException(message="Student ID is required.")
 
-    # Fetch the courses using the correct method from the repository
-    student_courses = await dashboard_controller.student_courses_repository.get_many(
+    ProfessorUser = aliased(User)
+    StudentUser = aliased(User)
+
+    where_conditions = [StudentCourses.student_id == request.student_id, User.role == UserRole.student]
+
+    join_conditions = {
+        "student_courses": {"type": "left", "alias": "student_courses"},
+        "professor": {"type": "left", "table": ProfessorUser, "alias": "professor_alias"},
+        "lessons": {"type": "left", "alias": "lessons_alias"},
+        "student": {"type": "left", "table": StudentUser, "alias": "student_alias"},
+    }
+    
+    select_fields = [
+        Courses.id.label("course_id"),
+        Courses.name.label("course_name"),
+        Courses.start_date,
+        Courses.end_date,
+        Courses.learning_outcomes,
+        Courses.status.label("course_status"),
+        Courses.image_url.label("course_image"),
+        StudentCourses.last_accessed,
+        func.count(Lessons.id).label("total_lessons"),
+        StudentCourses.completed_lessons,
+        (
+            case(
+                (
+                    func.count(Lessons.id) > 0,
+                    func.cast(
+                        (func.cast(StudentCourses.completed_lessons, Float) / func.cast(func.count(Lessons.id), Float))
+                        * 100,
+                        Float,
+                    ),
+                ),
+                else_=0.0,
+            )
+        ).label("percentage_complete"),
+        ProfessorUser.id.label("professor_id"), 
+        ProfessorUser.name.label("professor_name"),
+        ProfessorUser.email.label("professor_email"),
+        StudentUser.name.label("student_name"),
+        StudentUser.email.label("student_email"),
+    ]
+
+
+    group_by_fields = [
+        Courses.id,
+        ProfessorUser.id,
+        StudentUser.id,
+        StudentCourses.completed_lessons,
+        StudentCourses.last_accessed,
+    ]
+
+    order_conditions = {"asc": ["start_date"]}
+
+
+    paginated_courses = await courses_controller.courses_repository._get_many(
         skip=request.offset,
         limit=request.page_size,
-        where_=[StudentCourses.student_id == request.student_id],
-        order_={"desc": [{"field": "last_accessed", "model_class": StudentCourses}]},  # Order by last accessed
-    )
-    if not student_courses:
-        raise NotFoundException(message="No courses found for this student.")
-    
-    courses = await courses_controller.courses_repository.get_many(
-        where_=[Courses.id.in_([student_course.course_id for student_course in student_courses])],
+        fields=select_fields,
+        where_=where_conditions,
+        join_=join_conditions,
+        group_by_=group_by_fields,
+        order_=order_conditions,
     )
 
-    courses_data = []
-    
-    # Get the total number of courses for pagination
-    total_courses = await dashboard_controller.student_courses_repository.count(
-        where_=[StudentCourses.student_id == request.student_id]
-    )  
 
-    for walk in range(len(courses)):
-        course = courses[walk]
-        student_course = student_courses[walk]
-        total_lessons = len(course.lessons)
-        completed_lessons = student_course.completed_lessons
-        percentage_complete = (completed_lessons / total_lessons * 100) if total_lessons > 0 else 0
+    total_rows = await courses_controller.courses_repository.count(where_=where_conditions)
+    total_pages = (total_rows + request.page_size - 1) // request.page_size
 
-        last_accessed = student_course.last_accessed.strftime("%Y-%m-%d %H:%M:%S")
-
-        courses_data.append(
+    content: List[GetCoursesResponse] = []
+    for course in paginated_courses:
+        content.append(
             GetCoursesResponse(
-                id=course.id,
-                name=course.name,
-                start_date=course.start_date.strftime("%Y-%m-%d") if course.start_date else "",
-                end_date=course.end_date.strftime("%Y-%m-%d") if course.end_date else "",
-                student_list=[ 
-                    StudentList(student_id=student.id, student_name=student.name, student_email=student.email)
-                    for student in course.students
+                id=course.course_id,
+                name=course.course_name,
+                start_date=str(course.start_date),
+                end_date=str(course.end_date),
+                learning_outcomes=course.learning_outcomes,
+                status=course.course_status,
+                image=str(course.course_image),
+                percentage_complete=f"{course.percentage_complete:.2f}%",
+                last_accessed=course.last_accessed.isoformat() if course.last_accessed else None,
+                professor=ProfessorInformation(
+                    professor_id=course.professor_id,
+                    professor_name=course.professor_name,
+                    professor_email=course.professor_email,
+                ),
+                student_list=[
+                    StudentList(
+                        student_id=request.student_id,
+                        student_name=course.student_name or "",
+                        student_email=course.student_email or "",
+                    )
                 ],
-                learning_outcomes=course.learning_outcomes or [],
-                professor_id=course.professor_id,
-                status=course.status,
-                image=course.image_url,
-                percentage_complete=str(round(percentage_complete, 2)),
-                last_accessed=last_accessed,
             )
         )
 
-    # Pagination calculation
-    total_pages = (total_courses // request.page_size) + (1 if total_courses % request.page_size else 0)
-
-    # Prepare paginated response data
-    response_data = GetCoursesPaginatedResponse(
-        content=courses_data,
-        currentPage=(request.offset // request.page_size) + 1,
-        pageSize=request.page_size,
-        totalRows=total_courses,
-        totalPages=total_pages,
+    return Ok(
+        GetCoursesPaginatedResponse(
+            content=content,
+            currentPage=(request.offset // request.page_size) + 1,
+            pageSize=request.page_size,
+            totalRows=total_rows,
+            totalPages=total_pages,
+        )
     )
-
-    return Ok(data=response_data, message="Successfully fetched the courses.")
