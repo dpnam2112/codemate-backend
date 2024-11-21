@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy.sql import func, case
+from sqlalchemy.sql import func
 from typing import List
 from machine.models import Courses, StudentCourses, Lessons, User
 from machine.schemas.responses.courses import (
@@ -13,7 +13,6 @@ from core.response import Ok
 from core.exceptions import BadRequestException
 from machine.providers import InternalProvider
 from machine.controllers.courses import CoursesController
-from sqlalchemy.types import Float
 from core.repository.enum import UserRole
 from sqlalchemy.orm import aliased
 
@@ -50,20 +49,7 @@ async def get_courses(
         Courses.image_url.label("course_image"),
         StudentCourses.last_accessed,
         func.count(Lessons.id).label("total_lessons"),
-        StudentCourses.completed_lessons,
-        (
-            case(
-                (
-                    func.count(Lessons.id) > 0,
-                    func.cast(
-                        (func.cast(StudentCourses.completed_lessons, Float) / func.cast(func.count(Lessons.id), Float))
-                        * 100,
-                        Float,
-                    ),
-                ),
-                else_=0.0,
-            )
-        ).label("percentage_complete"),
+        StudentCourses.completed_lessons.label("completed_lessons"),
         ProfessorUser.id.label("professor_id"), 
         ProfessorUser.name.label("professor_name"),
         ProfessorUser.email.label("professor_email"),
@@ -108,7 +94,7 @@ async def get_courses(
                 learning_outcomes=course.learning_outcomes,
                 status=course.course_status,
                 image=str(course.course_image),
-                percentage_complete=f"{course.percentage_complete:.2f}%",
+                percentage_complete= f"{(course.completed_lessons/course.total_lessons*100) if course.total_lessons > 0 else 0:.0f}",
                 last_accessed=course.last_accessed.isoformat() if course.last_accessed else None,
                 professor=ProfessorInformation(
                     professor_id=course.professor_id,
