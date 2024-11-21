@@ -1,6 +1,6 @@
-from pydantic import BaseModel
-from datetime import datetime
 from uuid import UUID
+from datetime import datetime
+from pydantic import BaseModel
 from core.repository.enum import ActivityType
 class WelcomeMessageResponse(BaseModel):
     course: str

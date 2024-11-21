@@ -2,7 +2,7 @@ from core.controller import BaseController
 from machine.models import StudentCourses, Activities
 from machine.repositories import StudentCoursesRepository, ActivitiesRepository
 
-class DashboardController(BaseController[StudentCourses]):
+class StudentCoursesController(BaseController[StudentCourses]):
     def __init__(self, student_courses_repository: StudentCoursesRepository):
         super().__init__(model_class=StudentCourses, repository=student_courses_repository)
         self.student_courses_repository = student_courses_repository

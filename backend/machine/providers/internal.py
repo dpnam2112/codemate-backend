@@ -30,8 +30,8 @@ class InternalProvider:
     def get_user_controller(self, db_session=Depends(db_session_keeper.get_session)):
         return ctrl.UserController(user_repository=self.user_repository(db_session=db_session))
 
-    def get_dashboard_controller(self, db_session=Depends(db_session_keeper.get_session)):
-        return ctrl.DashboardController(
+    def get_studentcourses_controller(self, db_session=Depends(db_session_keeper.get_session)):
+        return ctrl.StudentCoursesController(
             student_courses_repository=self.student_courses_repository(db_session=db_session)
         )
     

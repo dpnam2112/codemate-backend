@@ -1,10 +1,10 @@
 from .user import UserController
-from .dashboard import DashboardController, ActivitiesController
+from .dashboard import StudentCoursesController, ActivitiesController
 from .courses import CoursesController
 from .lessons import LessonsController
 __all__ = [
     "UserController",
-    "DashboardController",
+    "StudentCoursesController",
     "ActivitiesController",
     "CoursesController",
     "LessonsController",

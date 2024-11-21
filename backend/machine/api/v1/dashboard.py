@@ -1,12 +1,12 @@
-from fastapi import APIRouter, Depends
-from machine.providers import InternalProvider
-from machine.controllers.dashboard import *
-from core.response import Ok
-from core.exceptions import NotFoundException, BadRequestException
-from machine.models import *
-from machine.schemas.responses.dashboard import *
-from machine.schemas.requests import *
 from typing import List
+from core.response import Ok
+from machine.models import *
+from fastapi import APIRouter, Depends
+from machine.schemas.requests import *
+from machine.controllers.dashboard import *
+from machine.providers import InternalProvider
+from machine.schemas.responses.dashboard import *
+from core.exceptions import NotFoundException, BadRequestException
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -14,12 +14,12 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 @router.get("/welcome", response_model=Ok[WelcomeMessageResponse])
 async def get_welcome_message(
     request: WelcomeMessageRequest,
-    dashboard_controller: DashboardController = Depends(InternalProvider().get_dashboard_controller),
+    studentcourses_controller: StudentCoursesController = Depends(InternalProvider().get_studentcourses_controller),
 ):
     if not request.student_id:
         raise BadRequestException(message="Student ID is required.")
 
-    recent_course = await dashboard_controller.student_courses_repository.first(
+    recent_course = await studentcourses_controller.student_courses_repository.first(
         where_=[StudentCourses.student_id == request.student_id],
         order_={"desc": [{"field": "last_accessed", "model_class": StudentCourses}]},
         relations=[StudentCourses.course],
