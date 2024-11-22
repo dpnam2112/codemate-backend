@@ -6,3 +6,5 @@ from .student_courses import StudentCourses
 from .activities import Activities
 from .lessons import Lessons
 from .exercises import Exercises
+from .student_lessons import StudentLessons
+from .student_exercises import StudentExercises

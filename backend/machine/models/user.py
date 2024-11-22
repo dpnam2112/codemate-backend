@@ -5,6 +5,7 @@ from core.db import Base
 from core.db.mixins import TimestampMixin
 from uuid import uuid4
 from core.repository.enum import UserRole
+
 class User(Base, TimestampMixin):
     __tablename__ = "users"
 
@@ -18,3 +19,5 @@ class User(Base, TimestampMixin):
     courses = relationship("Courses", back_populates="professor")
     activities = relationship("Activities", back_populates="student")
     student_courses = relationship("StudentCourses", back_populates="student")
+    student_lessons = relationship("StudentLessons", back_populates="student")  
+    student_exercises = relationship("StudentExercises", back_populates="student")

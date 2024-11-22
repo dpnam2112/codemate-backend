@@ -28,6 +28,10 @@ class InternalProvider:
     lessons_repository = partial(repo.LessonsRepository, model=modl.Lessons)
     
     exercises_repository = partial(repo.ExercisesRepository, model=modl.Exercises)
+    
+    student_lessons_repository = partial(repo.StudentLessonsRepository, model=modl.StudentLessons)
+    
+    student_exercises_repository = partial(repo.StudentExercisesRepository, model=modl.StudentExercises)
 
     def get_user_controller(self, db_session=Depends(db_session_keeper.get_session)):
         return ctrl.UserController(user_repository=self.user_repository(db_session=db_session))
@@ -55,4 +59,14 @@ class InternalProvider:
     def get_exercises_controller(self, db_session=Depends(db_session_keeper.get_session)):
         return ctrl.ExercisesController(
             exercises_repository=self.exercises_repository(db_session=db_session)
+        )
+        
+    def get_studentlessons_controller(self, db_session=Depends(db_session_keeper.get_session)):
+        return ctrl.StudentLessonsController(
+            student_lessons_repository=self.student_lessons_repository(db_session=db_session)
+        )
+        
+    def get_studentexercises_controller(self, db_session=Depends(db_session_keeper.get_session)):
+        return ctrl.StudentExercisesController(
+            student_exercises_repository=self.student_exercises_repository(db_session=db_session)
         )

@@ -16,11 +16,9 @@ class Courses(Base, TimestampMixin):
     start_date = Column(Date, nullable=True)
     end_date = Column(Date, nullable=True)
     status = Column(Enum(StatusType, name="statustype"), default="New", nullable=False)
-    image_url = Column(String, nullable=True)
-
+    image_url = Column(String, nullable=True) 
 
     student_courses = relationship("StudentCourses", back_populates="course")
     professor = relationship("User", back_populates="courses")
     lessons = relationship("Lessons", back_populates="course")
-
-
+    student_lessons = relationship("StudentLessons", back_populates="course")

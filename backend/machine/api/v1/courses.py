@@ -13,6 +13,7 @@ from sqlalchemy.orm import aliased
 
 router = APIRouter(prefix="/courses", tags=["courses"])
 
+
 @router.get("/", response_model=Ok[GetCoursesPaginatedResponse])
 async def get_courses(
     request: GetCoursesRequest,
@@ -32,7 +33,7 @@ async def get_courses(
         "lessons": {"type": "left", "alias": "lessons_alias"},
         "student": {"type": "left", "table": StudentUser, "alias": "student_alias"},
     }
-    
+
     select_fields = [
         Courses.id.label("course_id"),
         Courses.name.label("course_name"),
@@ -44,13 +45,12 @@ async def get_courses(
         StudentCourses.last_accessed,
         func.count(Lessons.id).label("total_lessons"),
         StudentCourses.completed_lessons.label("completed_lessons"),
-        ProfessorUser.id.label("professor_id"), 
+        ProfessorUser.id.label("professor_id"),
         ProfessorUser.name.label("professor_name"),
         ProfessorUser.email.label("professor_email"),
         StudentUser.name.label("student_name"),
         StudentUser.email.label("student_email"),
     ]
-
 
     group_by_fields = [
         Courses.id,
@@ -62,7 +62,6 @@ async def get_courses(
 
     order_conditions = {"asc": ["start_date"]}
 
-
     paginated_courses = await courses_controller.courses_repository._get_many(
         skip=request.offset,
         limit=request.page_size,
@@ -72,7 +71,6 @@ async def get_courses(
         group_by_=group_by_fields,
         order_=order_conditions,
     )
-
 
     total_rows = await courses_controller.courses_repository.count(where_=where_conditions)
     total_pages = (total_rows + request.page_size - 1) // request.page_size
@@ -88,7 +86,7 @@ async def get_courses(
                 learning_outcomes=course.learning_outcomes,
                 status=course.course_status,
                 image=str(course.course_image),
-                percentage_complete= f"{(course.completed_lessons/course.total_lessons*100) if course.total_lessons > 0 else 0:.0f}",
+                percentage_complete=f"{(course.completed_lessons/course.total_lessons*100) if course.total_lessons > 0 else 0:.0f}",
                 last_accessed=course.last_accessed.isoformat() if course.last_accessed else None,
                 professor=ProfessorInformation(
                     professor_id=course.professor_id,
@@ -114,13 +112,13 @@ async def get_courses(
             totalPages=total_pages,
         )
     )
-    
+
+
 @router.get("/{courseId}/students/{studentId}/", response_model=Ok[GetCourseDetailResponse])
 async def get_course_for_student(
-    courseId: str, 
-    studentId: str, 
+    courseId: str,
+    studentId: str,
     student_courses_controller: StudentCoursesController = Depends(InternalProvider().get_studentcourses_controller),
-    courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
     lessons_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
     exercises_controller: ExercisesController = Depends(InternalProvider().get_exercises_controller),
 ):
@@ -131,9 +129,7 @@ async def get_course_for_student(
 
     # Validate if student is enrolled in the course
     student_course = await student_courses_controller.student_courses_repository.first(
-        where_=[
-            and_(StudentCourses.student_id == student_id, StudentCourses.course_id == course_id)
-        ]
+        where_=[and_(StudentCourses.student_id == student_id, StudentCourses.course_id == course_id)]
     )
     if not student_course:
         raise BadRequestException(message="Student is not enrolled in this course.")
@@ -150,9 +146,7 @@ async def get_course_for_student(
     # Fetch exercises for the lessons
     lesson_ids = [lesson.id for lesson in lessons]
     exercises = await exercises_controller.exercises_repository.get_many(
-        where_=[
-            and_(Exercises.lesson_id.in_(lesson_ids), Exercises.type == "original")
-        ]
+        where_=[and_(Exercises.lesson_id.in_(lesson_ids), Exercises.type == "original")]
     )
 
     # Group exercises by lesson_id
@@ -196,3 +190,54 @@ async def get_course_for_student(
         lessons=lessons_response,
     )
     return Ok(data=response, message="Successfully fetched the course details.")
+
+
+@router.put("/{courseId}/students/{studentId}/lessons/{lessonId}/bookmark", response_model=Ok[bool])
+async def bookmark_lesson(
+    courseId: UUID,
+    studentId: UUID,
+    lessonId: UUID,
+    student_lessons_controller: StudentLessonsController = Depends(InternalProvider().get_studentlessons_controller),
+):
+    if not lessonId or not courseId or not studentId:
+        raise BadRequestException(message="Student ID, Course ID, and Lesson ID are required.")
+
+    # Find the existing lesson
+    lesson = await student_lessons_controller.student_lessons_repository.first(
+        where_=[
+            StudentLessons.lesson_id == lessonId,
+            StudentLessons.student_id == studentId,
+            StudentLessons.course_id == courseId,
+        ]
+    )
+
+    if not lesson:
+        raise BadRequestException(message="Lesson not found.")
+
+    # Toggle the bookmark status
+    new_bookmark_status = not lesson.bookmark
+
+    # Update with commit
+    updated_lesson = await student_lessons_controller.student_lessons_repository.update(
+        where_=[
+            StudentLessons.lesson_id == lessonId,
+            StudentLessons.student_id == studentId,
+            StudentLessons.course_id == courseId,
+        ],
+        attributes={"bookmark": new_bookmark_status},
+        commit=True,  # Important: commit the transaction
+    )
+
+    if not updated_lesson:
+        raise Exception("Failed to update lesson bookmark status")
+
+    # Verify the update was successful
+    if updated_lesson.bookmark != new_bookmark_status:
+        raise Exception("Bookmark status was not updated correctly")
+
+    return Ok(
+        data=new_bookmark_status,
+        message="Successfully {} the lesson.".format(
+            "bookmarked" if new_bookmark_status else "removed the bookmark from"
+        ),
+    )

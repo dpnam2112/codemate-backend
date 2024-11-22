@@ -7,6 +7,7 @@ class GetCoursesRequest(BaseModel):
     offset: Optional[int] = 0  # Default to the first page
     page_size: Optional[int] = 10  # Default number of courses per page
 
-class GetCourseDetailRequest(BaseModel):
+class BookmarkLessonRequest(BaseModel):
     student_id: UUID
+    lesson_id: UUID
     course_id: UUID

@@ -54,3 +54,8 @@ class GetCourseDetailResponse(BaseModel):
     time_spent:str 
     assignments_done: int
     lessons: List[GetLessonsResponse]
+    
+class BookmarkLessonResponse(BaseModel):
+    lesson_id: UUID
+    student_id: UUID
+    course_id: UUID
