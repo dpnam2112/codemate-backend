@@ -1,7 +1,7 @@
 from uuid import UUID
 from pydantic import BaseModel
 from typing import List
-from core.repository.enum import StatusType
+from core.repository.enum import *
 
 class StudentList(BaseModel):
     student_id: UUID
@@ -31,3 +31,26 @@ class GetCoursesPaginatedResponse(BaseModel):
     pageSize: int
     totalRows: int
     totalPages: int
+
+class GetExercisesResponse(BaseModel):
+    id: UUID
+    name: str
+    description: str
+    status: StatusType
+    type: ExerciseType
+class GetLessonsResponse(BaseModel):
+    id: UUID
+    title: str
+    description: str 
+    lesson_type: LessonType
+    bookmark: bool
+    order: int
+    status: StatusType
+    exercises: List[GetExercisesResponse]
+class GetCourseDetailResponse(BaseModel):
+    course_id: UUID
+    student_id: UUID
+    completed_lessons: int
+    time_spent:str 
+    assignments_done: int
+    lessons: List[GetLessonsResponse]

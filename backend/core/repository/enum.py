@@ -26,6 +26,9 @@ class UserRole(Enum):
     professor = "professor"
     admin = "admin"
 
+class ExerciseType(Enum):
+    original = "original"
+    recommended = "recommended"
 
 class LessonType(Enum):
     original = "original"  

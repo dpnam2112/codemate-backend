@@ -3,6 +3,7 @@ from .student_courses import StudentCoursesRepository
 from .activities import ActivitiesRepository
 from .courses import CoursesRepository
 from .lessons import LessonsRepository
+from .exercises import ExercisesRepository
 
 __all__ = [
     "UserRepository",
@@ -10,4 +11,5 @@ __all__ = [
     "ActivitiesRepository",
     "CoursesRepository",
     "LessonsRepository",
+    "ExercisesRepository",
 ]

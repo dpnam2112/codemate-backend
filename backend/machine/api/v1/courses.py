@@ -1,23 +1,17 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy.sql import func
+from sqlalchemy.sql import func, and_
 from typing import List
-from machine.models import Courses, StudentCourses, Lessons, User
-from machine.schemas.responses.courses import (
-    GetCoursesPaginatedResponse,
-    GetCoursesResponse,
-    StudentList,
-    ProfessorInformation,
-)
-from machine.schemas.requests import GetCoursesRequest
+from machine.models import *
+from machine.schemas.responses.courses import *
+from machine.schemas.requests import *
 from core.response import Ok
 from core.exceptions import BadRequestException
 from machine.providers import InternalProvider
-from machine.controllers.courses import CoursesController
+from machine.controllers import *
 from core.repository.enum import UserRole
 from sqlalchemy.orm import aliased
 
 router = APIRouter(prefix="/courses", tags=["courses"])
-
 
 @router.get("/", response_model=Ok[GetCoursesPaginatedResponse])
 async def get_courses(
@@ -120,3 +114,85 @@ async def get_courses(
             totalPages=total_pages,
         )
     )
+    
+@router.get("/{courseId}/students/{studentId}/", response_model=Ok[GetCourseDetailResponse])
+async def get_course_for_student(
+    courseId: str, 
+    studentId: str, 
+    student_courses_controller: StudentCoursesController = Depends(InternalProvider().get_studentcourses_controller),
+    courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
+    lessons_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
+    exercises_controller: ExercisesController = Depends(InternalProvider().get_exercises_controller),
+):
+    course_id = courseId
+    student_id = studentId
+    if not course_id or not student_id:
+        raise BadRequestException(message="Student ID and Course ID are required.")
+
+    # Validate if student is enrolled in the course
+    student_course = await student_courses_controller.student_courses_repository.first(
+        where_=[
+            and_(StudentCourses.student_id == student_id, StudentCourses.course_id == course_id)
+        ]
+    )
+    if not student_course:
+        raise BadRequestException(message="Student is not enrolled in this course.")
+
+    # Fetch lessons for the course
+    lessons = await lessons_controller.lessons_repository.get_many(
+        where_=[
+            Lessons.course_id == course_id,
+            Lessons.lesson_type == "original",
+        ],
+        order_={"asc": ["order"]},
+    )
+
+    # Fetch exercises for the lessons
+    lesson_ids = [lesson.id for lesson in lessons]
+    exercises = await exercises_controller.exercises_repository.get_many(
+        where_=[
+            and_(Exercises.lesson_id.in_(lesson_ids), Exercises.type == "original")
+        ]
+    )
+
+    # Group exercises by lesson_id
+    exercises_by_lesson = {}
+    for exercise in exercises:
+        exercises_by_lesson.setdefault(exercise.lesson_id, []).append(exercise)
+
+    # Transform lessons with their respective exercises
+    lessons_response: List[GetLessonsResponse] = []
+    for lesson in lessons:
+        lesson_exercises = exercises_by_lesson.get(lesson.id, [])
+        lessons_response.append(
+            GetLessonsResponse(
+                id=lesson.id,
+                title=lesson.title,
+                description=str(lesson.description),
+                lesson_type=lesson.lesson_type,
+                bookmark=lesson.bookmark,
+                order=lesson.order,
+                status=lesson.status,
+                exercises=[
+                    GetExercisesResponse(
+                        id=exercise.id,
+                        name=exercise.name,
+                        description=str(exercise.description),
+                        status=exercise.status,
+                        type=exercise.type,
+                    )
+                    for exercise in lesson_exercises
+                ],
+            )
+        )
+
+    # Construct and return the response
+    response = GetCourseDetailResponse(
+        course_id=student_course.course_id,
+        student_id=student_course.student_id,
+        completed_lessons=student_course.completed_lessons,
+        time_spent=str(student_course.time_spent),
+        assignments_done=student_course.assignments_done,
+        lessons=lessons_response,
+    )
+    return Ok(data=response, message="Successfully fetched the course details.")
