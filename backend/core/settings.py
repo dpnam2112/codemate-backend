@@ -18,12 +18,23 @@ class TestSettings(BaseSettings):
 
 
 class DatabaseSettings(BaseSettings):
-    SQLALCHEMY_POSTGRES_URI: str = "postgresql+asyncpg://postgres:thangcho@127.0.0.1:5432/fastapi_seed"
+    SQLALCHEMY_POSTGRES_URI: str = "postgresql+asyncpg://nam:123@127.0.0.1:5432/edu"
     SQLALCHEMY_ECHO: bool = False
 
 
 class RedisSettings(BaseSettings):
     REDIS_URL: str = "redis://127.0.0.1:6379/0"
+
+class Neo4jSettings(BaseSettings):
+    NEO4J_URI: str = "bolt://localhost:7687"
+    NEO4J_USERNAME: str = "neo4j"
+    NEO4J_PASSWORD: str = "password"
+
+class GoogleGenAISettings(BaseSettings):
+    GOOGLE_GENAI_API_KEY: str = ""
+
+class OpenAISettings(BaseSettings):
+    OPENAI_API_KEY: str = ""
 
 
 class Settings(
@@ -31,6 +42,9 @@ class Settings(
     TestSettings,
     DatabaseSettings,
     RedisSettings,
+    Neo4jSettings,
+    GoogleGenAISettings,
+    OpenAISettings
 ): ...
 
 
