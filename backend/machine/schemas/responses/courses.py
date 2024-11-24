@@ -7,11 +7,13 @@ class StudentList(BaseModel):
     student_id: UUID
     student_name: str
     student_email: str
+    student_avatar: str
 
 class ProfessorInformation(BaseModel):
     professor_id: UUID
     professor_name: str
     professor_email: str
+    professor_avatar: str
 class GetCoursesResponse(BaseModel):
     id: UUID
     name: str
@@ -31,7 +33,11 @@ class GetCoursesPaginatedResponse(BaseModel):
     pageSize: int
     totalRows: int
     totalPages: int
-
+class GetDocumentsResponse(BaseModel):
+    id: UUID
+    name: str
+    type: DocumentType
+    url: str
 class GetExercisesResponse(BaseModel):
     id: UUID
     name: str
@@ -47,6 +53,7 @@ class GetLessonsResponse(BaseModel):
     order: int
     status: StatusType
     exercises: List[GetExercisesResponse]
+    documents: List[GetDocumentsResponse]
 class GetCourseDetailResponse(BaseModel):
     course_id: UUID
     student_id: UUID
@@ -59,3 +66,12 @@ class BookmarkLessonResponse(BaseModel):
     lesson_id: UUID
     student_id: UUID
     course_id: UUID
+    
+class GetLessonsRecommendationResponse(BaseModel):
+    course_id: UUID
+    lesson_id: UUID
+    bookmark: bool
+    status: StatusType
+    title: str
+    description: str
+    order: int

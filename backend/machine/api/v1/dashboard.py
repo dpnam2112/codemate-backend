@@ -11,16 +11,16 @@ from core.exceptions import NotFoundException, BadRequestException
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 
-@router.get("/welcome", response_model=Ok[WelcomeMessageResponse])
+@router.get("/welcome/{studentId}", response_model=Ok[WelcomeMessageResponse])
 async def get_welcome_message(
-    request: WelcomeMessageRequest,
+    studentId: UUID,
     studentcourses_controller: StudentCoursesController = Depends(InternalProvider().get_studentcourses_controller),
 ):
-    if not request.student_id:
+    if not studentId:
         raise BadRequestException(message="Student ID is required.")
 
     recent_course = await studentcourses_controller.student_courses_repository.first(
-        where_=[StudentCourses.student_id == request.student_id],
+        where_=[StudentCourses.student_id == studentId],
         order_={"desc": [{"field": "last_accessed", "model_class": StudentCourses}]},
         relations=[StudentCourses.course],
     )
@@ -34,7 +34,7 @@ async def get_welcome_message(
     return Ok(data=data, message="Successfully fetched the welcome message.")
 
 
-@router.get("/activities", response_model=Ok[List[GetRecentActivitiesResponse]])
+@router.post("/activities", response_model=Ok[List[GetRecentActivitiesResponse]])
 async def get_activities(
     request: GetRecentActivitiesRequest,
     activities_controller: ActivitiesController = Depends(InternalProvider().get_activities_controller),

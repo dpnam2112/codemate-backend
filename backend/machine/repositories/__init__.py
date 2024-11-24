@@ -6,6 +6,7 @@ from .lessons import LessonsRepository
 from .exercises import ExercisesRepository
 from .student_lessons import StudentLessonsRepository
 from .student_exercises import StudentExercisesRepository
+from .documents import DocumentsRepository
 __all__ = [
     "UserRepository",
     "StudentCoursesRepository",
@@ -15,4 +16,5 @@ __all__ = [
     "ExercisesRepository",
     "StudentLessonsRepository",
     "StudentExercisesRepository",
+    "DocumentsRepository",
 ]

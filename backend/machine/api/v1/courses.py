@@ -14,7 +14,7 @@ from sqlalchemy.orm import aliased
 router = APIRouter(prefix="/courses", tags=["courses"])
 
 
-@router.get("/", response_model=Ok[GetCoursesPaginatedResponse])
+@router.post("/", response_model=Ok[GetCoursesPaginatedResponse])
 async def get_courses(
     request: GetCoursesRequest,
     courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
@@ -48,8 +48,11 @@ async def get_courses(
         ProfessorUser.id.label("professor_id"),
         ProfessorUser.name.label("professor_name"),
         ProfessorUser.email.label("professor_email"),
+        ProfessorUser.avatar_url.label("professor_avatar"),
+        StudentUser.id.label("student_id"),
         StudentUser.name.label("student_name"),
         StudentUser.email.label("student_email"),
+        StudentUser.avatar_url.label("student_avatar"),
     ]
 
     group_by_fields = [
@@ -64,7 +67,7 @@ async def get_courses(
 
     paginated_courses = await courses_controller.courses_repository._get_many(
         skip=request.offset,
-        limit=request.page_size,
+        #limit=request.page_size,
         fields=select_fields,
         where_=where_conditions,
         join_=join_conditions,
@@ -72,8 +75,11 @@ async def get_courses(
         order_=order_conditions,
     )
 
-    total_rows = await courses_controller.courses_repository.count(where_=where_conditions)
-    total_pages = (total_rows + request.page_size - 1) // request.page_size
+    #total_rows = await courses_controller.courses_repository.count(where_=where_conditions)
+    total_rows = len(paginated_courses)
+    total_pages = total_rows // request.page_size
+    if total_pages == 0:
+        total_pages = 1
 
     content: List[GetCoursesResponse] = []
     for course in paginated_courses:
@@ -92,12 +98,14 @@ async def get_courses(
                     professor_id=course.professor_id,
                     professor_name=course.professor_name,
                     professor_email=course.professor_email,
+                    professor_avatar=str(course.professor_avatar) if course.professor_avatar else "",
                 ),
                 student_list=[
                     StudentList(
                         student_id=request.student_id,
                         student_name=course.student_name or "",
                         student_email=course.student_email or "",
+                        student_avatar=str(course.student_avatar) if course.student_avatar else ""
                     )
                 ],
             )
@@ -121,62 +129,97 @@ async def get_course_for_student(
     student_courses_controller: StudentCoursesController = Depends(InternalProvider().get_studentcourses_controller),
     lessons_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
     exercises_controller: ExercisesController = Depends(InternalProvider().get_exercises_controller),
+    student_lessons_controller: StudentLessonsController = Depends(InternalProvider().get_studentlessons_controller),
+    student_exercises_controller: StudentExercisesController = Depends(InternalProvider().get_studentexercises_controller),
+    document_controller: DocumentsController = Depends(InternalProvider().get_documents_controller),
 ):
-    course_id = courseId
-    student_id = studentId
-    if not course_id or not student_id:
+    # Validate input
+    if not courseId or not studentId:
         raise BadRequestException(message="Student ID and Course ID are required.")
 
-    # Validate if student is enrolled in the course
+    # Check if the student is enrolled in the course
     student_course = await student_courses_controller.student_courses_repository.first(
-        where_=[and_(StudentCourses.student_id == student_id, StudentCourses.course_id == course_id)]
+        where_=[and_(StudentCourses.student_id == studentId, StudentCourses.course_id == courseId)]
     )
     if not student_course:
         raise BadRequestException(message="Student is not enrolled in this course.")
 
     # Fetch lessons for the course
     lessons = await lessons_controller.lessons_repository.get_many(
-        where_=[
-            Lessons.course_id == course_id,
-            Lessons.lesson_type == "original",
-        ],
+        where_=[Lessons.course_id == courseId],
         order_={"asc": ["order"]},
     )
 
-    # Fetch exercises for the lessons
+    # Fetch student lessons for the student in this course
     lesson_ids = [lesson.id for lesson in lessons]
-    exercises = await exercises_controller.exercises_repository.get_many(
-        where_=[and_(Exercises.lesson_id.in_(lesson_ids), Exercises.type == "original")]
+    student_lessons = await student_lessons_controller.student_lessons_repository.get_many(
+        where_=[and_(
+            StudentLessons.student_id == studentId,
+            StudentLessons.lesson_id.in_(lesson_ids),
+            StudentLessons.lesson_type == LessonType.original
+        )]
     )
+    student_lessons_by_lesson = {sl.lesson_id: sl for sl in student_lessons}
 
-    # Group exercises by lesson_id
+    # Fetch exercises for the lessons
+    exercises = await exercises_controller.exercises_repository.get_many(
+        where_=[Exercises.lesson_id.in_(lesson_ids)],
+    )
     exercises_by_lesson = {}
     for exercise in exercises:
         exercises_by_lesson.setdefault(exercise.lesson_id, []).append(exercise)
 
-    # Transform lessons with their respective exercises
+    # Fetch student exercises for the student
+    exercise_ids = [exercise.id for exercise in exercises]
+    student_exercises = await student_exercises_controller.student_exercises_repository.get_many(
+        where_=[StudentExercises.student_id == studentId, StudentExercises.exercise_id.in_(exercise_ids)],
+    )
+    student_exercises_by_exercise = {se.exercise_id: se for se in student_exercises}
+
+    # Fetch documents for the lessons
+    lesson_documents = await document_controller.documents_repository.get_many(
+        where_=[Documents.lesson_id.in_(lesson_ids)],
+    )
+    documents_by_lesson = {}
+    for document in lesson_documents:
+        documents_by_lesson.setdefault(document.lesson_id, []).append(document)
+
+    # Transform lessons into the response model
     lessons_response: List[GetLessonsResponse] = []
     for lesson in lessons:
+        student_lesson = student_lessons_by_lesson.get(lesson.id)
         lesson_exercises = exercises_by_lesson.get(lesson.id, [])
+        lesson_documents = documents_by_lesson.get(lesson.id, [])
+
         lessons_response.append(
             GetLessonsResponse(
                 id=lesson.id,
                 title=lesson.title,
-                description=str(lesson.description),
-                lesson_type=lesson.lesson_type,
-                bookmark=lesson.bookmark,
+                description=lesson.description or "",
+                lesson_type=student_lesson.lesson_type if student_lesson else LessonType.original,
+                bookmark=student_lesson.bookmark if student_lesson else False,
                 order=lesson.order,
-                status=lesson.status,
+                status=student_lesson.status if student_lesson else "New",
                 exercises=[
                     GetExercisesResponse(
                         id=exercise.id,
                         name=exercise.name,
-                        description=str(exercise.description),
-                        status=exercise.status,
+                        description=exercise.description or "",
+                        status=student_exercises_by_exercise[exercise.id].status
+                        if exercise.id in student_exercises_by_exercise else "New",
                         type=exercise.type,
                     )
                     for exercise in lesson_exercises
                 ],
+                documents=[
+                    GetDocumentsResponse(
+                        id=document.id,
+                        name=document.name,
+                        type=document.type,
+                        url=document.document_url,
+                    )
+                    for document in lesson_documents
+                ]
             )
         )
 
@@ -241,3 +284,54 @@ async def bookmark_lesson(
             "bookmarked" if new_bookmark_status else "removed the bookmark from"
         ),
     )
+
+@router.get("/{courseId}/students/{studentId}/lessons_recommendation/", response_model=Ok[List[GetLessonsRecommendationResponse]])
+async def get_lessons_recommendation(
+    courseId: UUID,
+    studentId: UUID,
+    student_lessons_controller: StudentLessonsController = Depends(InternalProvider().get_studentlessons_controller),
+):
+    if not courseId or not studentId:
+        raise BadRequestException(message="Both Student ID and Course ID are required.")
+
+    where_conditions = [
+        StudentLessons.student_id == studentId,
+        StudentLessons.course_id == courseId,
+        StudentLessons.lesson_type == LessonType.recommended,
+    ]
+
+    join_conditions = {
+        "lessons": {"type": "left", "alias": "lessons"},
+    }
+
+    recommended_lessons_list = await student_lessons_controller.student_lessons_repository._get_many(
+        where_=where_conditions,
+        join_=join_conditions,
+        fields=[
+            StudentLessons.course_id.label("course_id"),
+            StudentLessons.lesson_id.label("lesson_id"),
+            Lessons.title.label("title"),
+            Lessons.description.label("description"),
+            Lessons.order.label("order"),
+            StudentLessons.lesson_type.label("lesson_type"),
+            StudentLessons.bookmark.label("bookmark"),
+            StudentLessons.status.label("status"),
+        ],
+    )
+
+    recommended_lessons: List[GetLessonsRecommendationResponse] = []
+    for lesson in recommended_lessons_list:
+        recommended_lessons.append(
+            GetLessonsRecommendationResponse(
+                course_id=lesson.course_id, 
+                lesson_id=lesson.lesson_id,
+                title=lesson.title,
+                description=lesson.description or "",
+                lesson_type=lesson.lesson_type,
+                bookmark=lesson.bookmark,
+                order=lesson.order,
+                status=lesson.status,
+            )
+        )
+
+    return Ok(data=recommended_lessons, message="Successfully fetched the recommended lessons.")

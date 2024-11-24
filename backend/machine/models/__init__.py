@@ -8,3 +8,4 @@ from .lessons import Lessons
 from .exercises import Exercises
 from .student_lessons import StudentLessons
 from .student_exercises import StudentExercises
+from .documents import Documents

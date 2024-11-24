@@ -33,3 +33,18 @@ class ExerciseType(Enum):
 class LessonType(Enum):
     original = "original"  
     recommended = "recommended"
+
+class DocumentType(Enum):
+     csv = "CSV"
+     pdf =  "PDF"
+     doc =  "DOC"
+     docx =  "DOCX"
+     ppt =  "PPT"
+     pptx =  "PPTX"
+     xls =  "XLS"
+     xlsx =  "XLSX"
+     txt =  "TXT"
+     mp4 = "MP4"
+     mp3 = "MP3"
+     jpg =  "JPG"
+     png =  "PNG"
