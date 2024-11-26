@@ -33,3 +33,8 @@ class ExerciseType(Enum):
 class LessonType(Enum):
     original = "original"  
     recommended = "recommended"
+
+class DifficultyLevel(Enum):
+    easy = "easy"
+    medium = "medium"
+    hard = "hard"
