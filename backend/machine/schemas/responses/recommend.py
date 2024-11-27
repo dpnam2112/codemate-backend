@@ -15,7 +15,7 @@ class QuizQuestionResponse(BaseModel):
     options: List[str] 
     correct_answer: str 
     explanation: str
-    user_choice: Optional[str] = None
+    user_choice: Optional[int] = None
 
 class QuizExerciseResponse(BaseModel):
     id: UUID
@@ -35,7 +35,7 @@ class QuizListResponse(BaseModel):
     
 class ModuleResponse(BaseModel):
     module_id: UUID
-    name: str
+    title: str
     # description: str
     # objectives: List[str]
     

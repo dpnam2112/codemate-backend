@@ -54,21 +54,18 @@ async def get_quiz_exercise(
     quizId: UUID,
     quizexercises_controller: QuizExercisesController = Depends(InternalProvider().get_quizexercises_controller),
 ):
-    # Validate module existence
     module = await quizexercises_controller.quiz_exercises_repository.first(where_=[Modules.id == moduleId])
     if not module:
         raise NotFoundException(message="Module not found for the given ID.")
 
-    # Fetch the quiz exercise
     quiz = await quizexercises_controller.quiz_exercises_repository.first(
         where_=[QuizExercises.id == quizId, QuizExercises.module_id == moduleId]
     )
     if not quiz:
         raise NotFoundException(message="Quiz not found for the given ID in the specified module.")
 
-    # Parse questions stored in JSONB format
     try:
-        questions = quiz.questions  # `questions` is JSON and already loaded from the DB
+        questions = quiz.questions 
         parsed_questions = [
             QuizQuestionResponse(
                 id=UUID(question["id"]),
@@ -84,7 +81,6 @@ async def get_quiz_exercise(
     except KeyError as e:
         raise SystemError(message=f"Invalid data format in questions: {e}")
 
-    # Map the quiz data to the response model
     response_data = QuizExerciseResponse(
         id=quiz.id,
         name=quiz.name,
@@ -103,7 +99,6 @@ async def submit_quiz_answers(
     request: QuizAnswerRequest,
     quizexercises_controller: QuizExercisesController = Depends(InternalProvider().get_quizexercises_controller),
 ):  
-    # Fetch quiz and related questions
     quiz = await quizexercises_controller.quiz_exercises_repository.first(
         where_=[QuizExercises.id == quiz_id],
     )
@@ -118,9 +113,7 @@ async def submit_quiz_answers(
     results = []
 
     for question, user_choice in zip(quiz.questions, request.answers):
-        # Update chooseUser with the user's selected index
         question['user_choice'] = user_choice
-        # Check if the answer is correct
         is_correct = question['options'][user_choice] == question['correct_answer']
         if is_correct:
             correct_count += 1
@@ -136,7 +129,7 @@ async def submit_quiz_answers(
     await quizexercises_controller.quiz_exercises_repository.update(
         where_=[QuizExercises.id == quiz_id],
         attributes={"questions": quiz.questions, "score": quiz.score, "status": quiz.status},
-        commit=True,  # Commit the transaction to save changes
+        commit=True, 
     )
 
     response = QuizScoreResponse(
@@ -148,25 +141,22 @@ async def submit_quiz_answers(
     )
 
     return Ok(data=response, message="Quiz answers submitted successfully.")
-@router.get("/{moduleId}/documents/{documentId}", response_model=Ok[DocumentResponse])
+@router.get("/{moduleId}/documents", response_model=Ok[DocumentResponse])
 async def get_document(
-    documentId: UUID,
+    moduleId: UUID,
     documents_controller: DocumentsController = Depends(InternalProvider().get_documents_controller),
 ):
-    # Validate the request
-    if not documentId:
+    if not moduleId:
         raise BadRequestException(message="Document ID is required.")
 
-    # Fetch the document details
     document = await documents_controller.documents_repository.first(
-        where_=[Documents.id == documentId],
-        relations=[Documents.module],  # If related `module` data is required
+        where_=[Documents.module_id == moduleId],
+        relations=[Documents.module], 
     )
 
     if not document:
         raise NotFoundException(message="Document not found for the given ID.")
 
-    # Map the data to the response schema
     content = document.content or {}
 
     response_data = DocumentResponse(

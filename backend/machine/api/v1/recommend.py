@@ -16,14 +16,10 @@ async def recommend_lesson(
     recommendLessonId: UUID,
     lessons_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
 ):
-    request = RecommendLessonRequest(lesson_id=recommendLessonId)
-    # Validate the request
-    if not request.lesson_id:
-        raise BadRequestException(message="Lesson ID is required.")
-
+   
     # Fetch the lesson recommendation details
     lesson = await lessons_controller.lessons_repository.first(
-        where_=[Lessons.id == request.lesson_id],
+        where_=[Lessons.id == recommendLessonId],
         relations=[Lessons.modules],
     )
 
@@ -42,7 +38,7 @@ async def recommend_lesson(
         modules=[
             ModuleResponse(
                 module_id=module.id,
-                name=module.title,
+                title=module.title,
             )
             for module in lesson.modules
         ],
