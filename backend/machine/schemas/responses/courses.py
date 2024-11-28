@@ -69,6 +69,7 @@ class BookmarkLessonResponse(BaseModel):
     
 class GetLessonsRecommendationResponse(BaseModel):
     course_id: UUID
+    course_name: str
     lesson_id: UUID
     bookmark: bool
     status: StatusType

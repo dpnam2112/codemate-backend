@@ -1,15 +1,15 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.sql import func, and_
 from typing import List
 from machine.models import *
-from machine.schemas.responses.courses import *
-from machine.schemas.requests import *
 from core.response import Ok
-from core.exceptions import BadRequestException
-from machine.providers import InternalProvider
 from machine.controllers import *
-from core.repository.enum import UserRole
 from sqlalchemy.orm import aliased
+from sqlalchemy.sql import func, and_
+from fastapi import APIRouter, Depends
+from machine.schemas.requests import *
+from core.repository.enum import UserRole
+from machine.providers import InternalProvider
+from machine.schemas.responses.courses import *
+from core.exceptions import BadRequestException, NotFoundException
 
 router = APIRouter(prefix="/courses", tags=["courses"])
 
@@ -18,108 +18,137 @@ router = APIRouter(prefix="/courses", tags=["courses"])
 async def get_courses(
     request: GetCoursesRequest,
     courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
+    users_controller: UserController = Depends(InternalProvider().get_user_controller),
 ):
     if not request.student_id:
         raise BadRequestException(message="Student ID is required.")
+    where_conditions = [StudentCourses.student_id == request.student_id]
+    select_fields = [
+        Courses.id.label("id"),
+    ]
+    join_conditions = {"student_courses": {"type": "left", "alias": "student_courses"}}
+
+    student_courses = await courses_controller.courses_repository._get_many(
+        where_=where_conditions,
+        fields=select_fields,
+        join_=join_conditions,
+    )
+    course_ids = [sc.id for sc in student_courses]
+
+    if not course_ids:
+        return NotFoundException(message="No courses found for the student.")
 
     ProfessorUser = aliased(User)
-    StudentUser = aliased(User)
 
-    where_conditions = [StudentCourses.student_id == request.student_id, User.role == UserRole.student]
-
+    where_conditions = [StudentCourses.course_id.in_(course_ids)]
     join_conditions = {
         "student_courses": {"type": "left", "alias": "student_courses"},
+        "courses": {"type": "left", "alias": "courses"},
         "professor": {"type": "left", "table": ProfessorUser, "alias": "professor_alias"},
-        "lessons": {"type": "left", "alias": "lessons_alias"},
-        "student": {"type": "left", "table": StudentUser, "alias": "student_alias"},
     }
-
     select_fields = [
-        Courses.id.label("course_id"),
-        Courses.name.label("course_name"),
-        Courses.start_date,
-        Courses.end_date,
-        Courses.learning_outcomes,
-        Courses.status.label("course_status"),
-        Courses.image_url.label("course_image"),
-        StudentCourses.last_accessed,
+        Courses.id.label("id"),
+        Courses.name.label("name"),
+        Courses.start_date.label("start_date"),
+        Courses.end_date.label("end_date"),
+        Courses.learning_outcomes.label("learning_outcomes"),
+        Courses.status.label("status"),
+        Courses.image_url.label("image_url"),
+        Courses.professor_id.label("professor_id"),
         func.count(Lessons.id).label("total_lessons"),
         StudentCourses.completed_lessons.label("completed_lessons"),
-        ProfessorUser.id.label("professor_id"),
+        StudentCourses.time_spent.label("time_spent"),
+        StudentCourses.assignments_done.label("assignments_done"),
+        StudentCourses.last_accessed.label("last_accessed"),
+        User.id.label("student_id"),
+        User.name.label("student_name"),
+        User.email.label("student_email"),
+        User.avatar_url.label("student_avatar"),
         ProfessorUser.name.label("professor_name"),
         ProfessorUser.email.label("professor_email"),
         ProfessorUser.avatar_url.label("professor_avatar"),
-        StudentUser.id.label("student_id"),
-        StudentUser.name.label("student_name"),
-        StudentUser.email.label("student_email"),
-        StudentUser.avatar_url.label("student_avatar"),
     ]
 
     group_by_fields = [
         Courses.id,
-        ProfessorUser.id,
-        StudentUser.id,
+        Courses.name,
+        Courses.start_date,
+        Courses.end_date,
+        Courses.learning_outcomes,
+        Courses.status,
+        Courses.image_url,
+        Courses.professor_id,
         StudentCourses.completed_lessons,
+        StudentCourses.time_spent,
+        StudentCourses.assignments_done,
         StudentCourses.last_accessed,
+        User.id,
+        User.name,
+        User.email,
+        User.avatar_url,
+        ProfessorUser.name,
+        ProfessorUser.email,
+        ProfessorUser.avatar_url,
     ]
 
-    order_conditions = {"asc": ["start_date"]}
+    order_conditions = {"asc": ["name"]}
 
-    paginated_courses = await courses_controller.courses_repository._get_many(
-        skip=request.offset,
-        #limit=request.page_size,
-        fields=select_fields,
+    courses = await users_controller.user_repository._get_many(
         where_=where_conditions,
+        fields=select_fields,
         join_=join_conditions,
-        group_by_=group_by_fields,
         order_=order_conditions,
+        group_by_=group_by_fields,
     )
 
-    #total_rows = await courses_controller.courses_repository.count(where_=where_conditions)
-    total_rows = len(paginated_courses)
+    course_map = {}
+
+    for course in courses:
+        course_id = course.id
+
+        if course_id not in course_map:
+            course_map[course_id] = {
+                "id": course.id,
+                "name": course.name,
+                "start_date": str(course.start_date),
+                "end_date": str(course.end_date),
+                "student_list": [], 
+                "learning_outcomes": course.learning_outcomes,
+                "professor": ProfessorInformation(
+                    professor_id=course.professor_id,
+                    professor_name=course.professor_name,
+                    professor_email=course.professor_email,
+                    professor_avatar=str(course.professor_avatar),
+                ),
+                "status": course.status,
+                "image": str(course.image_url),
+                "percentage_complete": f"{(course.completed_lessons / course.total_lessons * 100) if course.total_lessons > 0 else 0:.0f}",
+                "last_accessed": str(course.last_accessed),
+            }
+
+        course_map[course_id]["student_list"].append( 
+            StudentList(
+                student_id=course.student_id,
+                student_name=course.student_name,
+                student_email=course.student_email,
+                student_avatar=str(course.student_avatar),
+            )
+        )
+
+    total_rows = len(courses)
     total_pages = total_rows // request.page_size
     if total_pages == 0:
         total_pages = 1
 
-    content: List[GetCoursesResponse] = []
-    for course in paginated_courses:
-        content.append(
-            GetCoursesResponse(
-                id=course.course_id,
-                name=course.course_name,
-                start_date=str(course.start_date),
-                end_date=str(course.end_date),
-                learning_outcomes=course.learning_outcomes,
-                status=course.course_status,
-                image=str(course.course_image),
-                percentage_complete=f"{(course.completed_lessons/course.total_lessons*100) if course.total_lessons > 0 else 0:.0f}",
-                last_accessed=course.last_accessed.isoformat() if course.last_accessed else None,
-                professor=ProfessorInformation(
-                    professor_id=course.professor_id,
-                    professor_name=course.professor_name,
-                    professor_email=course.professor_email,
-                    professor_avatar=str(course.professor_avatar) if course.professor_avatar else "",
-                ),
-                student_list=[
-                    StudentList(
-                        student_id=request.student_id,
-                        student_name=course.student_name or "",
-                        student_email=course.student_email or "",
-                        student_avatar=str(course.student_avatar) if course.student_avatar else ""
-                    )
-                ],
-            )
-        )
+    response = Ok(data=GetCoursesPaginatedResponse(
+        content=[GetCoursesResponse(**course_data) for course_data in course_map.values()],
+        currentPage=(request.offset // request.page_size) + 1,
+        pageSize=request.page_size,
+        totalRows=total_rows,
+        totalPages=total_pages,
+    ), message="Successfully fetched the courses.")
 
-    return Ok(
-        GetCoursesPaginatedResponse(
-            content=content,
-            currentPage=(request.offset // request.page_size) + 1,
-            pageSize=request.page_size,
-            totalRows=total_rows,
-            totalPages=total_pages,
-        )
-    )
+    return response
 
 
 @router.get("/{courseId}/students/{studentId}/", response_model=Ok[GetCourseDetailResponse])
@@ -130,38 +159,37 @@ async def get_course_for_student(
     lessons_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
     exercises_controller: ExercisesController = Depends(InternalProvider().get_exercises_controller),
     student_lessons_controller: StudentLessonsController = Depends(InternalProvider().get_studentlessons_controller),
-    student_exercises_controller: StudentExercisesController = Depends(InternalProvider().get_studentexercises_controller),
+    student_exercises_controller: StudentExercisesController = Depends(
+        InternalProvider().get_studentexercises_controller
+    ),
     document_controller: DocumentsController = Depends(InternalProvider().get_documents_controller),
 ):
-    # Validate input
     if not courseId or not studentId:
         raise BadRequestException(message="Student ID and Course ID are required.")
 
-    # Check if the student is enrolled in the course
     student_course = await student_courses_controller.student_courses_repository.first(
         where_=[and_(StudentCourses.student_id == studentId, StudentCourses.course_id == courseId)]
     )
     if not student_course:
         raise BadRequestException(message="Student is not enrolled in this course.")
 
-    # Fetch lessons for the course
     lessons = await lessons_controller.lessons_repository.get_many(
         where_=[Lessons.course_id == courseId],
         order_={"asc": ["order"]},
     )
 
-    # Fetch student lessons for the student in this course
     lesson_ids = [lesson.id for lesson in lessons]
     student_lessons = await student_lessons_controller.student_lessons_repository.get_many(
-        where_=[and_(
-            StudentLessons.student_id == studentId,
-            StudentLessons.lesson_id.in_(lesson_ids),
-            StudentLessons.lesson_type == LessonType.original
-        )]
+        where_=[
+            and_(
+                StudentLessons.student_id == studentId,
+                StudentLessons.lesson_id.in_(lesson_ids),
+                StudentLessons.lesson_type == LessonType.original,
+            )
+        ]
     )
     student_lessons_by_lesson = {sl.lesson_id: sl for sl in student_lessons}
 
-    # Fetch exercises for the lessons
     exercises = await exercises_controller.exercises_repository.get_many(
         where_=[Exercises.lesson_id.in_(lesson_ids)],
     )
@@ -169,14 +197,12 @@ async def get_course_for_student(
     for exercise in exercises:
         exercises_by_lesson.setdefault(exercise.lesson_id, []).append(exercise)
 
-    # Fetch student exercises for the student
     exercise_ids = [exercise.id for exercise in exercises]
     student_exercises = await student_exercises_controller.student_exercises_repository.get_many(
         where_=[StudentExercises.student_id == studentId, StudentExercises.exercise_id.in_(exercise_ids)],
     )
     student_exercises_by_exercise = {se.exercise_id: se for se in student_exercises}
 
-    # Fetch documents for the lessons
     lesson_documents = await document_controller.documents_repository.get_many(
         where_=[Documents.lesson_id.in_(lesson_ids)],
     )
@@ -184,7 +210,6 @@ async def get_course_for_student(
     for document in lesson_documents:
         documents_by_lesson.setdefault(document.lesson_id, []).append(document)
 
-    # Transform lessons into the response model
     lessons_response: List[GetLessonsResponse] = []
     for lesson in lessons:
         student_lesson = student_lessons_by_lesson.get(lesson.id)
@@ -205,8 +230,11 @@ async def get_course_for_student(
                         id=exercise.id,
                         name=exercise.name,
                         description=exercise.description or "",
-                        status=student_exercises_by_exercise[exercise.id].status
-                        if exercise.id in student_exercises_by_exercise else "New",
+                        status=(
+                            student_exercises_by_exercise[exercise.id].status
+                            if exercise.id in student_exercises_by_exercise
+                            else "New"
+                        ),
                         type=exercise.type,
                     )
                     for exercise in lesson_exercises
@@ -219,11 +247,9 @@ async def get_course_for_student(
                         url=document.document_url,
                     )
                     for document in lesson_documents
-                ]
+                ],
             )
         )
-
-    # Construct and return the response
     response = GetCourseDetailResponse(
         course_id=student_course.course_id,
         student_id=student_course.student_id,
@@ -245,7 +271,6 @@ async def bookmark_lesson(
     if not lessonId or not courseId or not studentId:
         raise BadRequestException(message="Student ID, Course ID, and Lesson ID are required.")
 
-    # Find the existing lesson
     lesson = await student_lessons_controller.student_lessons_repository.first(
         where_=[
             StudentLessons.lesson_id == lessonId,
@@ -257,10 +282,8 @@ async def bookmark_lesson(
     if not lesson:
         raise BadRequestException(message="Lesson not found.")
 
-    # Toggle the bookmark status
     new_bookmark_status = not lesson.bookmark
 
-    # Update with commit
     updated_lesson = await student_lessons_controller.student_lessons_repository.update(
         where_=[
             StudentLessons.lesson_id == lessonId,
@@ -274,7 +297,6 @@ async def bookmark_lesson(
     if not updated_lesson:
         raise Exception("Failed to update lesson bookmark status")
 
-    # Verify the update was successful
     if updated_lesson.bookmark != new_bookmark_status:
         raise Exception("Bookmark status was not updated correctly")
 
@@ -285,7 +307,11 @@ async def bookmark_lesson(
         ),
     )
 
-@router.get("/{courseId}/students/{studentId}/lessons_recommendation/", response_model=Ok[List[GetLessonsRecommendationResponse]])
+
+@router.get(
+    "/{courseId}/students/{studentId}/lessons_recommendation/",
+    response_model=Ok[List[GetLessonsRecommendationResponse]],
+)
 async def get_lessons_recommendation(
     courseId: UUID,
     studentId: UUID,
@@ -302,6 +328,7 @@ async def get_lessons_recommendation(
 
     join_conditions = {
         "lessons": {"type": "left", "alias": "lessons"},
+        "courses": {"type": "left", "alias": "courses"},
     }
 
     recommended_lessons_list = await student_lessons_controller.student_lessons_repository._get_many(
@@ -309,6 +336,7 @@ async def get_lessons_recommendation(
         join_=join_conditions,
         fields=[
             StudentLessons.course_id.label("course_id"),
+            Courses.name.label("courseName"),
             StudentLessons.lesson_id.label("lesson_id"),
             Lessons.title.label("title"),
             Lessons.description.label("description"),
@@ -323,7 +351,8 @@ async def get_lessons_recommendation(
     for lesson in recommended_lessons_list:
         recommended_lessons.append(
             GetLessonsRecommendationResponse(
-                course_id=lesson.course_id, 
+                course_id=lesson.course_id,
+                course_name=lesson.courseName,
                 lesson_id=lesson.lesson_id,
                 title=lesson.title,
                 description=lesson.description or "",
