@@ -1,12 +1,15 @@
 from typing import List
 from core.response import Ok
 from machine.models import *
+from datetime import datetime
 from fastapi import APIRouter, Depends
 from machine.schemas.requests import *
 from machine.controllers.dashboard import *
 from machine.providers import InternalProvider
 from machine.schemas.responses.dashboard import *
 from core.exceptions import NotFoundException, BadRequestException
+from pydantic import ValidationError
+from fastapi import HTTPException
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -70,3 +73,29 @@ async def get_activities(
 
     return Ok(data=activities_data, message="Successfully fetched the recent activities.")
 
+
+@router.post("/activities/", response_model=Ok[bool])
+async def add_activity(
+    request: AddActivityRequest,
+    activities_controller: ActivitiesController = Depends(InternalProvider().get_activities_controller),
+):
+    try:
+        if not request.student_id or not request.type or not request.description:
+            raise BadRequestException(message="Student ID, activity type, and activity description are required.")
+
+        activity = await activities_controller.activities_repository.create(
+            attributes={
+                "student_id": request.student_id,
+                "type": request.type,
+                "description": request.description,
+                "timestamp": datetime.now(),
+            },
+            commit=True,
+        )
+
+        if not activity:
+            raise NotFoundException(message="Failed to add activity.")
+
+        return Ok(data=True, message="Successfully added the activity.")
+    except ValidationError as e:
+        raise HTTPException(status_code=500, detail=f"Validation error: {e.errors()}")
