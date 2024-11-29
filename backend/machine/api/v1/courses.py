@@ -155,6 +155,7 @@ async def get_courses(
 async def get_course_for_student(
     courseId: str,
     studentId: str,
+    courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
     student_courses_controller: StudentCoursesController = Depends(InternalProvider().get_studentcourses_controller),
     lessons_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
     exercises_controller: ExercisesController = Depends(InternalProvider().get_exercises_controller),
@@ -172,7 +173,34 @@ async def get_course_for_student(
     )
     if not student_course:
         raise BadRequestException(message="Student is not enrolled in this course.")
-
+    
+    where_conditions = [StudentCourses.course_id == courseId, StudentCourses.student_id == studentId]
+    join_conditions = {
+        "student_courses": {"type": "left", "alias": "student_courses"},
+        "professor": {"type": "left", "alias": "professor_alias"},
+    }
+    select_fields = [
+        Courses.id.label("course_id"),
+        Courses.name.label("course_name"),
+        Courses.start_date.label("course_start_date"),
+        Courses.end_date.label("course_end_date"),
+        Courses.learning_outcomes.label("course_learning_outcomes"),
+        Courses.professor_id.label("course_professor_id"),
+        Courses.status.label("course_status"),
+        Courses.image_url.label("course_image_url"),
+        User.name.label("user_professor_name"),
+        User.email.label("user_professor_email"),
+        User.avatar_url.label("user_professor_avatar"),
+    ]
+    
+    get_orther_course_data = await courses_controller.courses_repository._get_many(
+        where_=where_conditions,
+        fields=select_fields,
+        join_=join_conditions,
+    )
+    
+    get_orther_course_data = get_orther_course_data[0]
+    
     lessons = await lessons_controller.lessons_repository.get_many(
         where_=[Lessons.course_id == courseId],
         order_={"asc": ["order"]},
@@ -251,8 +279,22 @@ async def get_course_for_student(
             )
         )
     response = GetCourseDetailResponse(
-        course_id=student_course.course_id,
+        course_id=get_orther_course_data.course_id,
+        course_name=get_orther_course_data.course_name,
+        course_start_date=str(get_orther_course_data.course_start_date),
+        course_end_date=str(get_orther_course_data.course_end_date),
+        course_learning_outcomes=get_orther_course_data.course_learning_outcomes,
+        course_professor=ProfessorInformation(
+            professor_id=get_orther_course_data.course_professor_id,
+            professor_name=get_orther_course_data.user_professor_name,
+            professor_email=get_orther_course_data.user_professor_email,
+            professor_avatar=str(get_orther_course_data.user_professor_avatar),
+        ),
+        course_status=get_orther_course_data.course_status,
+        course_image=str(get_orther_course_data.course_image_url),
+        course_percentage_complete=f"{(student_course.completed_lessons / len(lessons) * 100):.0f}",
         student_id=student_course.student_id,
+        course_last_accessed=str(student_course.last_accessed),
         completed_lessons=student_course.completed_lessons,
         time_spent=str(student_course.time_spent),
         assignments_done=student_course.assignments_done,

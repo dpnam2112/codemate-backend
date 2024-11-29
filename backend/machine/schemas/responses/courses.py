@@ -56,7 +56,15 @@ class GetLessonsResponse(BaseModel):
     documents: List[GetDocumentsResponse]
 class GetCourseDetailResponse(BaseModel):
     course_id: UUID
-    student_id: UUID
+    course_name: str
+    course_start_date: str
+    course_end_date: str
+    course_learning_outcomes: List[str]
+    course_professor: ProfessorInformation
+    course_status: StatusType
+    course_image: str
+    course_percentage_complete: str
+    course_last_accessed: str
     completed_lessons: int
     time_spent:str 
     assignments_done: int
