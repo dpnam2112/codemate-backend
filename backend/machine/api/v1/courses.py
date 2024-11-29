@@ -3,10 +3,11 @@ from machine.models import *
 from core.response import Ok
 from machine.controllers import *
 from sqlalchemy.orm import aliased
-from sqlalchemy.sql import func, and_
+from sqlalchemy import literal_column
 from fastapi import APIRouter, Depends
 from machine.schemas.requests import *
 from core.repository.enum import UserRole
+from sqlalchemy.sql import func, and_, or_
 from machine.providers import InternalProvider
 from machine.schemas.responses.courses import *
 from core.exceptions import BadRequestException, NotFoundException
@@ -23,6 +24,8 @@ async def get_courses(
     if not request.student_id:
         raise BadRequestException(message="Student ID is required.")
     where_conditions = [StudentCourses.student_id == request.student_id]
+
+
     select_fields = [
         Courses.id.label("id"),
     ]
@@ -41,6 +44,14 @@ async def get_courses(
     ProfessorUser = aliased(User)
 
     where_conditions = [StudentCourses.course_id.in_(course_ids)]
+    
+    if request.search_query:
+        search_condition = or_(
+            Courses.name.ilike(f"%{request.search_query}%"),
+            ProfessorUser.name.ilike(f"%{request.search_query}%"),
+        )
+        where_conditions.append(search_condition)
+    
     join_conditions = {
         "student_courses": {"type": "left", "alias": "student_courses"},
         "courses": {"type": "left", "alias": "courses"},
@@ -112,7 +123,7 @@ async def get_courses(
                 "name": course.name,
                 "start_date": str(course.start_date),
                 "end_date": str(course.end_date),
-                "student_list": [], 
+                "student_list": [],
                 "learning_outcomes": course.learning_outcomes,
                 "professor": ProfessorInformation(
                     professor_id=course.professor_id,
@@ -126,7 +137,7 @@ async def get_courses(
                 "last_accessed": str(course.last_accessed),
             }
 
-        course_map[course_id]["student_list"].append( 
+        course_map[course_id]["student_list"].append(
             StudentList(
                 student_id=course.student_id,
                 student_name=course.student_name,
@@ -134,19 +145,23 @@ async def get_courses(
                 student_avatar=str(course.student_avatar),
             )
         )
-
-    total_rows = len(courses)
+    response_content = [GetCoursesResponse(**course_data) for course_data in course_map.values()]
+    total_rows = len(response_content)
     total_pages = total_rows // request.page_size
     if total_pages == 0:
         total_pages = 1
-
-    response = Ok(data=GetCoursesPaginatedResponse(
-        content=[GetCoursesResponse(**course_data) for course_data in course_map.values()],
-        currentPage=(request.offset // request.page_size) + 1,
-        pageSize=request.page_size,
-        totalRows=total_rows,
-        totalPages=total_pages,
-    ), message="Successfully fetched the courses.")
+    
+    response_content = response_content[request.offset : request.offset + request.page_size]
+    response = Ok(
+        data=GetCoursesPaginatedResponse(
+            content=response_content,
+            currentPage=(request.offset // request.page_size) + 1,
+            pageSize=request.page_size,
+            totalRows=total_rows,
+            totalPages=total_pages,
+        ),
+        message="Successfully fetched the courses.",
+    )
 
     return response
 
@@ -173,7 +188,7 @@ async def get_course_for_student(
     )
     if not student_course:
         raise BadRequestException(message="Student is not enrolled in this course.")
-    
+
     where_conditions = [StudentCourses.course_id == courseId, StudentCourses.student_id == studentId]
     join_conditions = {
         "student_courses": {"type": "left", "alias": "student_courses"},
@@ -192,15 +207,15 @@ async def get_course_for_student(
         User.email.label("user_professor_email"),
         User.avatar_url.label("user_professor_avatar"),
     ]
-    
+
     get_orther_course_data = await courses_controller.courses_repository._get_many(
         where_=where_conditions,
         fields=select_fields,
         join_=join_conditions,
     )
-    
+
     get_orther_course_data = get_orther_course_data[0]
-    
+
     lessons = await lessons_controller.lessons_repository.get_many(
         where_=[Lessons.course_id == courseId],
         order_={"asc": ["order"]},
