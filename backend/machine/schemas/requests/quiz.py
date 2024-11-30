@@ -1,7 +1,7 @@
-from typing import List
-from uuid import UUID
+from typing import List, Optional
 from pydantic import BaseModel
+from uuid import UUID
 
 class QuizAnswerRequest(BaseModel):
-    quiz_id: UUID
-    answers: List[int] 
+    quizId: UUID
+    answers: Optional[List[int]] = None

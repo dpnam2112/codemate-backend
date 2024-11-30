@@ -16,9 +16,9 @@ class ActivityType(str, Enum):
     badge_earned = "badge_earned"
 
 class StatusType(str, Enum):
-    new = "New"
-    in_progress = "In Progress"
-    completed = "Completed"
+    new = "new"
+    in_progress = "in Progress"
+    completed = "completed"
 
 
 class UserRole(Enum):

@@ -93,14 +93,15 @@ async def get_quiz_exercise(
     return Ok(data=response_data, message="Successfully fetched quiz details.")
 
 
-@router.put("/{moduleId}/quizzes/{quiz_id}/submit", response_model=Ok[QuizScoreResponse])
+@router.put("/{moduleId}/quizzes/{quizId}/submit", response_model=Ok[QuizScoreResponse])
 async def submit_quiz_answers(
-    quiz_id: UUID,
+    moduleId: UUID,
+    quizId: UUID,
     request: QuizAnswerRequest,
     quizexercises_controller: QuizExercisesController = Depends(InternalProvider().get_quizexercises_controller),
 ):  
     quiz = await quizexercises_controller.quiz_exercises_repository.first(
-        where_=[QuizExercises.id == quiz_id],
+        where_=[QuizExercises.id == quizId],
     )
 
     if not quiz:
@@ -127,13 +128,13 @@ async def submit_quiz_answers(
     quiz.score = (correct_count / len(quiz.questions)) * 100 
     quiz.status = StatusType.completed
     await quizexercises_controller.quiz_exercises_repository.update(
-        where_=[QuizExercises.id == quiz_id],
+        where_=[QuizExercises.id == quizId],
         attributes={"questions": quiz.questions, "score": quiz.score, "status": quiz.status},
         commit=True, 
     )
 
     response = QuizScoreResponse(
-        quiz_id=quiz_id,
+        quiz_id=quizId,
         total_questions=len(quiz.questions),
         correct_answers=correct_count,
         score=quiz.score,
@@ -141,6 +142,34 @@ async def submit_quiz_answers(
     )
 
     return Ok(data=response, message="Quiz answers submitted successfully.")
+
+@router.put("/{moduleId}/quizzes/{quizId}/clear", response_model=Ok[bool])
+async def clear_quiz_answers(
+    moduleId: UUID,
+    quizId: UUID,
+    quizexercises_controller: QuizExercisesController = Depends(InternalProvider().get_quizexercises_controller),
+):
+    quiz = await quizexercises_controller.quiz_exercises_repository.first(
+        where_=[QuizExercises.id == quizId],
+    )
+    if not quiz:
+        raise NotFoundException(message="Quiz not found for the given ID.")
+
+    for question in quiz.questions:
+        question['user_choice'] = None
+
+    quiz.score = 0 
+    quiz.status = StatusType.in_progress
+
+    await quizexercises_controller.quiz_exercises_repository.update(
+        where_=[QuizExercises.id == quizId],
+        attributes={"questions": quiz.questions, "score": quiz.score, "status": quiz.status},
+        commit=True,
+    )
+
+    return Ok(data=True, message="Quiz answers cleared and reset successfully.")
+
+
 @router.get("/{moduleId}/documents", response_model=Ok[DocumentResponse])
 async def get_document(
     moduleId: UUID,
