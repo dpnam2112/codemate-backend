@@ -17,9 +17,3 @@ class InternalProvider:
 
     # DB Session Keeper
     db_session_keeper = DB_MANAGER[Dialect.POSTGRES]
-
-    # Repositories
-    user_repository = partial(repo.UserRepository, model=modl.User)
-
-    def get_user_controller(self, db_session=Depends(db_session_keeper.get_session)):
-        return ctrl.UserController(user_repository=self.user_repository(db_session=db_session))
