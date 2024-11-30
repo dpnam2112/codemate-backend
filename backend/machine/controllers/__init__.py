@@ -15,6 +15,6 @@ __all__ = [
     "StudentExercisesController",
     "ModulesController",
     "QuizExercisesController",
-    "DocumentsController"
+    "DocumentsController",
     "RecommendDocumentsController",
 ]

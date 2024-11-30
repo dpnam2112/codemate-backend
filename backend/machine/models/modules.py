@@ -14,4 +14,4 @@ class Modules(Base):
     
     lesson = relationship("Lessons", back_populates="modules")
     quizzes = relationship("QuizExercises", back_populates="module")
-    documents = relationship("Documents", back_populates="module")
+    recommendDocuments = relationship("RecommendDocuments", back_populates="module")

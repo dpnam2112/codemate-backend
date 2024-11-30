@@ -14,5 +14,5 @@ class RecommendDocuments(Base):
     module_id = Column(UUID, ForeignKey("modules.id"), nullable=False)
     content = Column(MutableDict.as_mutable(JSONB), nullable=False)
     
-    module = relationship("Modules", back_populates="documents")
+    module = relationship("Modules", back_populates="recommendDocuments")
     
