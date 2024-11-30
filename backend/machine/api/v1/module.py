@@ -173,14 +173,14 @@ async def clear_quiz_answers(
 @router.get("/{moduleId}/documents", response_model=Ok[DocumentResponse])
 async def get_document(
     moduleId: UUID,
-    documents_controller: DocumentsController = Depends(InternalProvider().get_documents_controller),
+    recommend_documents_controller: RecommendDocumentsController = Depends(InternalProvider().get_recommenddocuments_controller),
 ):
     if not moduleId:
         raise BadRequestException(message="Document ID is required.")
 
-    document = await documents_controller.documents_repository.first(
-        where_=[Documents.module_id == moduleId],
-        relations=[Documents.module], 
+    document = await recommend_documents_controller.recommend_documents_repository.first(
+        where_=[RecommendDocuments.module_id == moduleId],
+        relations=[RecommendDocuments.module], 
     )
 
     if not document:

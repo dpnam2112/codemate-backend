@@ -11,3 +11,4 @@ from .student_exercises import StudentExercises
 from .documents import Documents
 from .modules import Modules
 from .quiz_exercises import QuizExercises
+from .recommend_documents import RecommendDocuments

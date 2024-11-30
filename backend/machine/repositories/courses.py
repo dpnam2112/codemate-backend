@@ -1,8 +1,6 @@
 from sqlalchemy import Select
 from core.repository.base import BaseRepository
 from machine.models import Courses, StudentCourses, User, Lessons
-from core.repository.enum import UserRole
-from typing import Optional, Dict
 
 class CoursesRepository(BaseRepository[Courses]):
     def _join_student_courses(self, query: Select, join_params: dict) -> Select:

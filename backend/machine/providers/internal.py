@@ -32,12 +32,14 @@ class InternalProvider:
     student_lessons_repository = partial(repo.StudentLessonsRepository, model=modl.StudentLessons)
     
     student_exercises_repository = partial(repo.StudentExercisesRepository, model=modl.StudentExercises)
+    
+    documents_repository = partial(repo.DocumentsRepository, model=modl.Documents)
 
     modules_repository = partial(repo.ModulesRepository, model=modl.Modules)
     
     quiz_exercises_repository = partial(repo.QuizExercisesRepository, model=modl.QuizExercises)
     
-    documents_repository = partial(repo.DocumentsRepository, model=modl.Documents)
+    recommend_documents_repository = partial(repo.RecommendDocumentsRepository, model=modl.RecommendDocuments)
     def get_user_controller(self, db_session=Depends(db_session_keeper.get_session)):
         return ctrl.UserController(user_repository=self.user_repository(db_session=db_session))
 
@@ -89,4 +91,9 @@ class InternalProvider:
     def get_documents_controller(self, db_session=Depends(db_session_keeper.get_session)):
         return ctrl.DocumentsController(
             documents_repository=self.documents_repository(db_session=db_session)
+        )
+    
+    def get_recommenddocuments_controller(self, db_session=Depends(db_session_keeper.get_session)):
+        return ctrl.RecommendDocumentsController(
+            recommend_documents_repository=self.recommend_documents_repository(db_session=db_session)
         )
