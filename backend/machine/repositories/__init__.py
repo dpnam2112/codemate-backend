@@ -10,6 +10,8 @@ from .documents import DocumentsRepository
 from .modules import ModulesRepository
 from .quiz_exercises import QuizExercisesRepository
 from .recommend_documents import RecommendDocumentsRepository
+from .learning_paths import LearningPathsRepository
+from .recommend_lessons import RecommendLessonsRepository
 __all__ = [
     "UserRepository",
     "StudentCoursesRepository",
@@ -23,4 +25,6 @@ __all__ = [
     "ModulesRepository",
     "QuizExercisesRepository",
     "RecommendDocumentsRepository",
+    "LearningPathsRepository",
+    "RecommendLessonsRepository",
 ]
