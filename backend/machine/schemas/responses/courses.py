@@ -48,10 +48,8 @@ class GetLessonsResponse(BaseModel):
     id: UUID
     title: str
     description: str 
-    lesson_type: LessonType
     bookmark: bool
     order: int
-    status: StatusType
     exercises: List[GetExercisesResponse]
     documents: List[GetDocumentsResponse]
 class GetCourseDetailResponse(BaseModel):

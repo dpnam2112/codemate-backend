@@ -14,6 +14,6 @@ class RecommendLessons(Base):
     explain = Column(Text, nullable=True)
     status = Column(Enum(StatusType), default="new", nullable=False)
     
-    lesson = relationship("Lessons", back_populates="recommend_lessons")
+    lesson = relationship("Lessons", back_populates="recommend_lesson")
     learning_path = relationship("LearningPaths", back_populates="recommend_lessons")
-    modules = relationship("Modules", back_populates="lesson")
+    modules = relationship("Modules", back_populates="recommend_lesson")
