@@ -87,6 +87,7 @@ async def get_quiz_exercise(
         status=quiz.status,
         difficulty=quiz.difficulty,
         score=quiz.score,
+        max_score=quiz.max_score,
         questions=parsed_questions,
     )
 

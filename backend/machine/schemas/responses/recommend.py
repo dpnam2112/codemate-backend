@@ -22,7 +22,8 @@ class QuizExerciseResponse(BaseModel):
     name: str
     status: StatusType
     difficulty: DifficultyLevel
-    score: float = None  
+    score: Optional[float] = None  
+    max_score: float
     questions: List[QuizQuestionResponse]
 class QuizListResponse(BaseModel):
     id: UUID
