@@ -21,3 +21,4 @@ class User(Base, TimestampMixin):
     student_courses = relationship("StudentCourses", back_populates="student")
     student_lessons = relationship("StudentLessons", back_populates="student")  
     student_exercises = relationship("StudentExercises", back_populates="student")
+    learning_paths = relationship("LearningPaths", back_populates="student")

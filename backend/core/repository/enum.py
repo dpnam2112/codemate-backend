@@ -16,9 +16,9 @@ class ActivityType(str, Enum):
     badge_earned = "badge_earned"
 
 class StatusType(str, Enum):
-    new = "New"
-    in_progress = "In Progress"
-    completed = "Completed"
+    new = "new"
+    in_progress = "in Progress"
+    completed = "completed"
 
 
 class UserRole(Enum):
@@ -34,6 +34,10 @@ class LessonType(Enum):
     original = "original"  
     recommended = "recommended"
 
+class DifficultyLevel(Enum):
+    easy = "easy"
+    medium = "medium"
+    hard = "hard"
 class DocumentType(Enum):
      csv = "CSV"
      pdf =  "PDF"

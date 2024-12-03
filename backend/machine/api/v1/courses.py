@@ -227,7 +227,6 @@ async def get_course_for_student(
             and_(
                 StudentLessons.student_id == studentId,
                 StudentLessons.lesson_id.in_(lesson_ids),
-                StudentLessons.lesson_type == LessonType.original,
             )
         ]
     )
@@ -264,10 +263,8 @@ async def get_course_for_student(
                 id=lesson.id,
                 title=lesson.title,
                 description=lesson.description or "",
-                lesson_type=student_lesson.lesson_type if student_lesson else LessonType.original,
                 bookmark=student_lesson.bookmark if student_lesson else False,
                 order=lesson.order,
-                status=student_lesson.status if student_lesson else "New",
                 exercises=[
                     GetExercisesResponse(
                         id=exercise.id,
@@ -364,7 +361,6 @@ async def bookmark_lesson(
         ),
     )
 
-
 @router.get(
     "/{courseId}/students/{studentId}/lessons_recommendation/",
     response_model=Ok[List[GetLessonsRecommendationResponse]],
@@ -372,52 +368,54 @@ async def bookmark_lesson(
 async def get_lessons_recommendation(
     courseId: UUID,
     studentId: UUID,
-    student_lessons_controller: StudentLessonsController = Depends(InternalProvider().get_studentlessons_controller),
+    learning_paths_controller: LearningPathsController = Depends(InternalProvider().get_learningpaths_controller),
+    recommend_lessons_controller: RecommendLessonsController = Depends(InternalProvider().get_recommendlessons_controller),
+    lessons_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
 ):
     if not courseId or not studentId:
         raise BadRequestException(message="Both Student ID and Course ID are required.")
-
-    where_conditions = [
-        StudentLessons.student_id == studentId,
-        StudentLessons.course_id == courseId,
-        StudentLessons.lesson_type == LessonType.recommended,
+    
+    # Tìm Learning Path dựa trên Student ID và Course ID
+    where_learning_path_conditions = [
+        LearningPaths.student_id == studentId,
+        LearningPaths.course_id == courseId,
     ]
-
-    join_conditions = {
-        "lessons": {"type": "left", "alias": "lessons"},
-        "courses": {"type": "left", "alias": "courses"},
-    }
-
-    recommended_lessons_list = await student_lessons_controller.student_lessons_repository._get_many(
-        where_=where_conditions,
-        join_=join_conditions,
-        fields=[
-            StudentLessons.course_id.label("course_id"),
-            Courses.name.label("courseName"),
-            StudentLessons.lesson_id.label("lesson_id"),
-            Lessons.title.label("title"),
-            Lessons.description.label("description"),
-            Lessons.order.label("order"),
-            StudentLessons.lesson_type.label("lesson_type"),
-            StudentLessons.bookmark.label("bookmark"),
-            StudentLessons.status.label("status"),
-        ],
+    learning_path = await learning_paths_controller.learning_paths_repository.first(
+        where_=where_learning_path_conditions,
+        relations=[LearningPaths.recommend_lessons, LearningPaths.course],
     )
 
+    if not learning_path:
+        raise NotFoundException(message="Learning path not found for the given student and course.")
+    
+    # Truy xuất thông tin từ RecommendLessons
+    recommend_lessons = learning_path.recommend_lessons
+    course_name = learning_path.course.name if learning_path.course else "Unknown Course"
+
+    if not recommend_lessons:
+        raise NotFoundException(message="No recommended lessons found for the given learning path.")
+    
+    # Chuẩn bị dữ liệu trả về
     recommended_lessons: List[GetLessonsRecommendationResponse] = []
-    for lesson in recommended_lessons_list:
+    for recommend_lesson in recommend_lessons:
+        # Lấy thông tin từ bảng Lessons
+        lesson = await lessons_controller.lessons_repository.first(
+            where_=[Lessons.id == recommend_lesson.id]
+        )
+        if not lesson:
+            continue
+
         recommended_lessons.append(
             GetLessonsRecommendationResponse(
-                course_id=lesson.course_id,
-                course_name=lesson.courseName,
-                lesson_id=lesson.lesson_id,
+                course_id=courseId,
+                course_name=course_name,
+                lesson_id=lesson.id,
                 title=lesson.title,
                 description=lesson.description or "",
-                lesson_type=lesson.lesson_type,
-                bookmark=lesson.bookmark,
                 order=lesson.order,
-                status=lesson.status,
+                bookmark=lesson.bookmark if hasattr(lesson, "bookmark") else False,
+                status=recommend_lesson.status,
             )
         )
-
+    
     return Ok(data=recommended_lessons, message="Successfully fetched the recommended lessons.")

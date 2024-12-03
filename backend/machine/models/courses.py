@@ -22,3 +22,4 @@ class Courses(Base, TimestampMixin):
     professor = relationship("User", back_populates="courses")
     lessons = relationship("Lessons", back_populates="course")
     student_lessons = relationship("StudentLessons", back_populates="course")
+    learning_paths = relationship("LearningPaths", back_populates="course")
