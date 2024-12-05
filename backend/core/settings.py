@@ -1,7 +1,9 @@
 import os
 from typing import Literal
-
 from pydantic_settings import BaseSettings
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 class CoreSettings(BaseSettings):
@@ -18,12 +20,12 @@ class TestSettings(BaseSettings):
 
 
 class DatabaseSettings(BaseSettings):
-    SQLALCHEMY_POSTGRES_URI: str = "postgresql+asyncpg://postgres:chinchin@127.0.0.1:5432/fastapi_seed"
-    SQLALCHEMY_ECHO: bool = False
+    SQLALCHEMY_POSTGRES_URI: str
+    SQLALCHEMY_ECHO: bool
 
 
 class RedisSettings(BaseSettings):
-    REDIS_URL: str = "redis://127.0.0.1:6379/0"
+    REDIS_URL: str
 
 
 class Settings(
@@ -31,10 +33,12 @@ class Settings(
     TestSettings,
     DatabaseSettings,
     RedisSettings,
-): ...
+):
+    pass
 
 
-class DevelopmentSettings(Settings): ...
+class DevelopmentSettings(Settings):
+    pass
 
 
 class ProductionSettings(Settings):
