@@ -32,6 +32,7 @@ tenacity = "^9.0.0"
 dramatiq = "^1.17.0"
 python-dotenv = "^1.0.1"
 uvicorn = "^0.32.1"
+gunicorn = "^23.0.0"
 
 
 [build-system]
