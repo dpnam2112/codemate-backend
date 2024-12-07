@@ -78,6 +78,3 @@ This project uses [Poetry](https://python-poetry.org/) for dependency management
     poetry run python main.py
     ```
 The application will be available at http://127.0.0.1:8080 / http://localhost:8080 
-## Deployment
-
-The project has been deployed on Render. You can access it at [EduMind on Render](https://edumind.onrender.com).
