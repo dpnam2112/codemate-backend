@@ -2,10 +2,6 @@
 
 EduMind (CodeMate) is a FastAPI-based application designed to manage educational content and user interactions. This project is structured to follow best practices in software development, ensuring maintainability, scalability, and testability. 
 
-## Folder Structure
-
-EduMind/ ├── backend/ │ ├── core/ │ │ ├── db.py │ │ ├── exceptions.py │ │ ├── fastapi/ │ │ │ └── middlewares/ │ │ │ └── sqlalchemy.py │ │ ├── repository/ │ │ │ └── enum.py │ │ ├── response/ │ │ │ └── api_response.py │ │ └── settings.py │ ├── machine/ │ │ ├── api/ │ │ │ ├── init.py │ │ │ └── v1/ │ │ │ ├── init.py │ │ │ ├── courses.py │ │ │ └── dashboard.py │ │ ├── controllers/ │ │ │ └── courses.py │ │ ├── models/ │ │ │ ├── init.py │ │ │ ├── courses.py │ │ │ └── student_courses.py │ │ ├── providers/ │ │ │ └── internal.py │ │ ├── repositories/ │ │ │ └── courses.py │ │ ├── schemas/ │ │ │ ├── requests/ │ │ │ │ └── courses.py │ │ │ └── responses/ │ │ │ └── courses.py │ │ └── server.py │ ├── main.py │ ├── alembic.ini │ ├── migrations/ │ │ ├── env.py │ │ ├── script.py.mako │ │ └── versions/ │ └── pyproject.toml
-
 ## Folder Description
 
 - **backend/core**: Contains core functionalities and configurations such as database setup, custom exceptions, and settings.
