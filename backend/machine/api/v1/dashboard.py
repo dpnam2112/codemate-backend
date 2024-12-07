@@ -1,15 +1,15 @@
 from typing import List
 from core.response import Ok
+import logging
 from machine.models import *
 from datetime import datetime
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from machine.schemas.requests import *
 from machine.controllers.dashboard import *
 from machine.providers import InternalProvider
 from machine.schemas.responses.dashboard import *
 from core.exceptions import NotFoundException, BadRequestException
 from pydantic import ValidationError
-from fastapi import HTTPException
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -19,23 +19,26 @@ async def get_welcome_message(
     studentId: UUID,
     studentcourses_controller: StudentCoursesController = Depends(InternalProvider().get_studentcourses_controller),
 ):
-    if not studentId:
-        raise BadRequestException(message="Student ID is required.")
+    try:
+        if not studentId:
+            raise BadRequestException(message="Student ID is required.")
 
-    recent_course = await studentcourses_controller.student_courses_repository.first(
-        where_=[StudentCourses.student_id == studentId],
-        order_={"desc": [{"field": "last_accessed", "model_class": StudentCourses}]},
-        relations=[StudentCourses.course],
-    )
+        recent_course = await studentcourses_controller.student_courses_repository.first(
+            where_=[StudentCourses.student_id == studentId],
+            order_={"desc": [{"field": "last_accessed", "model_class": StudentCourses}]},
+            relations=[StudentCourses.course],
+        )
 
-    if not recent_course:
-        raise NotFoundException(message="No course found for the given student ID.")
+        if not recent_course:
+            raise NotFoundException(message="No course found for the given student ID.")
 
-    data = WelcomeMessageResponse(
-        course=recent_course.course.name, course_id=recent_course.course.id, last_accessed=recent_course.last_accessed
-    )
-    return Ok(data=data, message="Successfully fetched the welcome message.")
-
+        data = WelcomeMessageResponse(
+            course=recent_course.course.name, course_id=recent_course.course.id, last_accessed=recent_course.last_accessed
+        )
+        return Ok(data=data, message="Successfully fetched the welcome message.")
+    except Exception as e:
+        logging.error(f"Error fetching welcome message for {studentId}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 @router.post("/activities", response_model=Ok[List[GetRecentActivitiesResponse]])
 async def get_activities(
