@@ -1,12 +1,11 @@
 import re
 from contextlib import asynccontextmanager
-
 import toml
 from fastapi import FastAPI, Request
 from fastapi.middleware import Middleware
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-
+from fastapi.exceptions import RequestValidationError
 import core.utils as ut
 from core.cache import Cache, DefaultKeyMaker, RedisBackend
 from core.exceptions import CustomException
@@ -16,24 +15,71 @@ from core.response import Error
 from core.settings import settings
 from machine.api import router
 
+from core.exceptions.base import *
+from core.response.api_response import Error
+
 
 def init_routers(app_: FastAPI) -> None:
     app_.include_router(router)
 
-
 def init_listeners(app_: FastAPI) -> None:
+    """
+    Register custom exception handlers.
+    """
+
     @app_.exception_handler(CustomException)
     async def custom_exception_handler(request: Request, exc: CustomException):
+        message_code = re.sub(r'(?<!^)(?=[A-Z])', '_', exc.__class__.__name__).upper()
         return JSONResponse(
-            status_code=exc.code,
-            content=Error(error_code=exc.error_code, message=exc.message).model_dump(),
+            status_code=exc.code, 
+            content=Error(
+                error_code=exc.code, 
+                message=exc.message,  
+                message_code=message_code
+            ).model_dump()
         )
+        
+    @app_.exception_handler(BadRequestException)
+    async def bad_request_exception_handler(request: Request, exc: BadRequestException):
+        return await custom_exception_handler(request, exc)
+
+    @app_.exception_handler(NotFoundException)
+    async def not_found_exception_handler(request: Request, exc: NotFoundException):
+        return await custom_exception_handler(request, exc)
+
+    @app_.exception_handler(UnauthorizedException)
+    async def unauthorized_exception_handler(request: Request, exc: UnauthorizedException):
+        return await custom_exception_handler(request, exc)
+
+    @app_.exception_handler(ForbiddenException)
+    async def forbidden_exception_handler(request: Request, exc: ForbiddenException):
+        return await custom_exception_handler(request, exc)
+
+    @app_.exception_handler(SystemException)
+    async def system_exception_handler(request: Request, exc: SystemException):
+        return await custom_exception_handler(request, exc)
 
     @app_.exception_handler(Exception)
-    async def exception_handler(request: Request, exc: Exception):
+    async def general_exception_handler(request: Request, exc: Exception):
         return JSONResponse(
             status_code=500,
-            content=Error(error_code=500, message="Internal Server Error").model_dump(),
+            content=Error(
+                error_code=500,
+                message="Internal Server Error",
+                message_code="INTERNAL_SERVER_ERROR",
+            ).model_dump()
+        )
+    @app_.exception_handler(RequestValidationError)
+    async def validation_exception_handler(request: Request, exc: RequestValidationError):
+        error_details = exc.errors()
+
+        return JSONResponse(
+            status_code=400,  
+            content=Error(
+                error_code=400,
+                message="Validation error occurred",
+                message_code="VALIDATION_ERROR",
+            ).model_dump() 
         )
 
 

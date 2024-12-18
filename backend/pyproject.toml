@@ -38,6 +38,12 @@ google-generativeai = "^0.8.3"
 numpy = "1.26.4"
 scikit-learn = "^1.5.2"
 ujson = "^5.10.0"
+python-dotenv = "^1.0.1"
+uvicorn = "^0.32.1"
+gunicorn = "^23.0.0"
+poetry-plugin-export = "^1.8.0"
+ujson = "^5.10.0"
+psycopg2 = "^2.9.10"
 
 
 [build-system]
