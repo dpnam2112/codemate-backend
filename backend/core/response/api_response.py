@@ -1,30 +1,31 @@
-from typing import Generic, TypeVar
-
+from typing import Generic, Optional, TypeVar
 from pydantic import BaseModel
 
 T = TypeVar("T")
 
-
-class Ok(BaseModel, Generic[T]):
-    status: str = "success"
-    data: T
-
-    def __init__(self, data: T):
-        super().__init__(data=data)
-
-    @staticmethod
-    def format(data):
-        return {"status": "success", "data": data}
-
-
-class ErrorInfo(BaseModel):
-    error_code: int
+class BaseResponse(BaseModel, Generic[T]):
+    isSuccess: bool
+    errorCode: int
     message: str
+    messageCode: str
+    data: Optional[T] = None
 
 
-class Error(BaseModel):
-    status: str = "error"
-    error: ErrorInfo
+class Ok(BaseResponse[T]):
+    isSuccess: bool = True
+    errorCode: int = 0
+    message: str = "Operation successful"
+    messageCode: str = "SUCCESS"
 
-    def __init__(self, error_code: int, message: str):
-        super().__init__(error=ErrorInfo(error_code=error_code, message=message))
+    def __init__(self, data: T, **kwargs):
+        super().__init__(data=data, **kwargs)
+
+
+class Error(BaseResponse[None]):
+    isSuccess: bool = False
+    errorCode: int
+    message: str
+    messageCode: str = "ERROR"
+
+    def __init__(self, error_code: int, message: str, **kwargs):
+        super().__init__(errorCode=error_code, message=message, **kwargs)

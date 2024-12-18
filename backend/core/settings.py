@@ -1,7 +1,9 @@
 import os
 from typing import Literal
-
 from pydantic_settings import BaseSettings
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 class CoreSettings(BaseSettings):
@@ -23,7 +25,7 @@ class DatabaseSettings(BaseSettings):
 
 
 class RedisSettings(BaseSettings):
-    REDIS_URL: str = "redis://127.0.0.1:6379/0"
+    REDIS_URL: str = "http://localhost:6379"
 
 class Neo4jSettings(BaseSettings):
     NEO4J_URI: str = "bolt://localhost:7687"
@@ -48,7 +50,8 @@ class Settings(
 ): ...
 
 
-class DevelopmentSettings(Settings): ...
+class DevelopmentSettings(Settings):
+    pass
 
 
 class ProductionSettings(Settings):

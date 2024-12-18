@@ -7,7 +7,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-
+from typing import List, Dict
 from core.db import Base
 from core.exceptions import SystemException
 from core.logger import syslog
@@ -485,6 +485,32 @@ class BaseRepository(Generic[ModelType]):
         )
         result = await self.session.scalars(query)
         return result.all()
+    
+    async def _get_many(
+        self,
+        skip: Optional[int] = None,
+        limit: Optional[int] = None,
+        fields: Optional[list] = None,
+        distinct_: Optional[list] = None,
+        join_: Optional[set[str]] = None,
+        order_: Optional[dict] = None,
+        where_: Optional[list] = None,
+        group_by_: Optional[list] = None,
+    ) -> List[Dict]:
+        """Retrieves a list of records based on various query parameters."""
+        query = await self._query(
+            skip=skip,
+            limit=limit,
+            fields=fields,
+            distinct_=distinct_,
+            join_=join_,
+            order_=order_,
+            where_=where_,
+            group_by_=group_by_,
+        )
+
+        result = await self.session.execute(query)
+        return result.mappings().all()
 
     @safeguard_db_ops()
     async def first(
@@ -559,4 +585,5 @@ class BaseRepository(Generic[ModelType]):
                 query = query.where(condition)
         query = query.execution_options(synchronize_session=synchronize_session.value)
         await self.session.execute(query)
+        
         return del_instances
