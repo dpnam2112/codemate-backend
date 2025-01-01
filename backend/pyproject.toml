@@ -1,8 +1,8 @@
 [tool.poetry]
-name = "fastapi-seed"
+name = "edumind-api"
 version = "0.1.0"
-description = "FastAPI Boilerplate"
-authors = ["loctvl842 <loclepnvx@gmail.com>"]
+description = "API for the EduMind - my graduation project"
+authors = ["dpnam2112 <dpnam2112@gmail.com>"]
 license = "MIT"
 readme = "README.md"
 
@@ -42,7 +42,6 @@ python-dotenv = "^1.0.1"
 uvicorn = "^0.32.1"
 gunicorn = "^23.0.0"
 poetry-plugin-export = "^1.8.0"
-ujson = "^5.10.0"
 psycopg2 = "^2.9.10"
 
 
