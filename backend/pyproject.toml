@@ -42,7 +42,7 @@ python-dotenv = "^1.0.1"
 uvicorn = "^0.32.1"
 gunicorn = "^23.0.0"
 poetry-plugin-export = "^1.8.0"
-psycopg2 = "^2.9.10"
+psycopg = "^3.2.3"
 
 
 [build-system]
