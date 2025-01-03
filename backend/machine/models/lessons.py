@@ -14,6 +14,7 @@ class Lessons(Base):
     title = Column(String, nullable=False)
     description = Column(String, nullable=True)
     order = Column(Integer, nullable=False) 
+    learning_outcomes = Column(ARRAY(Text), nullable=True)
 
     course = relationship("Courses", back_populates="lessons")
     exercises = relationship("Exercises", back_populates="lesson")

@@ -33,7 +33,7 @@ async def recommend_lesson(
     response_data = RecommendLessonResponse(
         lesson_id=recommend_lesson.id,
         name=lesson.title,
-        learning_outcomes=[outcome for outcome in recommend_lesson.learning_outcomes],
+        learning_outcomes=[outcome for outcome in lesson.learning_outcomes],
         description=lesson.description,
         progress=recommend_lesson.progress,
         status=recommend_lesson.status,
