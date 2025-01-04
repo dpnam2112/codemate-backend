@@ -1,3 +1,4 @@
+from uuid import UUID
 from pydantic import BaseModel, Field
 from typing import List
 
@@ -45,3 +46,8 @@ class AddLearningResource(BaseModel):
     concepts: List[LearningResourceConceptRelationship] = Field(..., description="Concepts relating to the learning resource.")
     learning_outcomes: List[str] = Field(..., description="Learning outcomes that learners will achieve after completing this learning resource")
 
+class RecommenderItem(BaseModel):
+    id: str = Field(..., description="id of the recommended learning resource.")
+    code: str = Field(..., description="learning resource's code.")
+    description: str = Field(..., description="a short description for the learning resource.")
+    explanation: str = Field(..., description="explanation for why this learning resource is recommended to the learner based on her profile.")

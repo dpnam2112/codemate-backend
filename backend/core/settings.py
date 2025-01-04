@@ -25,7 +25,7 @@ class DatabaseSettings(BaseSettings):
 
 
 class RedisSettings(BaseSettings):
-    REDIS_URL: str = "http://localhost:6379"
+    REDIS_URL: str = "redis://localhost:6379"
 
 class Neo4jSettings(BaseSettings):
     NEO4J_URI: str = "bolt://localhost:7687"
@@ -33,7 +33,7 @@ class Neo4jSettings(BaseSettings):
     NEO4J_PASSWORD: str = "password"
 
 class GoogleGenAISettings(BaseSettings):
-    GOOGLE_GENAI_API_KEY: str = ""
+    GOOGLE_GENAI_API_KEY: str
 
 class OpenAISettings(BaseSettings):
     OPENAI_API_KEY: str = ""
@@ -59,12 +59,12 @@ class ProductionSettings(Settings):
 
 
 def get_settings() -> Settings:
+    source = {"_env_file": ".env", "_env_file_encoding": "utf-8"}
     env = os.getenv("ENV", "development")
     setting_types = {
-        "development": DevelopmentSettings(),
-        "production": ProductionSettings(),
+        "development": DevelopmentSettings(**source),
+        "production": ProductionSettings(**source),
     }
     return setting_types[env]
-
 
 settings = get_settings()

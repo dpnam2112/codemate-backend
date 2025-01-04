@@ -7,6 +7,7 @@ from langchain_core.embeddings import Embeddings
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 from core.settings import settings
 
 class EmbeddingsModelName(StrEnum):
@@ -14,6 +15,7 @@ class EmbeddingsModelName(StrEnum):
 
 class LLMModelName(StrEnum):
     GEMINI_PRO = "gemini-1.5-pro"
+    GPT_4O_MINI = "gpt-4o-mini"
 
 class AIToolProvider:
     """Provide dependencies related to ML/LLM tasks."""
@@ -29,15 +31,25 @@ class AIToolProvider:
 
         return embeddings
 
-    def chat_model_factory(self, modelname = None) -> BaseChatModel:
-        llm = ChatGoogleGenerativeAI(
-            model="gemini-1.5-pro",
-            temperature=0,
-            max_tokens=None,
-            timeout=None,
-            max_retries=2,
-            api_key=settings.GOOGLE_GENAI_API_KEY
-        )
+    def chat_model_factory(self, modelname: LLMModelName) -> BaseChatModel:
+
+        if modelname == LLMModelName.GEMINI_PRO:
+            llm = ChatGoogleGenerativeAI(
+                model="gemini-1.5-pro",
+                temperature=0,
+                max_tokens=None,
+                timeout=None,
+                max_retries=2,
+                api_key=settings.GOOGLE_GENAI_API_KEY
+            )
+        elif modelname == LLMModelName.GPT_4O_MINI:
+            llm = ChatOpenAI(
+                model="gpt-4o-mini",
+                temperature=0.5,
+                timeout=None,
+                max_retries=2,
+                api_key=settings.OPENAI_API_KEY
+            )
 
         return llm
 
