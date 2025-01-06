@@ -36,6 +36,10 @@ gunicorn = "^23.0.0"
 poetry-plugin-export = "^1.8.0"
 ujson = "^5.10.0"
 psycopg2 = "^2.9.10"
+fastapi-mail = "^1.4.2"
+pyjwt = "^2.10.1"
+passlib = "^1.7.4"
+bcrypt = "^4.2.1"
 
 
 [build-system]

@@ -3,3 +3,4 @@ from .dashboard import *
 from .courses import *
 from .recommend import *
 from .quiz import *
+from .auth import *

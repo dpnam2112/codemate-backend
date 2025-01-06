@@ -30,25 +30,31 @@ def init_listeners(app_: FastAPI) -> None:
     @app_.exception_handler(CustomException)
     async def custom_exception_handler(request: Request, exc: CustomException):
         message_code = re.sub(r'(?<!^)(?=[A-Z])', '_', exc.__class__.__name__).upper()
-        return JSONResponse(
-            status_code=exc.code, 
-            content=Error(
-                error_code=exc.code, 
-                message=exc.message,  
-                message_code=message_code
-            ).model_dump()
+        
+        # Trả về phản hồi theo cấu trúc Error
+        error_response = Error(
+            error_code=exc.code,
+            message=exc.message,
+            message_code=message_code
         )
+        
+        # Trả về phản hồi JSON với status code của exception
+        return JSONResponse(
+            status_code=exc.code,
+            content=error_response.dict()  # Sử dụng dict() để chuyển đổi thành JSON hợp lệ
+        )
+
         
     @app_.exception_handler(BadRequestException)
     async def bad_request_exception_handler(request: Request, exc: BadRequestException):
         return await custom_exception_handler(request, exc)
 
-    @app_.exception_handler(NotFoundException)
-    async def not_found_exception_handler(request: Request, exc: NotFoundException):
-        return await custom_exception_handler(request, exc)
-
     @app_.exception_handler(UnauthorizedException)
     async def unauthorized_exception_handler(request: Request, exc: UnauthorizedException):
+        return await custom_exception_handler(request, exc)
+
+    @app_.exception_handler(NotFoundException)
+    async def not_found_exception_handler(request: Request, exc: NotFoundException):
         return await custom_exception_handler(request, exc)
 
     @app_.exception_handler(ForbiddenException)
@@ -58,6 +64,7 @@ def init_listeners(app_: FastAPI) -> None:
     @app_.exception_handler(SystemException)
     async def system_exception_handler(request: Request, exc: SystemException):
         return await custom_exception_handler(request, exc)
+
 
     @app_.exception_handler(Exception)
     async def general_exception_handler(request: Request, exc: Exception):

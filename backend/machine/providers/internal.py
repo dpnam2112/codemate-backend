@@ -2,11 +2,11 @@ from functools import partial
 
 from fastapi import Depends
 
-import machine.controllers as ctrl
 import machine.models as modl
+from core.utils import singleton
+import machine.controllers as ctrl
 import machine.repositories as repo
 from core.db.session import DB_MANAGER, Dialect
-from core.utils import singleton
 
 
 @singleton
@@ -17,7 +17,11 @@ class InternalProvider:
 
     db_session_keeper = DB_MANAGER[Dialect.POSTGRES]
 
-    user_repository = partial(repo.UserRepository, model=modl.User)
+    student_repository = partial(repo.StudentRepository, model=modl.Student)
+    
+    professor_repository = partial(repo.ProfessorRepository, model=modl.Professor)
+    
+    admin_repository = partial(repo.AdminRepository, model=modl.Admin)
     
     student_courses_repository = partial(repo.StudentCoursesRepository, model=modl.StudentCourses)
 
@@ -45,8 +49,20 @@ class InternalProvider:
     
     learning_paths_repository = partial(repo.LearningPathsRepository, model=modl.LearningPaths)
     
-    def get_user_controller(self, db_session=Depends(db_session_keeper.get_session)):
-        return ctrl.UserController(user_repository=self.user_repository(db_session=db_session))
+    def get_student_controller(self, db_session=Depends(db_session_keeper.get_session)):
+        return ctrl.StudentController(
+            student_repository=self.student_repository(db_session=db_session)
+        )
+        
+    def get_professor_controller(self, db_session=Depends(db_session_keeper.get_session)):
+        return ctrl.ProfessorController(
+            professor_repository=self.professor_repository(db_session=db_session)
+        )
+        
+    def get_admin_controller(self, db_session=Depends(db_session_keeper.get_session)):
+        return ctrl.AdminController(
+            admin_repository=self.admin_repository(db_session=db_session)
+        )
 
     def get_studentcourses_controller(self, db_session=Depends(db_session_keeper.get_session)):
         return ctrl.StudentCoursesController(
