@@ -2,120 +2,148 @@ import os
 import jwt
 import random
 import string
-import secrets
 from fastapi import Depends
 from core.response import Ok
 from fastapi import APIRouter
+from core.exceptions import *
 from dotenv import load_dotenv
-from core.utils.email import conf
+from fastapi_mail import FastMail
 from machine.models import Student
+from machine.controllers.user import *
 from datetime import datetime, timedelta
 from passlib.context import CryptContext
+from utils.excel_utils import ExcelUtils
 from utils.functions import validate_email
-from machine.providers import InternalProvider
-from fastapi_mail import FastMail, MessageSchema
-from core.exceptions import *
-from machine.controllers import StudentController
 from machine.schemas.requests.auth import *
-
+from machine.providers import InternalProvider
+from sqlalchemy.dialects.postgresql import UUID
+from core.utils.email import conf, send_email_to_user
+from datetime import datetime, timedelta, timezone
 load_dotenv()
-secret_key = secrets.token_urlsafe(32)
-SECRET_KEY = os.getenv("SECRET_KEY", secret_key) 
+SECRET_KEY = os.getenv("SECRET_KEY") 
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30)) 
+EXCEL_FILE_PATH = os.getenv("EXCEL_FILE_PATH", "backend/data/emails.xlsx")
 
 fm = FastMail(conf)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+
+
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
-    to_encode = data.copy()
+    to_encode = {"sub": str(data["sub"])}
+    
+    # Lấy thời gian hiện tại theo múi giờ Việt Nam (UTC+7)
+    current_time = datetime.now(timezone(timedelta(hours=7)))
+    
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = current_time + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=15)  # Mặc định là 15 phút nếu không cung cấp
-    to_encode.update({"exp": expire})
+        expire = current_time + timedelta(minutes=15)
+    
+    exp_timestamp = int(expire.timestamp())
+    print(f"Token will expire at: {datetime.fromtimestamp(exp_timestamp)} (timestamp: {exp_timestamp})")
+    
+    to_encode.update({"exp": exp_timestamp})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
-
-# Hàm gửi email xác thực
-async def send_email_to_user(email: str, code: str):
-    message = MessageSchema(
-        subject="Mã xác thực của bạn", recipients=[email], body=f"Đây là mã xác thực của bạn: {code}", subtype="plain"
-    )
-    await fm.send_message(message)
 
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
 def generate_code(length: int = 6) -> str:
-    return "".join(random.choices(string.ascii_uppercase + string.digits, k=length))
+    return "".join(random.choices(string.digits, k=length))
+
+def get_role_from_excel(email: str):
+    excel_professors = ExcelUtils(EXCEL_FILE_PATH, 'Professor') 
+    if excel_professors.check_email_exist(email):
+        return "professor"
+
+    excel_admins = ExcelUtils(EXCEL_FILE_PATH, 'Admin') 
+    if excel_admins.check_email_exist(email):
+        return "admin"
+
+    return None
 
 @router.post("/login")
 async def login(
     request: LoginRequest,
     student_controller: StudentController = Depends(InternalProvider().get_student_controller),
+    professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
+    admin_controller: AdminController = Depends(InternalProvider().get_admin_controller)
 ):
     """
     Login User
     """
     if not request.email or not request.password:
-        return UnauthorizedException("Email and password are required.")
+        raise UnauthorizedException("Email and password are required.")
     if not validate_email(request.email):
-        return UnauthorizedException("Invalid email")
+        raise UnauthorizedException("Invalid email")
     
-    user = await student_controller.student_repository.first(where_=[Student.email == request.email])
+    role = get_role_from_excel(request.email)
     
-    if not user and not user.verification_code:
-        # If user doesn't exist, send a verification code to email
+    user = None
+    role_response = None 
+
+    if role == "professor":
+        user = await professor_controller.professor_repository.first(where_=[Professor.email == request.email])
+        role_response = "professor"
+    elif role == "admin":
+        user = await admin_controller.admin_repository.first(where_=[Admin.email == request.email])
+        role_response = "admin"
+    else:
+        user = await student_controller.student_repository.first(where_=[Student.email == request.email])
+        role_response = "student"
+
+    if not user:
         code = generate_code()
         await send_email_to_user(request.email, code)
 
-        # Modify student attributes directly in the API
-        student_attributes = {
-            "name": request.email.split("@")[0],  # Default name based on email
+        user_attributes = {
+            "name": request.email.split("@")[0],
             "email": request.email,
             "password": hash_password(request.password),
             "verification_code": code,
             "verification_code_expires_at": datetime.utcnow() + timedelta(minutes=10),
-            "is_email_verified": False,  # Newly created user is not verified
+            "is_email_verified": False, 
         }
 
-        # Create new user (using the repository's `create` method)
-        new_student = await student_controller.student_repository.create(attributes=student_attributes, commit=True)
+        if role == "professor":
+            new_user = await professor_controller.professor_repository.create(attributes=user_attributes, commit=True)
+        elif role == "admin":
+            new_user = await admin_controller.admin_repository.create(attributes=user_attributes, commit=True)
+        else:
+            new_user = await student_controller.student_repository.create(attributes=user_attributes, commit=True)
         
-        # Map new student data into a response structure similar to the `StudentOut`
-        student_response = {
-            "id": new_student.id,
-            "name": new_student.name,
-            "email": new_student.email,
-            "is_email_verified": new_student.is_email_verified,
-            "verification_code": new_student.verification_code,
-            "verification_code_expires_at": new_student.verification_code_expires_at,
+        user_response = {
+            "id": new_user.id,
+            "name": new_user.name,
+            "email": new_user.email,
+            "is_email_verified": new_user.is_email_verified,
+            "verification_code": new_user.verification_code,
+            "verification_code_expires_at": new_user.verification_code_expires_at,
         }
         
-        # Return the response
         return Ok(
-            data=student_response, 
+            data=user_response, 
             message="User not found. Verification code sent to email"
         )
-        
-    elif not user and user.verification_code:
-        return UnauthorizedException("User not found. Please check your email for verification code")
     
     if not pwd_context.verify(request.password, user.password):
-        return UnauthorizedException("Invalid password")
+        raise UnauthorizedException("Invalid password")
     
     if not user.is_email_verified:
-        return UnauthorizedException("Email is not verified. Please verify your email.")
+        raise UnauthorizedException("Email is not verified. Please verify your email.")
     
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    print(f"Creating token with {ACCESS_TOKEN_EXPIRE_MINUTES} minutes expiration")
     access_token = create_access_token(
-        data={"sub": user.email}, expires_delta=access_token_expires
+        data={"sub": user.id}, 
+        expires_delta=access_token_expires
     )
 
-    # Return successful login response
     user_response = {
         "id": user.id,
         "name": user.name,
@@ -124,7 +152,7 @@ async def login(
     }
 
     return Ok(
-        data={"access_token": access_token, "token_type": "bearer", **user_response},
+        data={"access_token": access_token, "token_type": "bearer", "role": role_response, **user_response},
         message="Login successfully"
     )
 
@@ -132,32 +160,213 @@ async def login(
 async def verify_email(
     request: VerifyEmailRequest,
     student_controller: StudentController = Depends(InternalProvider().get_student_controller),
+    professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
+    admin_controller: AdminController = Depends(InternalProvider().get_admin_controller)
 ):
     """
-    Verify Email Address
+    Verify Email Address for Student, Professor, and Admin
     """
-    # Tìm người dùng theo email
     if not request.email or not request.code:
         raise UnauthorizedException("Email and code are required")
     
-    user = student_controller.get_user_by_email(request.email)
+    role = get_role_from_excel(request.email)
+    user = None
+
+    if role == "professor":
+        user = await professor_controller.professor_repository.first(where_=[Professor.email == request.email])
+    elif role == "admin":
+        user = await admin_controller.admin_repository.first(where_=[Admin.email == request.email])
+    else:
+        user = await student_controller.student_repository.first(where_=[Student.email == request.email])
+
+    if not user:
+        raise NotFoundException("User not found")
+
+    if request.code != user.verification_code:
+        raise UnauthorizedException("Invalid verification code")
+
+    if user.verification_code_expires_at < datetime.utcnow():
+        raise UnauthorizedException("Verification code has expired")
+
+    update_attributes = {
+        "is_email_verified": True,
+        "is_active": True,
+    }
+
+    if role == "professor":
+        updated_user = await professor_controller.professor_repository.update(where_=[Professor.email == request.email], attributes=update_attributes, commit=True)
+    elif role == "admin":
+        updated_user = await admin_controller.admin_repository.update(where_=[Admin.email == request.email], attributes=update_attributes, commit=True)
+    else:
+        updated_user = await student_controller.student_repository.update(where_=[Student.email == request.email], attributes=update_attributes, commit=True)
+    
+    response = {
+        "id": updated_user.id,
+        "name": updated_user.name,
+        "email": updated_user.email,
+        "is_email_verified": updated_user.is_email_verified,
+        "verification_code": updated_user.verification_code,
+        "verification_code_expires_at": updated_user.verification_code_expires_at,
+    }
+
+    return Ok(data=response, message="Email verified successfully")
+
+
+@router.post("/resend-verification-code")
+async def resend_verification_code(
+    request: ResendVerificationCodeRequest,
+    student_controller: StudentController = Depends(InternalProvider().get_student_controller),
+    professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
+    admin_controller: AdminController = Depends(InternalProvider().get_admin_controller)
+):
+    """
+    Resend Verification Code for Student, Professor, and Admin
+    """
+    if not request.email:
+        raise UnauthorizedException("Email is required")
+    
+    role = get_role_from_excel(request.email)
+    user = None
+
+    if role == "professor":
+        user = await professor_controller.professor_repository.first(where_=[Professor.email == request.email])
+    elif role == "admin":
+        user = await admin_controller.admin_repository.first(where_=[Admin.email == request.email])
+    else:
+        user = await student_controller.student_repository.first(where_=[Student.email == request.email])
     
     if not user:
         raise NotFoundException("User not found")
 
-    # Kiểm tra mã xác thực
-    if request.code != user.verification_code:
-        raise UnauthorizedException("Invalid verification code")
+    code = generate_code()
+    
+    await send_email_to_user(request.email, code)
 
-    # Kiểm tra mã có hết hạn chưa
-    if user.verification_code_expires_at < datetime.utcnow():
-        raise UnauthorizedException("Verification code has expired")
+    update_attributes = {
+        "verification_code": code,
+        "verification_code_expires_at": datetime.utcnow() + timedelta(minutes=10)
+    }
 
-    # Cập nhật trạng thái xác thực email
-    user.is_email_verified = True
-    user.verification_code = None  # Xóa mã xác thực
-    user.verification_code_expires_at = None  # Xóa thời gian hết hạn
-    #use the update method to update the user
-    updateUserInfor = await student_controller.student_repository.update(model=user, commit=True)
+    if role == "professor":
+        updated_user = await professor_controller.professor_repository.update(where_=[Professor.email == request.email], attributes=update_attributes, commit=True)
+    elif role == "admin":
+        updated_user = await admin_controller.admin_repository.update(where_=[Admin.email == request.email], attributes=update_attributes, commit=True)
+    else:
+        updated_user = await student_controller.student_repository.update(where_=[Student.email == request.email], attributes=update_attributes, commit=True)
+    
+    response = {
+        "id": updated_user.id,
+        "name": updated_user.name,
+        "email": updated_user.email,
+        "is_email_verified": updated_user.is_email_verified,
+        "verification_code": updated_user.verification_code,
+        "verification_code_expires_at": updated_user.verification_code_expires_at,
+    }
 
-    return Ok(data=updateUserInfor, message="Email verified successfully")
+    return Ok(data=response, message="Resend verification code successfully")
+
+
+@router.post("/forgot-password")
+async def forgot_password(
+    request: ForgotPasswordRequest,
+    student_controller: StudentController = Depends(InternalProvider().get_student_controller),
+    professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
+    admin_controller: AdminController = Depends(InternalProvider().get_admin_controller)
+):
+    """Forgot Password Handle for Student, Professor, and Admin
+    """
+    if not request.email:
+        raise UnauthorizedException("Email is required!")
+    
+    role = get_role_from_excel(request.email)
+    user = None
+
+    if role == "professor":
+        user = await professor_controller.professor_repository.first(where_=[Professor.email == request.email])
+    elif role == "admin":
+        user = await admin_controller.admin_repository.first(where_=[Admin.email == request.email])
+    else:
+        user = await student_controller.student_repository.first(where_=[Student.email == request.email])
+    
+    if not user:
+        raise UnauthorizedException("User not found")
+    
+    code = generate_code()
+    
+    await send_email_to_user(request.email, code, template_name="forgot-template.html")
+
+    update_attributes = {
+        "password_reset_code": code,
+        "password_reset_code_expires_at": datetime.utcnow() + timedelta(minutes=10)
+    }
+
+    if role == "professor":
+        updated_user = await professor_controller.professor_repository.update(where_=[Professor.email == request.email], attributes=update_attributes, commit=True)
+    elif role == "admin":
+        updated_user = await admin_controller.admin_repository.update(where_=[Admin.email == request.email], attributes=update_attributes, commit=True)
+    else:
+        updated_user = await student_controller.student_repository.update(where_=[Student.email == request.email], attributes=update_attributes, commit=True)
+    
+    response = {
+        "id": updated_user.id,
+        "name": updated_user.name,
+        "email": updated_user.email,
+        "is_email_verified": updated_user.is_email_verified,
+        "password_reset_code": updated_user.password_reset_code,
+        "password_reset_code_expires_at": updated_user.password_reset_code_expires_at,
+    }
+
+    return Ok(data=response, message="Sent code to reset password successfully")
+
+@router.post("/reset-password")
+async def reset_password(
+    request: ResetPasswordRequest,
+    student_controller: StudentController = Depends(InternalProvider().get_student_controller),
+    professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
+    admin_controller: AdminController = Depends(InternalProvider().get_admin_controller)
+):
+    """Reset Password Handle for Student, Professor, and Admin
+    """
+    if not request.email or not request.code or not request.new_password:
+        raise UnauthorizedException("Email, code, and password are required")
+    
+    role = get_role_from_excel(request.email)
+    user = None
+
+    if role == "professor":
+        user = await professor_controller.professor_repository.first(where_=[Professor.email == request.email])
+    elif role == "admin":
+        user = await admin_controller.admin_repository.first(where_=[Admin.email == request.email])
+    else:
+        user = await student_controller.student_repository.first(where_=[Student.email == request.email])
+    
+    if not user:
+        raise UnauthorizedException("User not found")
+    
+    if request.code != user.password_reset_code:
+        raise UnauthorizedException("Invalid reset code")
+    
+    if user.password_reset_code_expires_at < datetime.utcnow():
+        raise UnauthorizedException("Reset code has expired")
+    
+    update_attributes = {
+        "password": hash_password(request.new_password),
+        "password_reset_code": None,
+        "password_reset_code_expires_at": None
+    }
+
+    if role == "professor":
+        updated_user = await professor_controller.professor_repository.update(where_=[Professor.email == request.email], attributes=update_attributes, commit=True)
+    elif role == "admin":
+        updated_user = await admin_controller.admin_repository.update(where_=[Admin.email == request.email], attributes=update_attributes, commit=True)
+    else:
+        updated_user = await student_controller.student_repository.update(where_=[Student.email == request.email], attributes=update_attributes, commit=True)
+    
+    response = {
+        "id": updated_user.id,
+        "name": updated_user.name,
+        "email": updated_user.email,
+        "is_email_verified": updated_user.is_email_verified,
+    }
+
+    return Ok(data=response, message="Reset password successfully")

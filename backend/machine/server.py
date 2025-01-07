@@ -29,19 +29,15 @@ def init_listeners(app_: FastAPI) -> None:
 
     @app_.exception_handler(CustomException)
     async def custom_exception_handler(request: Request, exc: CustomException):
-        message_code = re.sub(r'(?<!^)(?=[A-Z])', '_', exc.__class__.__name__).upper()
-        
-        # Trả về phản hồi theo cấu trúc Error
         error_response = Error(
             error_code=exc.code,
             message=exc.message,
-            message_code=message_code
+            message_code=exc.error_code
         )
         
-        # Trả về phản hồi JSON với status code của exception
         return JSONResponse(
             status_code=exc.code,
-            content=error_response.dict()  # Sử dụng dict() để chuyển đổi thành JSON hợp lệ
+            content=error_response.model_dump() 
         )
 
         
@@ -167,7 +163,7 @@ def create_machine() -> FastAPI:
     init_routers(app_)
     init_listeners(app_=app_)
     init_cache()
-    init_sentry()
+    #init_sentry()
     return app_
 
 

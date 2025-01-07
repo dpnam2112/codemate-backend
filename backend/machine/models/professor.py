@@ -14,17 +14,17 @@ class Professor(Base, TimestampMixin):
     password = Column(String(255), nullable=False)
     avatar_url = Column(String, nullable=True)
     created_at = Column(DateTime, default=func.now(), nullable=False)
-    
-    # Thêm các trường xác thực email
-    is_email_verified = Column(Boolean, default=False, nullable=False)  # Trạng thái xác thực email
-    verification_code = Column(String(6), nullable=True)  # Mã xác thực
-    verification_code_expires_at = Column(DateTime, nullable=True)  # Thời gian hết hạn mã xác thực
+    mscb = Column(String(10), nullable=True)
+    date_of_birth = Column(DateTime, nullable=True)
+    fullname = Column(String(255), nullable=True)
+        
+    is_email_verified = Column(Boolean, default=False, nullable=False)
+    verification_code = Column(String(6), nullable=True) 
+    verification_code_expires_at = Column(DateTime, nullable=True) 
 
-    # Trường mới cho tính năng đặt lại mật khẩu
-    password_reset_code = Column(String(6), nullable=True)  # Mã xác thực reset mật khẩu
-    password_reset_code_expires_at = Column(DateTime, nullable=True)  # Thời gian hết hạn mã reset mật khẩu
+    password_reset_code = Column(String(6), nullable=True) 
+    password_reset_code_expires_at = Column(DateTime, nullable=True)
 
-    # Trường mới cho trạng thái người dùng
-    is_active = Column(Boolean, default=False, nullable=False)  # Trạng thái tài khoản người dùng
+    is_active = Column(Boolean, default=False, nullable=False)
     
     courses = relationship("Courses", back_populates="professor")
