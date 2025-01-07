@@ -1,11 +1,12 @@
-from sqlalchemy import Column, Integer, Text, ARRAY, ForeignKey, Enum
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
 from core.db import Base
+from sqlalchemy.orm import relationship
 from core.repository.enum import StatusType
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, Integer, Text, ARRAY, ForeignKey, Enum
 
 class RecommendLessons(Base):
     __tablename__ = "recommend_lessons"
+    
     id = Column(UUID, ForeignKey("lessons.id"), primary_key=True)
     learning_path_id = Column(UUID, ForeignKey("learning_paths.id"), nullable=False)
     progress = Column(Integer, default=0, nullable=False)

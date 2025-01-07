@@ -1,8 +1,8 @@
-from sqlalchemy import Column, String, ForeignKey, Integer, Enum, DateTime, ARRAY, Text, func
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
-from core.db import Base
 from uuid import uuid4
+from core.db import Base
+from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, String, ForeignKey, DateTime, ARRAY, Text, func
 
 class Modules(Base):
     __tablename__ = "modules"

@@ -1,9 +1,9 @@
-from sqlalchemy import Column, String, ForeignKey, Enum, Integer
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
-from core.db import Base
 from uuid import uuid4
+from core.db import Base
+from sqlalchemy.orm import relationship
 from core.repository.enum import ExerciseType
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, String, ForeignKey, Enum, Integer
 
 class Exercises(Base):
     __tablename__ = "exercises"
