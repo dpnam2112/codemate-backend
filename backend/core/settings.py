@@ -41,6 +41,10 @@ class JWTSettings(BaseSettings):
 class ExcelLinkSettings(BaseSettings):
     EXCEL_FILE_PATH: str
 
+class GoogleAPI(BaseSettings):
+    CLIENT_AUTH: str
+    GOOGLE_API_URL: str
+
 class Settings(
     CoreSettings,
     TestSettings,
@@ -48,7 +52,8 @@ class Settings(
     RedisSettings,
     EmailSettings,
     JWTSettings,
-    ExcelLinkSettings
+    ExcelLinkSettings,
+    GoogleAPI
 ):
     pass
 

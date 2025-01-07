@@ -2,6 +2,7 @@ import os
 import jwt
 import random
 import string
+import httpx
 from fastapi import Depends
 from core.response import Ok
 from fastapi import APIRouter
@@ -14,16 +15,19 @@ from datetime import datetime, timedelta
 from passlib.context import CryptContext
 from utils.excel_utils import ExcelUtils
 from utils.functions import validate_email
+from fastapi import HTTPException
 from machine.schemas.requests.auth import *
 from machine.providers import InternalProvider
-from sqlalchemy.dialects.postgresql import UUID
-from core.utils.email import conf, send_email_to_user
 from datetime import datetime, timedelta, timezone
+from core.utils.email import conf, send_email_to_user
+
+
 load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY") 
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30)) 
 EXCEL_FILE_PATH = os.getenv("EXCEL_FILE_PATH", "backend/data/emails.xlsx")
+CLIENT_AUTH = os.getenv("CLIENT_AUTH")
 
 fm = FastMail(conf)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -35,7 +39,6 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
     to_encode = {"sub": str(data["sub"])}
     
-    # Lấy thời gian hiện tại theo múi giờ Việt Nam (UTC+7)
     current_time = datetime.now(timezone(timedelta(hours=7)))
     
     if expires_delta:
@@ -66,6 +69,20 @@ def get_role_from_excel(email: str):
         return "admin"
 
     return None
+
+async def verify_google_token(access_token: str):
+    google_api_url = os.getenv("GOOGLE_API_URL")  # Get the URL from the environment variable
+    
+    if not google_api_url:
+        raise ValueError("Google API URL is not set in the environment variables.")
+    
+    async with httpx.AsyncClient() as client:
+        response = await client.get(f'{google_api_url}{access_token}')
+    
+    if response.status_code != 200:
+        raise HTTPException(status_code=400, detail="Invalid Google token")
+    
+    return response.json()
 
 @router.post("/login")
 async def login(
@@ -370,3 +387,20 @@ async def reset_password(
     }
 
     return Ok(data=response, message="Reset password successfully")
+
+@router.post("/google-login")
+async def google_login(
+    auth_request: GoogleAuthRequest,
+):
+    google_token_info = await verify_google_token(auth_request.access_token)
+
+    if google_token_info['email'] != auth_request.email:
+        raise UnauthorizedException("Email does not match")
+
+    user_info = {
+        "email": google_token_info['email'],
+    }
+
+    return Ok(data=user_info, message="Google login successfully")
+    
+    
