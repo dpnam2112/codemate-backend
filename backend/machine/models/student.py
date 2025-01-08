@@ -11,7 +11,7 @@ class Student(Base, TimestampMixin):
     id = Column(UUID, primary_key=True, default=uuid4)
     name = Column(String(255), nullable=False)
     email = Column(String(255), unique=True, nullable=False)
-    password = Column(String(255), nullable=False)
+    password = Column(String(255), nullable=True)
     avatar_url = Column(String, nullable=True)
     created_at = Column(DateTime, default=func.now(), nullable=False)
     mssv = Column(String(10), nullable=True)
