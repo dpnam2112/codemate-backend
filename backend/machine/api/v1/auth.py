@@ -126,8 +126,6 @@ async def login(
             "name": request.email.split("@")[0],
             "email": request.email,
             "password": hash_password(request.password),
-            "verification_code": code,
-            "verification_code_expires_at": datetime.utcnow() + timedelta(minutes=10),
             "is_email_verified": False,
         }
 
@@ -143,8 +141,6 @@ async def login(
             "name": new_user.name,
             "email": new_user.email,
             "is_email_verified": new_user.is_email_verified,
-            "verification_code": new_user.verification_code,
-            "verification_code_expires_at": new_user.verification_code_expires_at,
         }
 
         return Ok(data=user_response, message="User not found. Verification code sent to email")
@@ -179,7 +175,7 @@ async def login(
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(data={"sub": user.id}, expires_delta=access_token_expires)
         return Ok(
-            data={"access_token": access_token, "token_type": "bearer", "role": role_response, **user_response},
+            data={"access_token": access_token, "role": role_response, **user_response},
             message="Login successfully",
         )
 
@@ -200,7 +196,7 @@ async def login(
     }
 
     return Ok(
-        data={"access_token": access_token, "token_type": "bearer", "role": role_response, **user_response},
+        data={"access_token": access_token, "role": role_response, **user_response},
         message="Login successfully",
     )
 
@@ -260,8 +256,6 @@ async def verify_email(
         "name": updated_user.name,
         "email": updated_user.email,
         "is_email_verified": updated_user.is_email_verified,
-        "verification_code": updated_user.verification_code,
-        "verification_code_expires_at": updated_user.verification_code_expires_at,
     }
 
     return Ok(data=response, message="Email verified successfully")
@@ -320,8 +314,6 @@ async def resend_verification_code(
         "name": updated_user.name,
         "email": updated_user.email,
         "is_email_verified": updated_user.is_email_verified,
-        "verification_code": updated_user.verification_code,
-        "verification_code_expires_at": updated_user.verification_code_expires_at,
     }
 
     return Ok(data=response, message="Resend verification code successfully")
@@ -378,8 +370,6 @@ async def forgot_password(
         "name": updated_user.name,
         "email": updated_user.email,
         "is_email_verified": updated_user.is_email_verified,
-        "password_reset_code": updated_user.password_reset_code,
-        "password_reset_code_expires_at": updated_user.password_reset_code_expires_at,
     }
 
     return Ok(data=response, message="Sent code to reset password successfully")
@@ -453,16 +443,43 @@ async def google_login(
 ):
     google_token_info = await verify_google_token(auth_request.access_token)
 
-    if google_token_info["email"] != auth_request.email:
+    if google_token_info["email"] != auth_request.user_info.email:
         raise UnauthorizedException("Email does not match")
+    
+    role = get_role_from_excel(auth_request.email)
 
-    email = google_token_info["email"]
+    user = None
+    role_response = None
 
-    role = get_role_from_excel(email)
+    if role == "professor":
+        user = await professor_controller.professor_repository.first(where_=[Professor.email == auth_request.email])
+        role_response = "professor"
+    elif role == "admin":
+        user = await admin_controller.admin_repository.first(where_=[Admin.email == auth_request.email])
+        role_response = "admin"
+    else:
+        user = await student_controller.student_repository.first(where_=[Student.email == auth_request.email])
+        role_response = "student"
+        
+    if user:
+        user_response = {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "is_email_verified": user.is_email_verified,
+        }
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(data={"sub": user.id}, expires_delta=access_token_expires)
+        return Ok(
+            data={"access_token": access_token, "role": role_response, **user_response},
+            message="Login successfully",
+        )
+
     user_attributes = {
-        "name": email.split("@")[0],
-        "email": email,
-        "password": hash_password(email),
+        "name": auth_request.user_info.name,
+        "email": auth_request.user_info.email,
+        "avatar_url": auth_request.user_info.picture,
+        "is_email_verified": auth_request.user_info.verified_email,
     }
 
     if role == "professor":
