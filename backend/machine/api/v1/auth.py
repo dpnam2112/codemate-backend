@@ -444,24 +444,25 @@ async def google_login(
     google_token_info = await verify_google_token(auth_request.access_token)
 
     if google_token_info["email"] != auth_request.user_info.email:
+        print(f"Google email: {google_token_info['email']}, Request email: {auth_request.user_info.email}")
         raise UnauthorizedException("Email does not match")
     
-    role = get_role_from_excel(auth_request.email)
+    role = get_role_from_excel(auth_request.user_info.email)
 
     user = None
     role_response = None
 
     if role == "professor":
-        user = await professor_controller.professor_repository.first(where_=[Professor.email == auth_request.email])
+        user = await professor_controller.professor_repository.first(where_=[Professor.email == auth_request.user_info.email])
         role_response = "professor"
     elif role == "admin":
-        user = await admin_controller.admin_repository.first(where_=[Admin.email == auth_request.email])
+        user = await admin_controller.admin_repository.first(where_=[Admin.email == auth_request.user_info.email])
         role_response = "admin"
     else:
-        user = await student_controller.student_repository.first(where_=[Student.email == auth_request.email])
+        user = await student_controller.student_repository.first(where_=[Student.email == auth_request.user_info.email])
         role_response = "student"
         
-    if user:
+    if user and user.password:
         user_response = {
             "id": user.id,
             "name": user.name,
@@ -474,6 +475,15 @@ async def google_login(
             data={"access_token": access_token, "role": role_response, **user_response},
             message="Login successfully",
         )
+        
+    if user and not user.password:
+        user_response = {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "is_email_verified": user.is_email_verified,
+        }
+        return Ok(data=user_response, message="Your account hasn't had the password. Please add a password to your account to complete your profile.")
 
     user_attributes = {
         "name": auth_request.user_info.name,
