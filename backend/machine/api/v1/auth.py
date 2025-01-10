@@ -127,6 +127,8 @@ async def login(
             "email": request.email,
             "password": hash_password(request.password),
             "is_email_verified": False,
+            "verification_code": code,
+            "verification_code_expires_at" : datetime.utcnow() + timedelta(minutes=10),
         }
 
         if role == "professor":
@@ -137,7 +139,6 @@ async def login(
             new_user = await student_controller.student_repository.create(attributes=user_attributes, commit=True)
 
         user_response = {
-            "id": new_user.id,
             "name": new_user.name,
             "email": new_user.email,
             "is_email_verified": new_user.is_email_verified,
@@ -166,7 +167,6 @@ async def login(
             )
 
         user_response = {
-            "id": new_user.id,
             "name": new_user.name,
             "email": new_user.email,
             "is_active": True,
@@ -183,13 +183,12 @@ async def login(
         raise UnauthorizedException("Invalid password")
 
     if not user.is_email_verified:
-        raise UnauthorizedException("Email is not verified. Please verify your email.")
+        return Ok(data=None, message="Your email hasn't been verified. Please verify your email to login.")
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(data={"sub": user.id}, expires_delta=access_token_expires)
 
     user_response = {
-        "id": user.id,
         "name": user.name,
         "email": user.email,
         "is_email_verified": user.is_email_verified,
@@ -252,7 +251,6 @@ async def verify_email(
         )
 
     response = {
-        "id": updated_user.id,
         "name": updated_user.name,
         "email": updated_user.email,
         "is_email_verified": updated_user.is_email_verified,
@@ -310,7 +308,6 @@ async def resend_verification_code(
         )
 
     response = {
-        "id": updated_user.id,
         "name": updated_user.name,
         "email": updated_user.email,
         "is_email_verified": updated_user.is_email_verified,
@@ -366,7 +363,6 @@ async def forgot_password(
         )
 
     response = {
-        "id": updated_user.id,
         "name": updated_user.name,
         "email": updated_user.email,
         "is_email_verified": updated_user.is_email_verified,
@@ -425,7 +421,6 @@ async def reset_password(
         )
 
     response = {
-        "id": updated_user.id,
         "name": updated_user.name,
         "email": updated_user.email,
         "is_email_verified": updated_user.is_email_verified,
@@ -446,14 +441,16 @@ async def google_login(
     if google_token_info["email"] != auth_request.user_info.email:
         print(f"Google email: {google_token_info['email']}, Request email: {auth_request.user_info.email}")
         raise UnauthorizedException("Email does not match")
-    
+
     role = get_role_from_excel(auth_request.user_info.email)
 
     user = None
     role_response = None
 
     if role == "professor":
-        user = await professor_controller.professor_repository.first(where_=[Professor.email == auth_request.user_info.email])
+        user = await professor_controller.professor_repository.first(
+            where_=[Professor.email == auth_request.user_info.email]
+        )
         role_response = "professor"
     elif role == "admin":
         user = await admin_controller.admin_repository.first(where_=[Admin.email == auth_request.user_info.email])
@@ -461,10 +458,9 @@ async def google_login(
     else:
         user = await student_controller.student_repository.first(where_=[Student.email == auth_request.user_info.email])
         role_response = "student"
-        
+
     if user and user.password:
         user_response = {
-            "id": user.id,
             "name": user.name,
             "email": user.email,
             "is_email_verified": user.is_email_verified,
@@ -475,15 +471,17 @@ async def google_login(
             data={"access_token": access_token, "role": role_response, **user_response},
             message="Login successfully",
         )
-        
+
     if user and not user.password:
         user_response = {
-            "id": user.id,
             "name": user.name,
             "email": user.email,
             "is_email_verified": user.is_email_verified,
         }
-        return Ok(data=user_response, message="Your account hasn't had the password. Please add a password to your account to complete your profile.")
+        return Ok(
+            data=user_response,
+            message="Your account hasn't had the password. Please add a password to your account to complete your profile.",
+        )
 
     user_attributes = {
         "name": auth_request.user_info.name,
@@ -503,7 +501,6 @@ async def google_login(
         raise Exception("Cannot create user. Please contact the admin for support")
 
     user_response = {
-        "id": new_user.id,
         "name": new_user.name,
         "email": new_user.email,
     }
