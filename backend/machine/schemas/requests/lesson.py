@@ -2,6 +2,8 @@ from pydantic import BaseModel
 from typing import Optional
 from uuid import UUID
 from fastapi import FastAPI, File, UploadFile, Form
+from datetime import datetime
+from core.repository.enum import DifficultyLevel, QuestionType
 # class DocumentRequest(BaseModel):
 #     name: str
 #     type: str
@@ -34,4 +36,22 @@ class PutLessonRequest(BaseModel):
     learning_outcomes: Optional[list[str]]
     
 class DeleteLessonRequest(BaseModel):
+    lesson_id: UUID
+    
+class QuestionModel(BaseModel):
+    question: str
+    answer: list[str]
+    options: list[str]
+    type: QuestionType
+    score: int
+
+class ExerciseRequest(BaseModel):
+    name: str
+    description: Optional[str]
+    deadline: Optional[datetime]
+    time : Optional[int]
+    topic: Optional[str]
+    attempts : Optional[int]
+    difficulty: DifficultyLevel
+    questions: list[QuestionModel]
     lesson_id: UUID
