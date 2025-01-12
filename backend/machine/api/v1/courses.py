@@ -3,10 +3,8 @@ from machine.models import *
 from core.response import Ok
 from machine.controllers import *
 from sqlalchemy.orm import aliased
-from sqlalchemy import literal_column
 from fastapi import APIRouter, Depends
 from machine.schemas.requests import *
-from core.repository.enum import UserRole
 from sqlalchemy.sql import func, and_, or_
 from machine.providers import InternalProvider
 from machine.schemas.responses.courses import *
@@ -19,12 +17,11 @@ router = APIRouter(prefix="/courses", tags=["courses"])
 async def get_courses(
     request: GetCoursesRequest,
     courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
-    users_controller: UserController = Depends(InternalProvider().get_user_controller),
+    student_controller: StudentController = Depends(InternalProvider().get_student_controller),
 ):
     if not request.student_id:
         raise BadRequestException(message="Student ID is required.")
     where_conditions = [StudentCourses.student_id == request.student_id]
-
 
     select_fields = [
         Courses.id.label("id"),
@@ -41,21 +38,21 @@ async def get_courses(
     if not course_ids:
         return NotFoundException(message="No courses found for the student.")
 
-    ProfessorUser = aliased(User)
+    ProfessorAlias = aliased(Professor)
 
     where_conditions = [StudentCourses.course_id.in_(course_ids)]
     
     if request.search_query:
         search_condition = or_(
             Courses.name.ilike(f"%{request.search_query}%"),
-            ProfessorUser.name.ilike(f"%{request.search_query}%"),
+            ProfessorAlias.name.ilike(f"%{request.search_query}%"),
         )
         where_conditions.append(search_condition)
     
     join_conditions = {
         "student_courses": {"type": "left", "alias": "student_courses"},
         "courses": {"type": "left", "alias": "courses"},
-        "professor": {"type": "left", "table": ProfessorUser, "alias": "professor_alias"},
+        "professor": {"type": "left", "table": ProfessorAlias, "alias": "professor_alias"},
     }
     select_fields = [
         Courses.id.label("id"),
@@ -71,13 +68,13 @@ async def get_courses(
         StudentCourses.time_spent.label("time_spent"),
         StudentCourses.assignments_done.label("assignments_done"),
         StudentCourses.last_accessed.label("last_accessed"),
-        User.id.label("student_id"),
-        User.name.label("student_name"),
-        User.email.label("student_email"),
-        User.avatar_url.label("student_avatar"),
-        ProfessorUser.name.label("professor_name"),
-        ProfessorUser.email.label("professor_email"),
-        ProfessorUser.avatar_url.label("professor_avatar"),
+        Student.id.label("student_id"),
+        Student.name.label("student_name"),
+        Student.email.label("student_email"),
+        Student.avatar_url.label("student_avatar"),
+        ProfessorAlias.name.label("professor_name"),
+        ProfessorAlias.email.label("professor_email"),
+        ProfessorAlias.avatar_url.label("professor_avatar"),
     ]
 
     group_by_fields = [
@@ -93,18 +90,18 @@ async def get_courses(
         StudentCourses.time_spent,
         StudentCourses.assignments_done,
         StudentCourses.last_accessed,
-        User.id,
-        User.name,
-        User.email,
-        User.avatar_url,
-        ProfessorUser.name,
-        ProfessorUser.email,
-        ProfessorUser.avatar_url,
+        Student.id,
+        Student.name,
+        Student.email,
+        Student.avatar_url,
+        ProfessorAlias.name,
+        ProfessorAlias.email,
+        ProfessorAlias.avatar_url,
     ]
 
     order_conditions = {"asc": ["name"]}
 
-    courses = await users_controller.user_repository._get_many(
+    courses = await student_controller.student_repository._get_many(
         where_=where_conditions,
         fields=select_fields,
         join_=join_conditions,
@@ -203,9 +200,9 @@ async def get_course_for_student(
         Courses.professor_id.label("course_professor_id"),
         Courses.status.label("course_status"),
         Courses.image_url.label("course_image_url"),
-        User.name.label("user_professor_name"),
-        User.email.label("user_professor_email"),
-        User.avatar_url.label("user_professor_avatar"),
+        Professor.name.label("professor_name"),
+        Professor.email.label("professor_email"),
+        Professor.avatar_url.label("professor_avatar"),
     ]
 
     get_orther_course_data = await courses_controller.courses_repository._get_many(
@@ -298,9 +295,9 @@ async def get_course_for_student(
         course_learning_outcomes=get_orther_course_data.course_learning_outcomes,
         course_professor=ProfessorInformation(
             professor_id=get_orther_course_data.course_professor_id,
-            professor_name=get_orther_course_data.user_professor_name,
-            professor_email=get_orther_course_data.user_professor_email,
-            professor_avatar=str(get_orther_course_data.user_professor_avatar),
+            professor_name=get_orther_course_data.professor_name,
+            professor_email=get_orther_course_data.professor_email,
+            professor_avatar=str(get_orther_course_data.professor_avatar),
         ),
         course_status=get_orther_course_data.course_status,
         course_image=str(get_orther_course_data.course_image_url),
@@ -345,7 +342,7 @@ async def bookmark_lesson(
             StudentLessons.course_id == courseId,
         ],
         attributes={"bookmark": new_bookmark_status},
-        commit=True,  # Important: commit the transaction
+        commit=True,
     )
 
     if not updated_lesson:

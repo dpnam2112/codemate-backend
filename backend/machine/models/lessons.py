@@ -1,10 +1,9 @@
-from sqlalchemy import Column, String, ForeignKey, Integer, Enum, Text, ARRAY
-from sqlalchemy import Column, String, ForeignKey, Integer
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
-from core.db import Base
 from uuid import uuid4
-from core.repository.enum import LessonType
+from core.db import Base
+from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, String, ForeignKey, Integer
+from sqlalchemy import Column, String, ForeignKey, Integer
 
 class Lessons(Base):
     __tablename__ = "lessons"
