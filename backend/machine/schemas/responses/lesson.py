@@ -1,6 +1,8 @@
 from typing import List,Optional
 from uuid import UUID
 from pydantic import BaseModel
+from datetime import datetime
+from core.repository.enum import DifficultyLevel, QuestionType
 
 class DocumentResponse(BaseModel):
     name: str
@@ -34,3 +36,21 @@ class DeleteLessonResponse(BaseModel):
     description: Optional[str]
     order: int
     learning_outcomes: Optional[list[str]]
+class QuestionModel(BaseModel):
+    question: str
+    answer: List[str]
+    options: List[str]
+    type: QuestionType
+    score: int
+
+class ExerciseResponse(BaseModel):
+    exercise_id: UUID
+    name: str
+    description: Optional[str]
+    deadline: Optional[datetime]
+    time : Optional[int]
+    topic: Optional[str]
+    attempts : Optional[int]
+    difficulty: DifficultyLevel
+    questions: List[QuestionModel]
+    lesson_id: UUID
