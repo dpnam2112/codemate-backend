@@ -82,3 +82,6 @@ class GetLessonsRecommendationResponse(BaseModel):
     title: str
     description: str
     order: int
+class PutLearningOutcomesCoursesResponse(BaseModel):
+    course_id: UUID
+    learning_outcomes: list[str]

@@ -12,3 +12,7 @@ class BookmarkLessonRequest(BaseModel):
     student_id: UUID
     lesson_id: UUID
     course_id: UUID
+    
+class PutLearningOutcomesCoursesRequest(BaseModel):
+    course_id: UUID
+    learning_outcomes: list[str]
