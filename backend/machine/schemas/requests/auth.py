@@ -7,6 +7,7 @@ class LoginRequest(BaseModel):
 class VerifyEmailRequest(BaseModel):
     email: str
     code: str
+    reset_password: bool = False
     
 class ResendVerificationCodeRequest(BaseModel):
     email: str
@@ -30,3 +31,6 @@ class UserInformationFromGoogle(BaseModel):
 class GoogleAuthRequest(BaseModel):
     access_token: str
     user_info: UserInformationFromGoogle
+    
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
