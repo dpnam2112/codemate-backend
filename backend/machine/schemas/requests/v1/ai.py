@@ -1,8 +1,9 @@
+from typing import Optional
 from uuid import UUID
 from pydantic import BaseModel
 
 
-class RecommendLearningResourcesRequest(BaseModel):
+class LearningPathPlanningRequest(BaseModel):
     course_id: UUID
     user_id: UUID
-    goal: str
+    goal: Optional[str]

@@ -1,10 +1,18 @@
-from uuid import UUID
 from pydantic import BaseModel, Field
-from typing import List
+from typing import Generic, List, TypeVar
+
+T = TypeVar("T")
+
+class ListModelSchema(BaseModel, Generic[T]):
+    items: List[T] = Field(..., description="A list of items. If your response is a list of items, put all items in this field.")
 
 class LearnerConceptProficiency(BaseModel):
     concept: str
     proficiency: float
+
+class LearnerProfile(BaseModel):
+    user_id: str = Field(..., description="A unique identifier for the learner.")
+    concept_proficiencies: List[LearnerConceptProficiency] = Field(..., description="Proficiency levels across different concepts for the learner.")
 
 class LearningResourceRecommendation(BaseModel):
     resource_id: str
@@ -46,8 +54,16 @@ class AddLearningResource(BaseModel):
     concepts: List[LearningResourceConceptRelationship] = Field(..., description="Concepts relating to the learning resource.")
     learning_outcomes: List[str] = Field(..., description="Learning outcomes that learners will achieve after completing this learning resource")
 
-class RecommenderItem(BaseModel):
-    id: str = Field(..., description="id of the recommended learning resource.")
-    code: str = Field(..., description="learning resource's code.")
-    description: str = Field(..., description="a short description for the learning resource.")
+class LessonModule(BaseModel):
+    title: str = Field(..., description="A concise name for the module")
+    description: str = Field(..., description="A brief overview of what the module covers.")
+    objectives: list[str] = Field(..., description="What should the learner achieve by the end of this lesson?")
+    time_estimated: int = Field(..., description="Time estimated in minutes for the learner to complete the module considering his/her mastery on the concepts.")
+
+class RecommendedLessonItem(BaseModel):
+    id: str = Field(..., description="id of the recommended lesson/learning resource.")
     explanation: str = Field(..., description="explanation for why this learning resource is recommended to the learner based on her profile.")
+    modules: list[LessonModule] = Field(
+        ..., 
+        description="A list of lesson modules included in the lesson, detailing what each module covers, its objectives, and the estimated time required."
+    )
