@@ -46,3 +46,6 @@ class CreateCourseResponse(BaseModel):
     image_url: str
     student_courses_list: List[StudentCoursesListResponse]
     
+class PutLearningOutcomesCoursesRequest(BaseModel):
+    course_id: UUID
+    learning_outcomes: list[str]

@@ -418,8 +418,8 @@ router = APIRouter(prefix="/courses", tags=["courses"])
 #                 status=recommend_lesson.status,
 #             )
 #         )
-
-#     return Ok(data=recommended_lessons, message="Successfully fetched the recommended lessons.")
+    
+#    return Ok(data=recommended_lessons, message="Successfully fetched the recommended lessons.")
 
 
 @router.post("/", response_model=Ok[Union[CreateCourseResponse, List[CreateCourseResponse]]])
@@ -617,3 +617,39 @@ async def create_course(
             courses_response.append(course_response)
 
         return Ok(data=courses_response, message="Successfully created the courses.")
+        
+# @router.put("/learning_outcomes", response_model=Ok[PutLearningOutcomesCoursesResponse])
+# async def bookmark_lesson(
+#     body: PutLearningOutcomesCoursesRequest,
+#     courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
+# ):
+
+#     course = await courses_controller.courses_repository.first(
+#         where_=[
+#             Courses.id == body.course_id,
+#         ]
+#     )
+
+#     if not course:
+#         raise BadRequestException(message="Course not found.")
+
+#     learning_outcomes = body.learning_outcomes
+
+#     updated_course = await courses_controller.courses_repository.update(
+#         where_=[
+#             Courses.id == body.course_id,
+#         ],
+#         attributes={"learning_outcomes": learning_outcomes},
+#         commit=True,
+#     )
+
+#     if not updated_course:
+#         raise Exception("Failed to update course learning outcomes")
+
+#     return Ok(
+#         data=PutLearningOutcomesCoursesResponse(
+#             course_id=updated_course.id,
+#             learning_outcomes=updated_course.learning_outcomes,
+#         ),
+#         message="Successfully updated the course learning outcomes.",
+#     )
