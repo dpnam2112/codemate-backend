@@ -1,7 +1,7 @@
 from uuid import uuid4
 from core.db import Base
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from sqlalchemy import Column, String, ForeignKey, Integer
 from sqlalchemy import Column, String, ForeignKey, Integer
 
@@ -13,7 +13,7 @@ class Lessons(Base):
     title = Column(String, nullable=False)
     description = Column(String, nullable=True)
     order = Column(Integer, nullable=False) 
-    learning_outcomes = Column(ARRAY(Text), nullable=True)
+    learning_outcomes = Column(ARRAY(String), nullable=True)
 
     course = relationship("Courses", back_populates="lessons")
     exercises = relationship("Exercises", back_populates="lesson")

@@ -13,7 +13,6 @@ class Professor(Base, TimestampMixin):
     email = Column(String(255), unique=True, nullable=False)
     password = Column(String(255), nullable=True)
     avatar_url = Column(String, nullable=True)
-    created_at = Column(DateTime, default=func.now(), nullable=False)
     mscb = Column(String(10), nullable=True)
     date_of_birth = Column(DateTime, nullable=True)
     fullname = Column(String(255), nullable=True)
