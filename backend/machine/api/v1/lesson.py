@@ -400,3 +400,47 @@ async def update_exercise(
         ),
         message="Successfully updated the exercise.",
     )
+@router.delete("/exercises/{exercise_id}", response_model=Ok[ExerciseResponse])
+async def delete_exercise(
+    exercise_id: UUID,
+    exercises_controller: ExercisesController = Depends(InternalProvider().get_exercises_controller),
+):
+    """
+    Deletes an existing exercise by ID.
+    """
+    # Validate exercise existence
+    exercise = await exercises_controller.exercises_repository.first(
+        where_=[Exercises.id == exercise_id]
+    )
+    if not exercise:
+        raise NotFoundException(message="Exercise not found for the given ID.")
+
+    # Delete the exercise
+    deleted_exercise = await exercises_controller.exercises_repository.delete(
+        where_=[Exercises.id == exercise_id],
+    )
+    print(deleted_exercise)
+    # Return success response
+    return Ok(
+        data=ExerciseResponse(
+            exercise_id=exercise.id,
+            name=exercise.name,
+            description=exercise.description,
+            deadline=exercise.deadline,
+            time=exercise.time,
+            topic=exercise.topic,
+            attempts=exercise.attempts,
+            difficulty=exercise.difficulty,
+            lesson_id=exercise.lesson_id,
+            questions=[
+                QuestionModel(
+                    question=q["question"],
+                    answer=q["answer"],
+                    options=q["options"],
+                    type=q["type"],
+                    score=q["score"],
+                ).model_dump()  # Convert to dictionary
+                for q in exercise.questions
+            ],
+        ),
+        message="Exercise successfully deleted.")

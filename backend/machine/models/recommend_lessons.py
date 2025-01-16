@@ -1,9 +1,13 @@
+
 from sqlalchemy import Column, Integer, Text, ARRAY, ForeignKey, Enum
 from sqlalchemy.dialects.postgresql import UUID
 from uuid import uuid4
 from sqlalchemy.orm import relationship
 from core.db import Base
+from sqlalchemy.orm import relationship
 from core.repository.enum import StatusType
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, Integer, Text, ARRAY, ForeignKey, Enum
 
 class RecommendLessons(Base):
     __tablename__ = "recommend_lessons"

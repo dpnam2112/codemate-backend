@@ -1,11 +1,11 @@
-from sqlalchemy import Column, ForeignKey
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy import Column, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
-from core.db import Base
 from uuid import uuid4
+from core.db import Base
+from sqlalchemy.orm import relationship
+from sqlalchemy import Column, ForeignKey
+from sqlalchemy import Column, ForeignKey
 from sqlalchemy.ext.mutable import MutableDict
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB
 class RecommendDocuments(Base):
     __tablename__ = "recommendDocuments"
 

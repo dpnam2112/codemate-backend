@@ -6,6 +6,7 @@ from uuid import uuid4
 from core.repository.enum import DifficultyLevel
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.mutable import MutableList
+
 class Exercises(Base):
     __tablename__ = "exercises"
 
