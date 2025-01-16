@@ -15,14 +15,18 @@ def verify_token(token: str) -> dict:
         current_time = int(datetime.now(timezone(timedelta(hours=7))).timestamp())
 
         if exp is None:
+            print("Token has no expiration time")
             raise UnauthorizedException("Token is invalid")
 
         if current_time > exp:
+            print("Token has expired")
             raise UnauthorizedException("Token has expired")
 
         return payload
 
     except jwt.ExpiredSignatureError:
+        print("Token has expired")
         raise UnauthorizedException("Token has expired")
     except PyJWTError as e:  
+        print("Token is invalid")
         raise UnauthorizedException("Token is invalid", e)

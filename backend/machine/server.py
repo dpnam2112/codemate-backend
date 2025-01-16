@@ -14,13 +14,17 @@ from core.logger import syslog
 from core.response import Error
 from core.settings import settings
 from machine.api import router
+import logging
 
 from core.exceptions.base import *
 from core.response.api_response import Error
 
+logger = logging.getLogger("uvicorn.error")
+
 
 def init_routers(app_: FastAPI) -> None:
     app_.include_router(router)
+
 
 def init_listeners(app_: FastAPI) -> None:
     """
@@ -29,18 +33,19 @@ def init_listeners(app_: FastAPI) -> None:
 
     @app_.exception_handler(CustomException)
     async def custom_exception_handler(request: Request, exc: CustomException):
+        """
+        Handle custom exceptions and include specific error messages.
+        """
         error_response = Error(
             error_code=exc.code,
-            message=exc.message,
-            message_code=exc.error_code
+            message=exc.message or "An error occurred",
+            message_code=exc.error_code or "CUSTOM_ERROR",
         )
-        
         return JSONResponse(
             status_code=exc.code,
-            content=error_response.model_dump() 
+            content=error_response.model_dump(),
         )
 
-        
     @app_.exception_handler(BadRequestException)
     async def bad_request_exception_handler(request: Request, exc: BadRequestException):
         return await custom_exception_handler(request, exc)
@@ -61,28 +66,33 @@ def init_listeners(app_: FastAPI) -> None:
     async def system_exception_handler(request: Request, exc: SystemException):
         return await custom_exception_handler(request, exc)
 
-
     @app_.exception_handler(Exception)
     async def general_exception_handler(request: Request, exc: Exception):
+        logger.error(f"Unexpected error: {str(exc)}", exc_info=True)
         return JSONResponse(
             status_code=500,
             content=Error(
                 error_code=500,
                 message="Internal Server Error",
                 message_code="INTERNAL_SERVER_ERROR",
-            ).model_dump()
+            ).model_dump(),
         )
+
     @app_.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError):
+        """
+        Handle validation errors and include detailed messages in the response.
+        """
         error_details = exc.errors()
-
+        error_messages = [{"loc": err["loc"], "msg": err["msg"], "type": err["type"]} for err in error_details]
         return JSONResponse(
-            status_code=400,  
+            status_code=400,
             content=Error(
                 error_code=400,
-                message="Validation error occurred",
+                message=str(error_messages),
                 message_code="VALIDATION_ERROR",
-            ).model_dump() 
+                data=None,
+            ).model_dump(),
         )
 
 
@@ -163,7 +173,7 @@ def create_machine() -> FastAPI:
     init_routers(app_)
     init_listeners(app_=app_)
     init_cache()
-    #init_sentry()
+    # init_sentry()
     return app_
 
 

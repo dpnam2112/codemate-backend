@@ -8,10 +8,10 @@ class StudentCourses(Base):
 
     student_id = Column(UUID, ForeignKey('students.id'), primary_key=True, nullable=False)
     course_id = Column(UUID, ForeignKey('courses.id'), primary_key=True, nullable=False)
-    last_accessed = Column(DateTime, default=func.now(), nullable=False)
-    completed_lessons = Column(Integer, default=0, nullable=False)
-    time_spent = Column(Interval, default=timedelta(0), nullable=False)
-    assignments_done = Column(Integer, default=0, nullable=False)
+    last_accessed = Column(DateTime, default=func.now(), nullable=True)
+    completed_lessons = Column(Integer, default=0, nullable=True)
+    time_spent = Column(Interval, default=timedelta(0), nullable=True)
+    assignments_done = Column(Integer, default=0, nullable=True)
 
     course = relationship("Courses", back_populates="student_courses")
     student = relationship("Student", back_populates="student_courses")
