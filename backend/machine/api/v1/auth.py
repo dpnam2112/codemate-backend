@@ -201,6 +201,31 @@ async def login(
         raise UnauthorizedException("Invalid password")
 
     if not user.is_email_verified:
+        code = generate_code()
+        await send_email_to_user(request.email, code)
+        user_attributes = {
+            "is_email_verified": False,
+            "verification_code": code,
+            "verification_code_expires_at": datetime.utcnow() + timedelta(minutes=10),
+        }
+        if role == "professor":
+            new_user = await professor_controller.professor_repository.update(
+                where_=[Professor.email == request.email],
+                attributes=user_attributes,
+                commit=True,
+            )
+        elif role == "admin":
+            new_user = await admin_controller.admin_repository.update(
+                where_=[Admin.email == request.email],
+                attributes=user_attributes,
+                commit=True,
+            )
+        else:
+            new_user = await student_controller.student_repository.update(
+                where_=[Student.email == request.email],
+                attributes=user_attributes,
+                commit=True,
+            )
         return Ok(data=None, message="Your email hasn't been verified. Please verify your email to login.")
 
     user_response = {
