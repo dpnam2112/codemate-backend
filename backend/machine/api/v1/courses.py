@@ -618,38 +618,53 @@ async def create_course(
 
         return Ok(data=courses_response, message="Successfully created the courses.")
         
-# @router.put("/learning_outcomes", response_model=Ok[PutLearningOutcomesCoursesResponse])
-# async def bookmark_lesson(
-#     body: PutLearningOutcomesCoursesRequest,
-#     courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
-# ):
+@router.put("/learning_outcomes", response_model=Ok[PutLearningOutcomesCoursesResponse])
+async def change_learning_outcomes(
+    body: PutLearningOutcomesCoursesRequest,
+    token: str = Depends(oauth2_scheme),
+    professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
+    courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
+):
+    # payload = verify_token(token)
+    # user_id = payload.get("sub")
+    # if not user_id:
+    #     print("Your account is not authorized. Please log in again.")
+    #     raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    
+    # user = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
+    # if not user:
+    #     print("Your account is not allowed to update course's learning outcomes.")
+    #     raise NotFoundException(message="Your account is not allowed to update course's learning outcomes.")
+    
+    course = await courses_controller.courses_repository.first(
+        where_=[
+            Courses.id == body.course_id,
+        ]
+    )
 
-#     course = await courses_controller.courses_repository.first(
-#         where_=[
-#             Courses.id == body.course_id,
-#         ]
-#     )
+    if not course:
+        raise BadRequestException(message="Course not found.")
+    
+    if user.id != course.professor_id:
+        raise BadRequestException(message="You are not allowed to update this course's learning outcomes.")
+    
+    learning_outcomes = body.learning_outcomes
 
-#     if not course:
-#         raise BadRequestException(message="Course not found.")
+    updated_course = await courses_controller.courses_repository.update(
+        where_=[
+            Courses.id == body.course_id,
+        ],
+        attributes={"learning_outcomes": learning_outcomes},
+        commit=True,
+    )
 
-#     learning_outcomes = body.learning_outcomes
+    if not updated_course:
+        raise Exception("Failed to update course learning outcomes")
 
-#     updated_course = await courses_controller.courses_repository.update(
-#         where_=[
-#             Courses.id == body.course_id,
-#         ],
-#         attributes={"learning_outcomes": learning_outcomes},
-#         commit=True,
-#     )
-
-#     if not updated_course:
-#         raise Exception("Failed to update course learning outcomes")
-
-#     return Ok(
-#         data=PutLearningOutcomesCoursesResponse(
-#             course_id=updated_course.id,
-#             learning_outcomes=updated_course.learning_outcomes,
-#         ),
-#         message="Successfully updated the course learning outcomes.",
-#     )
+    return Ok(
+        data=PutLearningOutcomesCoursesResponse(
+            course_id=updated_course.id,
+            learning_outcomes=updated_course.learning_outcomes,
+        ),
+        message="Successfully updated the course learning outcomes.",
+    )
