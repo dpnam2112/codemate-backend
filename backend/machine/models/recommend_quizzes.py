@@ -5,8 +5,8 @@ from sqlalchemy.ext.mutable import MutableList
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from core.repository.enum import DifficultyLevel, StatusType
 from sqlalchemy import Column, String, ForeignKey, Enum, Float
-class QuizExercises(Base):
-    __tablename__ = "quiz_exercises"
+class RecommendQuizzes(Base):
+    __tablename__ = "recommend_quizzes"
 
     id = Column(UUID, primary_key=True, default=uuid4)
     module_id = Column(UUID, ForeignKey("modules.id"), nullable=False)

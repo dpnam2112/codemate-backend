@@ -52,14 +52,14 @@ async def get_module_by_quiz(
 async def get_quiz_exercise(
     moduleId: UUID,
     quizId: UUID,
-    quizexercises_controller: QuizExercisesController = Depends(InternalProvider().get_quizexercises_controller),
+    recommend_quizzes_controller: RecommendQuizzesController = Depends(InternalProvider().get_recommend_quizzes_controller),
 ):
-    module = await quizexercises_controller.quiz_exercises_repository.first(where_=[Modules.id == moduleId])
+    module = await recommend_quizzes_controller.recommend_quizzes_repository.first(where_=[Modules.id == moduleId])
     if not module:
         raise NotFoundException(message="Module not found for the given ID.")
 
-    quiz = await quizexercises_controller.quiz_exercises_repository.first(
-        where_=[QuizExercises.id == quizId, QuizExercises.module_id == moduleId]
+    quiz = await recommend_quizzes_controller.recommend_quizzes_repository.first(
+        where_=[RecommendQuizzes.id == quizId, RecommendQuizzes.module_id == moduleId]
     )
     if not quiz:
         raise NotFoundException(message="Quiz not found for the given ID in the specified module.")
@@ -99,10 +99,10 @@ async def submit_quiz_answers(
     moduleId: UUID,
     quizId: UUID,
     request: QuizAnswerRequest,
-    quizexercises_controller: QuizExercisesController = Depends(InternalProvider().get_quizexercises_controller),
+    recommend_quizzes_controller: RecommendQuizzesController = Depends(InternalProvider().get_recommend_quizzes_controller),
 ):  
-    quiz = await quizexercises_controller.quiz_exercises_repository.first(
-        where_=[QuizExercises.id == quizId],
+    quiz = await recommend_quizzes_controller.recommend_quizzes_repository.first(
+        where_=[RecommendQuizzes.id == quizId],
     )
 
     if not quiz:
@@ -128,8 +128,8 @@ async def submit_quiz_answers(
         )
     quiz.score = (correct_count / len(quiz.questions)) * 100 
     quiz.status = StatusType.completed
-    await quizexercises_controller.quiz_exercises_repository.update(
-        where_=[QuizExercises.id == quizId],
+    await recommend_quizzes_controller.recommend_quizzes_repository.update(
+        where_=[recommend_quizzes.id == quizId],
         attributes={"questions": quiz.questions, "score": quiz.score, "status": quiz.status},
         commit=True, 
     )
@@ -148,10 +148,10 @@ async def submit_quiz_answers(
 async def clear_quiz_answers(
     moduleId: UUID,
     quizId: UUID,
-    quizexercises_controller: QuizExercisesController = Depends(InternalProvider().get_quizexercises_controller),
+    recommend_quizzes_controller: RecommendQuizzesController = Depends(InternalProvider().get_recommend_quizzes_controller),
 ):
-    quiz = await quizexercises_controller.quiz_exercises_repository.first(
-        where_=[QuizExercises.id == quizId],
+    quiz = await recommend_quizzes_controller.recommend_quizzes_repository.first(
+        where_=[RecommendQuizzes.id == quizId],
     )
     if not quiz:
         raise NotFoundException(message="Quiz not found for the given ID.")
@@ -162,8 +162,8 @@ async def clear_quiz_answers(
     quiz.score = 0 
     quiz.status = StatusType.in_progress
 
-    await quizexercises_controller.quiz_exercises_repository.update(
-        where_=[QuizExercises.id == quizId],
+    await recommend_quizzes_controller.recommend_quizzes_repository.update(
+        where_=[RecommendQuizzes.id == quizId],
         attributes={"questions": quiz.questions, "score": quiz.score, "status": quiz.status},
         commit=True,
     )
