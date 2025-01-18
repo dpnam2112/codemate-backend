@@ -43,7 +43,7 @@ class QuestionModel(BaseModel):
     type: QuestionType
     score: int
 
-class ExerciseResponse(BaseModel):
+class ExerciseQuizResponse(BaseModel):
     exercise_id: UUID
     name: str
     description: Optional[str]
