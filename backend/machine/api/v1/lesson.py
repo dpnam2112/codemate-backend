@@ -1,6 +1,5 @@
 from typing import List
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
 from core.response import Ok
 from machine.schemas.requests.lesson import PutLessonRequest, DeleteLessonRequest, ExerciseRequest, QuestionModel
 from machine.schemas.responses.lesson import CreateNewLessonResponse, DocumentResponse, PutLessonResponse, DeleteLessonResponse, ExerciseResponse
@@ -9,13 +8,17 @@ from machine.controllers import *
 from machine.models import *
 from core.utils.file import upload_to_s3
 from core.exceptions import NotFoundException, BadRequestException
-from fastapi import FastAPI, File, UploadFile, Form
+from fastapi import File, UploadFile, Form
 from uuid import UUID
 from fastapi import File, Form, UploadFile, Depends
 from typing import List
 from core.settings import settings
 from core.repository import SynchronizeSessionEnum
 import uuid
+from fastapi.security import OAuth2PasswordBearer
+from core.utils.auth_utils import verify_token
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 router = APIRouter(prefix="/lessons", tags=["lesson"])
 @router.post("/", response_model=Ok[CreateNewLessonResponse])
 async def create_new_lesson(
@@ -25,13 +28,22 @@ async def create_new_lesson(
     order: int = Form(...),
     learning_outcomes: List[str] = Form(...),
     files: List[UploadFile] = File(None),
+    token: str = Depends(oauth2_scheme),
     lesson_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
     document_controller: DocumentsController = Depends(InternalProvider().get_documents_controller),
     course_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
+    professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
 ):
     """
     Creates a new lesson with optional documents.
     """
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    user = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
+    if not user:  
+        raise NotFoundException(message="Only professors have the permission to create lesson.")
     # Check if the course exists
     course = await course_controller.courses_repository.first(
         where_=[Courses.id == course_id]
@@ -39,6 +51,8 @@ async def create_new_lesson(
     if not course:
         raise NotFoundException(message="Course not found for the given ID.")
     
+    if user.id != course.professor_id:
+        raise BadRequestException(message="You are not allowed to create lesson in this course.")
     # Create a new lesson
     lesson_data = {
         "id": str(uuid.uuid4()),
@@ -95,18 +109,32 @@ async def create_new_lesson(
 @router.put("/", response_model=Ok[PutLessonResponse])
 async def update_lesson(
     put_lesson: PutLessonRequest,
+    token: str = Depends(oauth2_scheme),
     lesson_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
+    professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
 ):
     """
     Updates an existing lesson.
     """
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    user = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
+    if not user:
+        raise NotFoundException(message="Only professors have the permission to update this lesson.")
     lesson = await lesson_controller.lessons_repository.first(
-        where_=[Lessons.id == put_lesson.lesson_id]
+        where_=[Lessons.id == put_lesson.lesson_id],
+        relations=[Lessons.course],
         )
-    
     if not lesson:
         raise NotFoundException(message="Lesson not found for the given ID.")
     
+    if not lesson.course:
+        raise NotFoundException(message="Lesson not associated with any course.")
+    
+    if user.id != lesson.course.professor_id:
+        raise BadRequestException(message="You are not allowed to update lesson in this course.")
     # Update the lesson
     lesson.learning_outcomes = put_lesson.learning_outcomes
     lesson.title = put_lesson.title
@@ -138,26 +166,39 @@ async def update_lesson(
 @router.delete("/", response_model=Ok[DeleteLessonResponse])
 async def delete_lesson(
     delete_lesson_request: DeleteLessonRequest,
+    token: str = Depends(oauth2_scheme),
     lesson_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
     recommend_lesson_controller: RecommendLessonsController = Depends(InternalProvider().get_recommendlessons_controller),
     document_controller: DocumentsController = Depends(InternalProvider().get_documents_controller),
+    professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
 ):
     """
     Deletes a lesson by its ID, ensuring all related entities are also deleted.
     """
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    user = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
+    if not user:
+        raise NotFoundException(message="Only professors have the permission to delete this lesson.")
     # Fetch the lesson by ID with related entities
     lesson = await lesson_controller.lessons_repository.first(
         where_=[Lessons.id == delete_lesson_request.lesson_id],
         relations=[
             Lessons.documents,
-            Lessons.student_lessons,
             Lessons.recommend_lesson,
+            Lessons.course,
         ],
     )
     
     if not lesson:
         raise NotFoundException(message="Lesson not found for the given ID.")
-
+    if not lesson.course:
+        raise NotFoundException(message="Lesson not associated with any course.")
+    if not lesson.course.professor_id == user.id:
+        raise BadRequestException(message="You are not allowed to delete lesson in this course.")
+    
     # Delete related RecommendLessons
     if lesson.recommend_lesson:
         await recommend_lesson_controller.recommend_lessons_repository.delete(
@@ -195,11 +236,37 @@ async def delete_lesson(
 async def add_documents(
     lesson_id: UUID = Form(...),
     files: List[UploadFile] = File(...),
+    token: str = Depends(oauth2_scheme),
     document_controller: DocumentsController = Depends(InternalProvider().get_documents_controller),
+    professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
+    lesson_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
 ):
     """
     Adds multiple documents to a specific lesson.
     """
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    
+    user = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
+    if not user:
+        raise NotFoundException(message="Only professors have the permission to upload document.")
+    
+    lesson = await lesson_controller.lessons_repository.first(
+        where_=[Lessons.id == lesson_id],
+        relations=[
+            Lessons.course,
+        ],
+    )
+    if not lesson:
+        raise NotFoundException(message="Lesson not found for the given ID.")
+    if not lesson.course:
+        raise NotFoundException(message="Lesson not associated with any course.")
+    if not lesson.course.professor_id == user_id:
+        raise BadRequestException(message="You are not allowed to add documents to this lesson.")
+    
+    
     # Validate that files are provided
     if not files or all(file.filename == "" for file in files):
         raise ValueError("No files provided for upload.")
@@ -240,19 +307,33 @@ async def add_documents(
 @router.post("/exercises", response_model=Ok[ExerciseResponse])
 async def add_exercises(
     body: ExerciseRequest,
+    token : str = Depends(oauth2_scheme),
     exercises_controller: ExercisesController = Depends(InternalProvider().get_exercises_controller),
     lesson_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
+    professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
 ):
     """
     Adds a new exercise with questions to a lesson.
     """
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    user = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
+    if not user:
+        raise NotFoundException(message="Only professors have the permission to create exercise for this lesson.")
+    user = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
     # Validate lesson existence
     lesson = await lesson_controller.lessons_repository.first(
-        where_=[Lessons.id == body.lesson_id]
+        where_=[Lessons.id == body.lesson_id],
+        relations=[Lessons.course],
     )
     if not lesson:
         raise NotFoundException(message="Lesson not found for the given ID.")
-
+    if not lesson.course:
+        raise NotFoundException(message="Lesson not associated with any course.")
+    if not lesson.course.professor_id == user_id:
+        raise BadRequestException(message="You are not allowed to create exercise for this lesson.")
     # Validate and process questions
     questions_data = []
     for question in body.questions:
@@ -313,13 +394,23 @@ async def add_exercises(
 async def update_exercise(
     exercise_id: UUID,
     body: ExerciseResponse,
+    token: str = Depends(oauth2_scheme),
     exercises_controller: ExercisesController = Depends(InternalProvider().get_exercises_controller),
     lesson_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
+    professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
 ):
     """
     Updates an existing exercise with new details and questions.
 
     """
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    user = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
+    if not user:
+        raise NotFoundException(message="Only professors have the permission to update this exercise.")
+    
     # Validate exercise existence
     exercise = await exercises_controller.exercises_repository.first(
         where_=[Exercises.id == exercise_id]
@@ -329,11 +420,16 @@ async def update_exercise(
 
     # Validate lesson existence
     lesson = await lesson_controller.lessons_repository.first(
-        where_=[Lessons.id == body.lesson_id]
+        where_=[Lessons.id == body.lesson_id],
+        relations=[Lessons.course],
     )
     if not lesson:
         raise NotFoundException(message="Lesson not found for the given ID.")
-
+    if not lesson.course:
+        raise NotFoundException(message="Lesson not associated with any course.")
+    if not lesson.course.professor_id == user_id:
+        raise BadRequestException(message="You are not allowed to update exercise for this lesson.")
+    
     # Validate and process questions
     questions_data = []
     for question in body.questions:
@@ -403,18 +499,39 @@ async def update_exercise(
 @router.delete("/exercises/{exercise_id}", response_model=Ok[ExerciseResponse])
 async def delete_exercise(
     exercise_id: UUID,
+    token: str = Depends(oauth2_scheme),
     exercises_controller: ExercisesController = Depends(InternalProvider().get_exercises_controller),
+    lesson_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
+    professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
 ):
     """
     Deletes an existing exercise by ID.
     """
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    user = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
+    if not user:
+        raise NotFoundException(message="Only professors have the permission to delete this exercise.")
     # Validate exercise existence
     exercise = await exercises_controller.exercises_repository.first(
-        where_=[Exercises.id == exercise_id]
+        where_=[Exercises.id == exercise_id],
+        relations=[Exercises.lesson],
     )
     if not exercise:
         raise NotFoundException(message="Exercise not found for the given ID.")
-
+    if not exercise.lesson:
+        raise NotFoundException(message="Exercise not associated with any lesson.")
+    lesson = await lesson_controller.lessons_repository.first(
+        where_=[Lessons.id == exercise.lesson_id],
+        relations=[Lessons.course],
+    )
+    if not lesson:
+        if not lesson.course:
+            raise NotFoundException(message="Lesson not associated with any course.")
+        if not lesson.course.professor_id == user_id:
+            raise BadRequestException(message="You are not allowed to delete exercise for this lesson.")
     # Delete the exercise
     deleted_exercise = await exercises_controller.exercises_repository.delete(
         where_=[Exercises.id == exercise_id],

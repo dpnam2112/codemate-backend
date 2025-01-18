@@ -618,27 +618,28 @@ async def create_course(
 
         return Ok(data=courses_response, message="Successfully created the courses.")
         
-@router.put("/learning_outcomes", response_model=Ok[PutLearningOutcomesCoursesResponse])
+@router.put("/{course_id}/learning_outcomes", response_model=Ok[PutLearningOutcomesCoursesResponse])
 async def change_learning_outcomes(
+    course_id: UUID,
     body: PutLearningOutcomesCoursesRequest,
     token: str = Depends(oauth2_scheme),
     professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
     courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
 ):
-    # payload = verify_token(token)
-    # user_id = payload.get("sub")
-    # if not user_id:
-    #     print("Your account is not authorized. Please log in again.")
-    #     raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        print("Your account is not authorized. Please log in again.")
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
     
-    # user = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
-    # if not user:
-    #     print("Your account is not allowed to update course's learning outcomes.")
-    #     raise NotFoundException(message="Your account is not allowed to update course's learning outcomes.")
+    user = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
+    if not user:
+        print("Your account is not allowed to update course's learning outcomes.")
+        raise NotFoundException(message="Your account is not allowed to update course's learning outcomes.")
     
     course = await courses_controller.courses_repository.first(
         where_=[
-            Courses.id == body.course_id,
+            Courses.id == course_id,
         ]
     )
 
@@ -652,7 +653,7 @@ async def change_learning_outcomes(
 
     updated_course = await courses_controller.courses_repository.update(
         where_=[
-            Courses.id == body.course_id,
+            Courses.id == course_id,
         ],
         attributes={"learning_outcomes": learning_outcomes},
         commit=True,

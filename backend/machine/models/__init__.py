@@ -12,7 +12,7 @@ from .student_lessons import StudentLessons
 from .student_exercises import StudentExercises
 from .documents import Documents
 from .modules import Modules
-from .quiz_exercises import QuizExercises
+from .recommend_quizzes import RecommendQuizzes
 from .recommend_documents import RecommendDocuments
 from .recommend_lessons import RecommendLessons
 from .learning_paths import LearningPaths

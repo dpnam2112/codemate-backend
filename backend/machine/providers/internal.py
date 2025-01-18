@@ -41,7 +41,7 @@ class InternalProvider:
 
     modules_repository = partial(repo.ModulesRepository, model=modl.Modules)
     
-    quiz_exercises_repository = partial(repo.QuizExercisesRepository, model=modl.QuizExercises)
+    recommend_quizzes_repository = partial(repo.RecommendQuizzesRepository, model=modl.RecommendQuizzes)
     
     recommend_documents_repository = partial(repo.RecommendDocumentsRepository, model=modl.RecommendDocuments)
     
@@ -104,9 +104,9 @@ class InternalProvider:
             modules_repository=self.modules_repository(db_session=db_session)
         )
     
-    def get_quizexercises_controller(self, db_session=Depends(db_session_keeper.get_session)):
-        return ctrl.QuizExercisesController(
-            quiz_exercises_repository=self.quiz_exercises_repository(db_session=db_session)
+    def get_recommend_quizzes_controller(self, db_session=Depends(db_session_keeper.get_session)):
+        return ctrl.RecommendQuizzesController(
+            recommend_quizzes_repository=self.recommend_quizzes_repository(db_session=db_session)
         )
         
     def get_documents_controller(self, db_session=Depends(db_session_keeper.get_session)):
