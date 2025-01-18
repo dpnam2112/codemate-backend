@@ -4,7 +4,8 @@ from sqlalchemy.orm import relationship
 from core.repository.enum import StatusType
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy import Column, ForeignKey, Integer, Text, DateTime, Enum
-
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.ext.mutable import MutableList
 class StudentExercises(Base):
     __tablename__ = "student_exercises"
 
@@ -16,6 +17,7 @@ class StudentExercises(Base):
     submission = Column(Text, nullable=True)
     time_spent = Column(Integer, default=0)
     completion_date = Column(DateTime, nullable=True)
+    answer = Column(MutableList.as_mutable(JSONB), nullable=True)
 
     exercise = relationship("Exercises", back_populates="student_exercises")
     student = relationship("Student", back_populates="student_exercises")

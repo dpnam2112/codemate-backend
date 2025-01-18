@@ -14,5 +14,10 @@ from core.repository.enum import *
 class CourseNameResponse(BaseModel):
     course_id: UUID
     course_name: str
-class GetCourseListResponse(BaseModel):
+class GetCoursesListResponse(BaseModel):
     course_name_list: List[CourseNameResponse]
+class ExerciseNameResponse(BaseModel):
+    exercise_id: UUID
+    exercise_name: str
+class GetExercisesListResponse(BaseModel):
+    exercises_name_list: List[ExerciseNameResponse]
