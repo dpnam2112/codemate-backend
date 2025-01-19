@@ -14,7 +14,7 @@ async def invoke_lp_planner(
     body: LearningPathPlanningRequest,
     controller: Annotated[LPPPlanningController, Depends(InternalProvider().get_lp_planning_controller)]
 ):
-    learning_path = await controller.invoke_lp_planner(
+    learning_path, llm_response = await controller.invoke_lp_planner(
         user_id=body.user_id,
         course_id=body.course_id,
         goal=body.goal,
@@ -22,7 +22,8 @@ async def invoke_lp_planner(
 
     return Ok(
         data=LPPlanningResponse(
-            learning_path_id=learning_path.id,
+            learning_path_id=learning_path["id"],
+            llm_response=llm_response,
             message="Learning path and recommendations created successfully."
         )
     )

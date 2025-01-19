@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional
 from uuid import UUID, uuid4
 from datetime import datetime
 from langchain_core.messages import HumanMessage
@@ -73,21 +73,23 @@ class LPPPlanningController:
         return LPPlanningWorkflowResponse(**args)
 
     @Transactional()
-    async def invoke_lp_planner(self, user_id: UUID, course_id: UUID, goal: Optional[str]) -> dict:
+    async def invoke_lp_planner(self, user_id: UUID, course_id: UUID, goal: Optional[str]) -> tuple[dict, LPPlanningWorkflowResponse]:
         """
         Generates personalized lesson recommendations, persists the data to the database, 
-        and returns the new learning path instance.
+        and returns the new learning path instance along with the agent's response.
 
         Args:
-            user_id (UUID): Unique identifier of the user.
-            course_id (UUID): Unique identifier of the course.
-            goal (str): The learning goal specified by the user.
+            user_id (UUID): Unique identifier of the user initiating the request.
+            course_id (UUID): Unique identifier of the course for which the learning path is being planned.
+            goal (Optional[str]): A specific learning goal provided by the user to guide the recommendation.
 
         Returns:
-            dict: The new learning path instance.
+            tuple[dict, LPPlanningWorkflowResponse]:
+                - dict: A dictionary representation of the newly created learning path instance, including its ID, student ID, course ID, objective, and start date.
+                - LPPlanningWorkflowResponse: The detailed response from the learning path planning workflow, including recommended lessons and modules.
 
         Raises:
-            Exception: If there is an issue with persisting the data or invoking the agent.
+            Exception: If an error occurs during the recommendation process or while persisting data to the database.
         """
         # Step 1: Invoke the agent to get recommendations
         response = await self._invoke_lesson_planning_workflow(user_id, course_id, goal)
@@ -101,31 +103,39 @@ class LPPPlanningController:
             "objective": goal,
             "start_date": datetime.now()
         }
-        learning_path_instance = await self.learning_paths_repository.create(new_learning_path)
+        learning_path_instance = await self.learning_paths_repository.create(new_learning_path, commit=False)
 
-        # Step 3: Persist recommended lessons
-        lesson_entries = [
-            {
+        # Step 3: Persist recommended lessons and generate UUIDs
+        recommend_lesson_entries = []
+        lesson_uuid_map = {}  # Map to store recommend_lesson_id for each lesson
+
+        for item in response.recommended_items:
+            recommend_lesson_id = uuid4()  # Generate a UUID for the recommend lesson
+            lesson_uuid_map[item.id] = recommend_lesson_id  # Map original lesson id to the new UUID
+
+            recommend_lesson_entries.append({
+                "id": str(recommend_lesson_id),  # New UUID for recommend_lesson
                 "learning_path_id": str(learning_path_id),
-                "lesson_id": item.id,  # From RecommendedLessonItem
+                "lesson_id": item.id,  # Original lesson id
                 "explain": item.explanation,
                 "status": "new",
-            }
-            for item in response.recommended_items
-        ]
-        await self.recommend_lesson_repository.create_many(lesson_entries)
+            })
+
+        await self.recommend_lesson_repository.create_many(recommend_lesson_entries, commit=False)
 
         # Step 4: Persist learning modules
+        module_entries = []
+
         for item in response.recommended_items:
+            recommend_lesson_id = lesson_uuid_map[item.id]  # Get the mapped recommend_lesson_id
             for module in item.modules:
-                module_entry = {
-                    "lesson_id": item.id,
+                module_entries.append({
+                    "id": str(uuid4()),  # Generate UUID for the module
+                    "recommend_lesson_id": str(recommend_lesson_id),  # Foreign key to recommend_lesson
                     "title": module.title,
-                    "description": module.description,
-                    "objectives": module.objectives,
-                    "time_estimated": module.time_estimated,
-                }
-                await self.learning_paths_repository.create(module_entry)
+                    "objectives": module.objectives
+                })
 
-        return learning_path_instance.to_dict()
+        await self.module_repository.create_many(module_entries, commit=False)
 
+        return learning_path_instance.to_dict(), response
