@@ -101,7 +101,8 @@ class LPPPlanningController:
             "student_id": str(user_id),
             "course_id": str(course_id),
             "objective": goal,
-            "start_date": datetime.now()
+            "start_date": datetime.now(),
+            "llm_response": response.model_dump()
         }
         learning_path_instance = await self.learning_paths_repository.create(new_learning_path, commit=False)
 
