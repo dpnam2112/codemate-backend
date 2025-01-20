@@ -5,104 +5,113 @@ from pydantic import BaseModel
 from langchain_core.runnables import RunnableConfig
 import neo4j
 from langchain_core.embeddings import Embeddings
-from machine.providers.ai_tool import AIToolProvider, EmbeddingsModelName
-from machine.providers.db_session import DBSessionProvider
+from .ai_tool_provider import AIToolProvider, EmbeddingsModelName
 from langchain_core.tools import InjectedToolArg, tool
-from .schemas import AddLearningResource, RecommenderItem
+from .schemas import AddLearningResource, RecommendedLessonItem
 from core.logger import syslog
+from core.db.neo4j_session import Neo4jDBSessionProvider
 
-def get_learner_profile_and_resource_related_concepts(
-    user_id: str, 
-    course_id: str, 
-    input_concepts: str,
-    top_n: int = 10, 
-    similarity_threshold: float = 0.8
+def get_learner_profile_and_related_lessons(
+    config: RunnableConfig,
+    input_concepts: Optional[list[str]] = None,
+    fulltext_index_name: str = "conceptNameIndex"
 ):
     """
-    Retrieves a learner's profile and the top N learning resources for a specific course,
-    considering only concepts directly related to learning resources.
+    Retrieves a learner's profile and the top N lessons for a specific course.
 
     Args:
-        user_id (str): The unique identifier of the learner.
-        course_id (str): The unique identifier of the course.
-        input_concepts (list[str]): A list of input concept names.
-        top_n (int): The number of top learning resources to return.
-        similarity_threshold (float): The minimum similarity score to consider a concept related.
+        input_concepts (Optional[list[str]]): A list of concept names to filter by.
+        fulltext_index_name (str): The name of the full-text index on Concept.name.
 
     Returns:
-        dict: A dictionary containing the learner's profile and the top N learning resources.
+        dict: A dictionary containing the learner's profile and related lessons.
     """
-    syslog.info("invoke get_learner_profile_and_learning_resources")
-    syslog.info("user_id =", user_id)
-    syslog.info("course_id =", course_id)
-    embeddings_model = AIToolProvider().embedding_models_factory(EmbeddingsModelName.GOOGLE_TEXT_EMBEDDING)
+    user_id = config.get("configurable", {}).get("user_id")
+    course_id = config.get("configurable", {}).get("course_id")
 
-    with DBSessionProvider().get_neo4j_session() as session:
-        query = """
-        MATCH (course:Course {id: $course_id})-[:HAS_RESOURCE]->(resource:LearningResource)
-        MATCH (resource)-[:COVER]->(concept:Concept)
+    syslog.debug("user_id =", user_id)
+    syslog.debug("course_id =", course_id)
 
-        // Collect relevant concepts and learner's proficiency
-        WITH resource, concept
-        OPTIONAL MATCH (learner {id: $user_id})-[learn:LEARN]->(concept)
-        WITH resource, concept,
-             CASE
-                WHEN learn IS NULL THEN 0
-                ELSE coalesce(learn.proficiency, 0)
-             END AS proficiency
-        WITH resource, collect(distinct concept) AS concepts,
-             collect(proficiency) AS proficiencies
+    with Neo4jDBSessionProvider().get_neo4j_session() as session:
+        if input_concepts:
+            # Query for specified concepts
+            fulltext_query = " OR ".join([f'\"{concept}\"' for concept in input_concepts])
+            query = """
+            CALL db.index.fulltext.queryNodes($fulltext_index_name, $fulltext_query) YIELD node AS concept, score
+            MATCH (course:Course {id: $course_id})-[:HAS_LESSON]->(lesson:Lesson)
+            MATCH (lesson)-[:COVER]->(concept)
+            OPTIONAL MATCH (learner {id: $user_id})-[learn:LEARN]->(concept)
+            WITH learner, lesson, concept.name AS concept_name,
+                 coalesce(learn.proficiency, 0) AS proficiency,
+                 coalesce((lesson)-[:COVER]->(concept).difficulty, 0) AS difficulty,
+                 properties(learner) AS learner_attributes,
+                 properties(lesson) AS lesson_attributes
+            RETURN learner_attributes,
+                   lesson_attributes,
+                   collect(DISTINCT {concept: concept_name, difficulty: difficulty}) AS lesson_difficulty,
+                   collect(DISTINCT {concept: concept_name, proficiency: proficiency}) AS learner_proficiency
+            """
+        else:
+            # Query for all lessons and concepts
+            query = """
+            MATCH (course:Course {id: $course_id})-[:HAS_LESSON]->(lesson:Lesson)
+            MATCH (lesson)-[cover_rel:COVER]->(concept:Concept)
+            OPTIONAL MATCH (learner {id: $user_id})-[learn:LEARN]->(concept)
+            WITH learner, lesson, concept.name AS concept_name,
+                 coalesce(learn.proficiency, 0) AS proficiency,
+                 coalesce(cover_rel.difficulty, 0) AS difficulty,
+                 properties(learner) AS learner_attributes,
+                 properties(lesson) AS lesson_attributes
+            RETURN learner_attributes,
+                   lesson_attributes,
+                   collect(DISTINCT {concept: concept_name, difficulty: difficulty}) AS lesson_difficulty,
+                   collect(DISTINCT {concept: concept_name, proficiency: proficiency}) AS learner_proficiency
+            """
 
-        // Compute difficulty vectors for the resources
-        UNWIND concepts AS concept
-        OPTIONAL MATCH (resource)-[cover:COVER]->(concept)
-        WITH resource, concepts, proficiencies,
-             CASE
-                WHEN cover IS NULL THEN 0
-                ELSE coalesce(cover.difficulty, 0)
-             END AS difficulty
-        WITH resource, concepts, proficiencies,
-             collect(difficulty) AS difficulties
-
-        // Calculate similarity between learner's proficiency vector and resource's difficulty vector
-        WITH resource, concepts, proficiencies, difficulties, vector.similarity.euclidean(proficiencies, difficulties) AS similarity ORDER BY similarity DESC
-        LIMIT $top_n
-
-        // Return results
-        RETURN resource, concepts, proficiencies, difficulties, similarity
-        """
-        
-        combined_data = list(session.run(
+        # Execute the query
+        result = session.run(
             query,
+            fulltext_index_name=fulltext_index_name,
+            fulltext_query=fulltext_query if input_concepts else None,
             course_id=course_id,
             user_id=user_id,
-            top_n=top_n,
-            threshold=similarity_threshold
-        ))
+        )
 
     # Parse results
     learner_profile = {}
-    top_resources = []
+    lessons = []
+    learner_attributes = {}
 
-    for record in combined_data:
-        # Initialize learner profile if empty
-        if not learner_profile:
-            learner_profile = {
-                concept["name"]: proficiency
-                for concept, proficiency in zip(record["concepts"], record["proficiencies"])
+    records = list(result)
+
+    for record in records:
+        # Build learner profile
+        learner_profile = {
+            entry["concept"]: entry["proficiency"]
+            for entry in record["learner_proficiency"]
+        }
+        # Capture learner attributes
+        learner_attributes = record["learner_attributes"]
+        # Build lesson data
+        lessons.append({
+            "lesson_attributes": record["lesson_attributes"],
+            "difficulty_mapping": {
+                entry["concept"]: entry["difficulty"]
+                for entry in record["lesson_difficulty"]
             }
-        # Append learning resource data
-        top_resources.append(dict(record["resource"]))
+        })
 
-    syslog.info("learner_profile:", learner_profile)
-    syslog.info("top_resources:", top_resources)
+    syslog.debug("Learner profile:", learner_profile)
+    syslog.debug("Learner attributes:", learner_attributes)
+    syslog.debug("Lessons:", lessons)
 
     return {
         "learner_profile": learner_profile,
-        "top_resources": top_resources,
+        "learner_attributes": learner_attributes,
+        "lessons": lessons,
     }
 
-@DBSessionProvider().inject_neo4j_session(argname="neo4j_session")
+@Neo4jDBSessionProvider().inject_neo4j_session(argname="neo4j_session")
 @AIToolProvider().inject_embeddings_model(
     argname="embeddings_model",
     modelname=EmbeddingsModelName.GOOGLE_TEXT_EMBEDDING
@@ -171,32 +180,155 @@ def add_learning_resource(
         outcome_data=outcome_data
     )
 
-@tool
-def get_learner_profile_and_learning_resources_tool(
-    concepts: list[str],
-    config: RunnableConfig
+class LPPlanningWorkflowResponse(BaseModel):
+    """Retrieves a learner's profile and the top N learning resources for a specific course,
+    considering only concepts directly related to learning resources."""
+    recommended_items: List[RecommendedLessonItem]
+
+def get_learner_profile(
+    config: RunnableConfig,
+    fulltext_index_name: str = "conceptNameIndex"
 ):
     """
-    ## Purpose
+    Retrieves the learner's profile including their attributes and proficiency vector,
+    considering only concepts covered by lessons within a specific course.
 
-    The function aims to:
+    Argsget_learner_profile
+        config (RunnableConfig): Configuration object containing user information.
+        course_id (str): The unique identifier of the course.
+        input_concepts (Optional[list[str]]): A list of concept names to filter by. If input_concepts is not specified, learner profile will contain all concepts that the course cover. Must be passed as None.
+        fulltext_index_name (str): Name of the full-text index on Concept.name.
 
-        Understand the learner's knowledge state based on their proficiency in various concepts.
-        Recommend learning resources that are well-matched to the learner’s current skill level, calculated through a similarity metric between the learner's proficiency and the difficulty of learning resources.
+    Returns:
+        dict: A dictionary containing learner's attributes and proficiency vector.
     """
-
     user_id = config.get("configurable", {}).get("user_id")
     course_id = config.get("configurable", {}).get("course_id")
 
-    if not isinstance(user_id, str):
-        raise ValueError("Invalid type of user_id.")
+    syslog.debug("user_id =", user_id)
+    syslog.debug("course_id =", course_id)
 
-    if not isinstance(course_id, str):
-        raise ValueError("Invalid type of course_id.")
+    input_concepts = []
 
-    return get_learner_profile_and_resource_related_concepts(user_id, course_id, concepts)
+    with Neo4jDBSessionProvider().get_neo4j_session() as session:
+        if input_concepts:
+            # Query for specified concepts covered by lessons in the course
+            fulltext_query = " OR ".join([f'\"{concept}\"' for concept in input_concepts])
+            query = """
+            CALL db.index.fulltext.queryNodes($fulltext_index_name, $fulltext_query) YIELD node AS concept, score
+            MATCH (course:Course {id: $course_id})-[:HAS_LESSON]->(lesson:Lesson)-[:COVER]->(concept)
+            OPTIONAL MATCH (learner {id: $user_id})-[learn:LEARN]->(concept)
+            RETURN properties(learner) AS learner_attributes,
+                   collect(DISTINCT {concept: concept.name, proficiency: coalesce(learn.proficiency, 0)}) AS learner_proficiency
+            """
+            params = {
+                "fulltext_index_name": fulltext_index_name,
+                "fulltext_query": fulltext_query,
+                "course_id": course_id,
+                "user_id": user_id,
+            }
+        else:
+            # Query for all concepts covered by lessons in the course
+            query = """
+            MATCH (course:Course {id: $course_id})-[:HAS_LESSON]->(lesson:Lesson)-[:COVER]->(concept:Concept)
+            OPTIONAL MATCH (learner {id: $user_id})-[learn:LEARN]->(concept)
+            RETURN properties(learner) AS learner_attributes,
+                   collect(DISTINCT {concept: concept.name, proficiency: coalesce(learn.proficiency, 0)}) AS learner_proficiency
+            """
+            params = {
+                "course_id": course_id,
+                "user_id": user_id,
+            }
 
-class lp_recommender_response(BaseModel):
-    """Retrieves a learner's profile and the top N learning resources for a specific course,
-    considering only concepts directly related to learning resources."""
-    recommended_items: List[RecommenderItem]
+        result = session.run(query, **params)
+        records = list(result)
+
+
+    learner_attributes = {}
+    learner_proficiencies = {}
+
+    syslog.debug("records =", records)
+
+    for record in records:
+        # Check if the learner attributes exist in the record
+        if record["learner_attributes"] is not None:
+            # Extract all learner attributes
+            learner_attributes = {
+                key: value for key, value in record["learner_attributes"].items()
+            }
+            syslog.debug(f"Learner attributes found: {learner_attributes}")
+        else:
+            # No learner node found, keep learner_attributes empty
+            syslog.debug("No learner node found in record.")
+
+        # Build the learner proficiency mapping
+        for entry in record["learner_proficiency"]:
+            concept = entry["concept"]
+            proficiency = entry["proficiency"]
+            learner_proficiencies[concept] = proficiency
+
+    # Add 'proficiencies' key to the learner attributes dictionary
+    learner_attributes["proficiencies"] = learner_proficiencies
+
+    syslog.debug(f"Processed learner profile: {learner_proficiencies}")
+    syslog.debug(f"Processed learner attributes with proficiencies: {learner_attributes}")
+
+    return learner_attributes
+
+
+def get_related_lessons(config: RunnableConfig, fulltext_index_name: str = "conceptNameIndex"):
+    """
+    Retrieves lessons with their attributes and difficulty vector.
+
+    Args:
+        config (RunnableConfig): Configuration object containing user and course information.
+        fulltext_index_name (str): Name of the full-text index on Concept.name.
+
+    Returns:
+        list[dict]: A list of lessons with their attributes and difficulty vectors.
+    """
+    course_id = config.get("configurable", {}).get("course_id")
+    syslog.debug("course_id =", course_id)
+
+    input_concepts = []
+
+    with Neo4jDBSessionProvider().get_neo4j_session() as session:
+        if input_concepts:
+            fulltext_query = " OR ".join([f'\"{concept}\"' for concept in input_concepts])
+            query = """
+            CALL db.index.fulltext.queryNodes($fulltext_index_name, $fulltext_query) YIELD node AS concept, score
+            MATCH (course:Course {id: $course_id})-[:HAS_LESSON]->(lesson:Lesson)
+            MATCH (lesson)-[:COVER]->(concept)
+            RETURN properties(lesson) AS lesson_attributes,
+                   collect(DISTINCT {concept: concept.name, difficulty: coalesce((lesson)-[:COVER]->(concept).difficulty, 0)}) AS lesson_difficulty
+            """
+        else:
+            query = """
+            MATCH (course:Course {id: $course_id})-[:HAS_LESSON]->(lesson:Lesson)
+            MATCH (lesson)-[cover_rel:COVER]->(concept:Concept)
+            RETURN properties(lesson) AS lesson_attributes,
+                   collect(DISTINCT {concept: concept.name, difficulty: coalesce(cover_rel.difficulty, 0)}) AS lesson_difficulty
+            """
+
+        result = session.run(
+            query,
+            fulltext_index_name=fulltext_index_name,
+            fulltext_query=fulltext_query if input_concepts else None,
+            course_id=course_id,
+        )
+
+        records = list(result)
+
+    lessons = []
+
+    for record in records:
+        lessons.append({
+            "lesson_attributes": record["lesson_attributes"],
+            "difficulty_mapping": {
+                entry["concept"]: entry["difficulty"]
+                for entry in record["lesson_difficulty"]
+            }
+        })
+
+    syslog.debug("Lessons:", lessons)
+    return lessons

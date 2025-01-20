@@ -10,7 +10,7 @@ from neo4j import AsyncSession as Neo4jAsyncSession, Session as Neo4jSession, As
 
 
 @singleton
-class DBSessionProvider:
+class Neo4jDBSessionProvider:
     """
     This provider handles database session management.
     This class is used to implement Dependency Injection/Inversion of Control.

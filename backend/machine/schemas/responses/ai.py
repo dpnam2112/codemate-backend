@@ -1,11 +1,11 @@
 from pydantic import BaseModel
 from uuid import UUID
 
+from machine.services.workflows.tools import LPPlanningWorkflowResponse
 
-class RecommendLearningResourcesResponse(BaseModel):
-    """
-    Schema for the response of the recommend learning resources endpoint.
-    """
+
+class LPPlanningResponse(BaseModel):
     learning_path_id: UUID
+    llm_response: LPPlanningWorkflowResponse
     message: str
 

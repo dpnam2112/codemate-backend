@@ -9,7 +9,7 @@ class QuizExercises(Base):
     __tablename__ = "quiz_exercises"
 
     id = Column(UUID, primary_key=True, default=uuid4)
-    module_id = Column(UUID, ForeignKey("modules.id"), nullable=False)
+    module_id = Column(UUID, ForeignKey("modules.id", ondelete="CASCADE"), nullable=False)
     name = Column(String, nullable=False)
     status = Column(Enum(StatusType), default="new", nullable=False)
     difficulty = Column(Enum(DifficultyLevel), default="easy",nullable=False)

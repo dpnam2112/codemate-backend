@@ -1,16 +1,17 @@
-from typing import List
+from typing import List, Literal
 from machine.models import *
 from core.response import Ok
 from machine.controllers import *
 from sqlalchemy.orm import aliased
 from sqlalchemy import literal_column
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query, status
 from machine.schemas.requests import *
 from core.repository.enum import UserRole
 from sqlalchemy.sql import func, and_, or_
 from machine.providers import InternalProvider
 from machine.schemas.responses.courses import *
 from core.exceptions import BadRequestException, NotFoundException
+from machine.schemas.responses.learning_path import LearningPathDTO, RecommendedLessonDTO
 
 router = APIRouter(prefix="/courses", tags=["courses"])
 
@@ -362,60 +363,45 @@ async def bookmark_lesson(
     )
 
 @router.get(
-    "/{courseId}/students/{studentId}/lessons_recommendation/",
-    response_model=Ok[List[GetLessonsRecommendationResponse]],
+    "/{course_id}/students/{studentId}/personalized-lp",
+    response_model=Ok[LearningPathDTO]
 )
-async def get_lessons_recommendation(
-    courseId: UUID,
-    studentId: UUID,
-    learning_paths_controller: LearningPathsController = Depends(InternalProvider().get_learningpaths_controller),
-    recommend_lessons_controller: RecommendLessonsController = Depends(InternalProvider().get_recommendlessons_controller),
-    lessons_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
+async def get_personalized_lp(
+    course_id: UUID,
+    student_id: UUID,
+    lp_controller: LearningPathsController = Depends(InternalProvider().get_learningpaths_controller)
 ):
-    if not courseId or not studentId:
-        raise BadRequestException(message="Both Student ID and Course ID are required.")
-    
-    # Tìm Learning Path dựa trên Student ID và Course ID
-    where_learning_path_conditions = [
-        LearningPaths.student_id == studentId,
-        LearningPaths.course_id == courseId,
-    ]
-    learning_path = await learning_paths_controller.learning_paths_repository.first(
-        where_=where_learning_path_conditions,
-        relations=[LearningPaths.recommend_lessons, LearningPaths.course],
+    lp = await lp_controller.get_learning_path(
+        course_id=course_id, user_id=student_id
     )
 
-    if not learning_path:
-        raise NotFoundException(message="Learning path not found for the given student and course.")
-    
-    # Truy xuất thông tin từ RecommendLessons
-    recommend_lessons = learning_path.recommend_lessons
-    course_name = learning_path.course.name if learning_path.course else "Unknown Course"
+    return Ok(data=LearningPathDTO.model_validate(lp))
+@router.get(
+    "/{course_id}/students/{student_id}/learning-path/recommended-lessons",
+    response_model=Ok[List[RecommendedLessonDTO]]
+)
+async def get_recommended_lessons(
+    course_id: UUID,
+    student_id: UUID,
+    expand: Optional[Literal["modules"]] = Query(None, description="Expand related data, e.g., 'modules'."),
+    lp_controller: LearningPathsController = Depends(InternalProvider().get_learningpaths_controller)
+):
+    recommended_lessons = await lp_controller.get_recommended_lessons(
+        user_id=student_id, 
+        course_id=course_id, 
+        expand=expand
+    )
 
-    if not recommend_lessons:
-        raise NotFoundException(message="No recommended lessons found for the given learning path.")
-    
-    # Chuẩn bị dữ liệu trả về
-    recommended_lessons: List[GetLessonsRecommendationResponse] = []
-    for recommend_lesson in recommend_lessons:
-        # Lấy thông tin từ bảng Lessons
-        lesson = await lessons_controller.lessons_repository.first(
-            where_=[Lessons.id == recommend_lesson.id]
-        )
-        if not lesson:
-            continue
+    return Ok(data=recommended_lessons)
 
-        recommended_lessons.append(
-            GetLessonsRecommendationResponse(
-                course_id=courseId,
-                course_name=course_name,
-                lesson_id=lesson.id,
-                title=lesson.title,
-                description=lesson.description or "",
-                order=lesson.order,
-                bookmark=lesson.bookmark if hasattr(lesson, "bookmark") else False,
-                status=recommend_lesson.status,
-            )
-        )
-    
-    return Ok(data=recommended_lessons, message="Successfully fetched the recommended lessons.")
+
+@router.delete(
+    "/{course_id}/students/{student_id}/learning-path"
+)
+async def delete_learning_path(
+    course_id: UUID,
+    student_id: UUID,
+    lp_controller: LearningPathsController = Depends(InternalProvider().get_learningpaths_controller)
+):
+    await lp_controller.delete_learning_path(user_id=student_id, course_id=course_id)
+    return None
