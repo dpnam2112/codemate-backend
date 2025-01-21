@@ -20,7 +20,7 @@ class TestSettings(BaseSettings):
 
 
 class DatabaseSettings(BaseSettings):
-    SQLALCHEMY_POSTGRES_URI: str = "postgresql+asyncpg://nam:123@127.0.0.1:5432/edu"
+    SQLALCHEMY_POSTGRES_URI: str = "postgresql+asyncpg://nam:thangcho@localhost:5432/codemate"
     SQLALCHEMY_ECHO: bool = False
 
 
@@ -33,7 +33,7 @@ class Neo4jSettings(BaseSettings):
     NEO4J_PASSWORD: str = "password"
 
 class GoogleGenAISettings(BaseSettings):
-    GOOGLE_GENAI_API_KEY: str
+    GOOGLE_GENAI_API_KEY: str = ""
 
 class OpenAISettings(BaseSettings):
     OPENAI_API_KEY: str = ""
