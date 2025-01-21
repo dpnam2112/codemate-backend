@@ -363,7 +363,7 @@ async def bookmark_lesson(
     )
 
 @router.get(
-    "/{course_id}/students/{studentId}/personalized-lp",
+    "/{course_id}/students/{studentId}/learning-path",
     response_model=Ok[LearningPathDTO]
 )
 async def get_personalized_lp(
