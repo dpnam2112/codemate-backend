@@ -40,10 +40,10 @@ class LearningPaths(Base):
     objective: Mapped[str | None] = mapped_column(nullable=True)
     progress: Mapped[float] = mapped_column(default=0.0, nullable=False)
     llm_response: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    student_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    student_id: Mapped[UUID] = mapped_column(ForeignKey("student.id"), nullable=False)
     course_id: Mapped[UUID] = mapped_column(ForeignKey("courses.id"), nullable=False)
 
-    student: Mapped["User"] = relationship(back_populates="learning_paths")
+    student: Mapped["Student"] = relationship(back_populates="learning_paths")
     course: Mapped["Courses"] = relationship(back_populates="learning_paths")
     recommend_lessons: Mapped[list["RecommendLessons"]] = relationship(back_populates="learning_path", cascade="all, delete-orphan")
 
