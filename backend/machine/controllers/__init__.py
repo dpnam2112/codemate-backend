@@ -11,6 +11,7 @@ from .recommend import (
     LearningPathsController,
 )
 
+from .recommend import ModulesController, RecommendQuizzesController, RecommendDocumentsController, RecommendLessonsController, LearningPathsController
 __all__ = [
     "StudentController",
     "ProfessorController",
@@ -22,7 +23,7 @@ __all__ = [
     "ExercisesController",
     "StudentExercisesController",
     "ModulesController",
-    "QuizExercisesController",
+    "RecommendQuizzesController",
     "DocumentsController",
     "RecommendDocumentsController",
     "RecommendLessonsController",

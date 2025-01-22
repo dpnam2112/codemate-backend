@@ -13,6 +13,6 @@ class Modules(Base):
     objectives = Column(ARRAY(String), nullable=True)
     last_accessed = Column(DateTime, default=func.now(), nullable=False)
     
-    quizzes = relationship("QuizExercises", back_populates="module")
+    quizzes = relationship("RecommendQuizzes", back_populates="module")
     recommendDocuments = relationship("RecommendDocuments", back_populates="module")
     recommend_lesson = relationship("RecommendLessons", back_populates="modules")    

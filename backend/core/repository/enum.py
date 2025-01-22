@@ -29,6 +29,8 @@ class UserRole(Enum):
 class ExerciseType(Enum):
     original = "original"
     recommended = "recommended"
+    quiz = "quiz"
+    code = "code"
 
 class LessonType(Enum):
     original = "original"  
@@ -40,6 +42,7 @@ class DifficultyLevel(Enum):
     hard = "hard"
 class QuestionType(Enum):
     multiple_choice = "multiple_choice"
+    single_choice = "single_choice"
     true_false = "true_false"
     fill_in_the_blank = "fill_in_the_blank"
     short_answer = "short_answer"
