@@ -1,9 +1,10 @@
-from typing import List, Union
+from typing import List, Union, Literal
 from machine.models import *
 from core.response import Ok
 from machine.controllers import *
 from sqlalchemy.orm import aliased
-from fastapi import APIRouter, Depends
+from sqlalchemy import literal_column
+from fastapi import APIRouter, Depends, Query, status
 from machine.schemas.requests import *
 from data.constant import expectedHeaders
 from sqlalchemy.sql import func, and_, or_
@@ -12,6 +13,7 @@ from core.utils.auth_utils import verify_token
 from machine.schemas.responses.courses import *
 from fastapi.security import OAuth2PasswordBearer
 from core.exceptions import BadRequestException, NotFoundException
+from machine.schemas.responses.learning_path import LearningPathDTO, RecommendedLessonDTO
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 router = APIRouter(prefix="/courses", tags=["courses"])
@@ -669,3 +671,47 @@ async def change_learning_outcomes(
         ),
         message="Successfully updated the course learning outcomes.",
     )
+
+@router.get(
+    "/{course_id}/students/{studentId}/personalized-lp",
+    response_model=Ok[LearningPathDTO]
+)
+async def get_personalized_lp(
+    course_id: UUID,
+    student_id: UUID,
+    lp_controller: LearningPathsController = Depends(InternalProvider().get_learningpaths_controller)
+):
+    lp = await lp_controller.get_learning_path(
+        course_id=course_id, user_id=student_id
+    )
+
+    return Ok(data=LearningPathDTO.model_validate(lp))
+@router.get(
+    "/{course_id}/students/{student_id}/learning-path/recommended-lessons",
+    response_model=Ok[List[RecommendedLessonDTO]]
+)
+async def get_recommended_lessons(
+    course_id: UUID,
+    student_id: UUID,
+    expand: Optional[Literal["modules"]] = Query(None, description="Expand related data, e.g., 'modules'."),
+    lp_controller: LearningPathsController = Depends(InternalProvider().get_learningpaths_controller)
+):
+    recommended_lessons = await lp_controller.get_recommended_lessons(
+        user_id=student_id, 
+        course_id=course_id, 
+        expand=expand
+    )
+
+    return Ok(data=recommended_lessons)
+
+
+@router.delete(
+    "/{course_id}/students/{student_id}/learning-path"
+)
+async def delete_learning_path(
+    course_id: UUID,
+    student_id: UUID,
+    lp_controller: LearningPathsController = Depends(InternalProvider().get_learningpaths_controller)
+):
+    await lp_controller.delete_learning_path(user_id=student_id, course_id=course_id)
+    return None

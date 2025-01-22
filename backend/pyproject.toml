@@ -1,8 +1,8 @@
 [tool.poetry]
-name = "fastapi-seed"
+name = "edumind-api"
 version = "0.1.0"
-description = "FastAPI Boilerplate"
-authors = ["loctvl842 <loclepnvx@gmail.com>"]
+description = "API for the EduMind - my graduation project"
+authors = ["dpnam2112 <dpnam2112@gmail.com>"]
 license = "MIT"
 readme = "README.md"
 
@@ -18,7 +18,7 @@ line-length = 120
 line-length = 120
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = ">=3.11,<3.13"
 fastapi = "^0.111.0"
 pydantic-settings = "^2.2.1"
 toml = "^0.10.2"
@@ -31,12 +31,20 @@ supervisor = "^4.2.5"
 httpx = "^0.27.2"
 tenacity = "^9.0.0"
 dramatiq = "^1.17.0"
+langgraph = "^0.2.45"
+langchain = "^0.3.7"
+neo4j = "^5.26.0"
+langchain-google-genai = "^2.0.4"
+google-generativeai = "^0.8.3"
+numpy = "1.26.4"
+scikit-learn = "^1.5.2"
+ujson = "^5.10.0"
+langchain-openai = "^0.2.10"
 python-dotenv = "^1.0.1"
 uvicorn = "^0.32.1"
 gunicorn = "^23.0.0"
 poetry-plugin-export = "^1.8.0"
 ujson = "^5.10.0"
-psycopg2 = "^2.9.10"
 fastapi-mail = "^1.4.2"
 pyjwt = "^2.10.1"
 passlib = "^1.7.4"
@@ -47,6 +55,8 @@ google-auth = "^2.37.0"
 google-auth-oauthlib = "^1.2.1"
 google-auth-httplib2 = "^0.2.0"
 boto3 = "^1.36.0"
+psycopg = "^3.2.3"
+pybkt = "^1.4.1"
 
 
 [build-system]
