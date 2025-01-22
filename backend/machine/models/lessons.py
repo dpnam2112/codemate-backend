@@ -17,6 +17,5 @@ class Lessons(Base):
 
     course = relationship("Courses", back_populates="lessons")
     exercises = relationship("Exercises", back_populates="lesson")
-    student_lessons = relationship("StudentLessons", back_populates="lesson")
     documents = relationship("Documents", back_populates="lesson") 
     recommend_lesson = relationship("RecommendLessons", back_populates="lesson")

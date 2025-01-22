@@ -11,7 +11,7 @@ class LearningPaths(Base):
     id = Column(UUID, primary_key=True, default=uuid4)
     start_date = Column(DateTime, default=datetime.utcnow, nullable=True)
     end_date = Column(DateTime, nullable=True)
-    objective = Column(String, nullable=True)
+    objective = Column(String, nullable=True) # What student want to achieve in this course
     progress = Column(Float, default=0.0, nullable=False)
     
     student_id = Column(UUID, ForeignKey("students.id"), nullable=False)
