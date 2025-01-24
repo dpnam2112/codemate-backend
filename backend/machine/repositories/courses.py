@@ -26,11 +26,3 @@ class CoursesRepository(BaseRepository[Courses]):
         if join_type == 'left':
             return query.outerjoin(alias, alias.course_id == self.model_class.id)
         return query.join(alias, alias.course_id == self.model_class.id)
-
-    def _join_student(self, query: Select, join_params: dict) -> Select:
-        join_type = join_params.get('type', 'inner')
-        table = join_params.get('table', Student)
-        
-        if join_type == 'left':
-            return query.outerjoin(table, StudentCourses.student_id == table.id)
-        return query.join(table, StudentCourses.student_id == table.id)
