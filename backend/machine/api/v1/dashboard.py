@@ -11,17 +11,22 @@ from machine.schemas.responses.dashboard import *
 from fastapi import APIRouter, Depends, HTTPException
 from core.exceptions import NotFoundException, BadRequestException
 from fastapi.security import OAuth2PasswordBearer
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 from core.utils.auth_utils import verify_token
+
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 
-@router.get("/student-welcome", response_model=Ok[WelcomeMessageResponse])
-async def get_welcome_message(
+@router.get("/student-recent-course", response_model=Ok[WelcomeMessageResponse])
+async def get_recent_course(
     token: str = Depends(oauth2_scheme),
     studentcourses_controller: StudentCoursesController = Depends(InternalProvider().get_studentcourses_controller),
-    student_controller: StudentController = Depends(InternalProvider().get_student_controller)
+    student_controller: StudentController = Depends(InternalProvider().get_student_controller),
 ):
+    """
+    Get the most recently accessed course by the student.
+    """
     payload = verify_token(token)
     user_id = payload.get("sub")
     if not user_id:
@@ -30,10 +35,10 @@ async def get_welcome_message(
     student = await student_controller.student_repository.first(
         where_=[Student.id == user_id],
     )
-    
+
     if not student:
         raise NotFoundException(message="You are not a student. Please log in as a student to access this feature.")
-    
+
     recent_course = await studentcourses_controller.student_courses_repository.first(
         where_=[StudentCourses.student_id == user_id],
         order_={"desc": [{"field": "last_accessed", "model_class": StudentCourses}]},
@@ -48,24 +53,24 @@ async def get_welcome_message(
     )
     return Ok(data=data, message="Successfully fetched the welcome message.")
 
+
 @router.get("/student-activities", response_model=Ok[List[GetRecentActivitiesResponse]])
 async def get_activities(
     token: str = Depends(oauth2_scheme),
     activities_controller: ActivitiesController = Depends(InternalProvider().get_activities_controller),
-    student_controller: StudentController = Depends(InternalProvider().get_student_controller)
+    student_controller: StudentController = Depends(InternalProvider().get_student_controller),
 ):
     payload = verify_token(token)
     user_id = payload.get("sub")
     if not user_id:
         raise BadRequestException(message="Your account is not authorized. Please log in again.")
-    
+
     student = await student_controller.student_repository.first(
         where_=[Student.id == user_id],
     )
-    
+
     if not student:
         raise NotFoundException(message="You are not a student. Please log in as a student to access this feature.")
-
 
     recent_activities = await activities_controller.activities_repository.get_many(
         where_=[Activities.student_id == user_id],
@@ -96,25 +101,24 @@ async def get_activities(
     return Ok(data=activities_data, message="Successfully fetched the recent activities.")
 
 
-@router.post("/student-activities/", response_model=Ok[bool])
+@router.post("/student-activities", response_model=Ok[bool])
 async def add_activity(
     request: AddActivityRequest,
     token: str = Depends(oauth2_scheme),
     activities_controller: ActivitiesController = Depends(InternalProvider().get_activities_controller),
-    student_controller: StudentController = Depends(InternalProvider().get_student_controller)
+    student_controller: StudentController = Depends(InternalProvider().get_student_controller),
 ):
     payload = verify_token(token)
     user_id = payload.get("sub")
     if not user_id:
         raise BadRequestException(message="Your account is not authorized. Please log in again.")
-    
+
     student = await student_controller.student_repository.first(
         where_=[Student.id == user_id],
     )
-    
+
     if not student:
         raise NotFoundException(message="You are not a student. Please log in as a student to access this feature.")
-
 
     try:
         if not request.type or not request.description:
