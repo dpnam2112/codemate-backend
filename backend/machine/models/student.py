@@ -7,7 +7,7 @@ from sqlalchemy import Column, String, UUID, DateTime, Boolean, func
 
 
 class Student(Base, TimestampMixin):
-    __tablename__ = "students"
+    __tablename__ = "student"
 
     id = Column(UUID, primary_key=True, default=uuid4)  # Unique ID for each student
     name = Column(String(255), nullable=False)  # Username of the student

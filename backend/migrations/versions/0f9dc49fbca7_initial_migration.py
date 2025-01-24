@@ -1,8 +1,8 @@
-"""Tạo lại các bảng
+"""Initial migration
 
-Revision ID: cb6315430b27
-Revises: 731ef32afdc4
-Create Date: 2025-01-05 14:38:10.998990
+Revision ID: 0f9dc49fbca7
+Revises: 3bc138fa9696
+Create Date: 2025-01-22 20:14:18.137587
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = 'cb6315430b27'
-down_revision: Union[str, None] = '731ef32afdc4'
+revision: str = '0f9dc49fbca7'
+down_revision: Union[str, None] = '3bc138fa9696'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -24,9 +24,18 @@ def upgrade() -> None:
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('name', sa.String(length=255), nullable=False),
     sa.Column('email', sa.String(length=255), nullable=False),
+    sa.Column('password', sa.String(length=255), nullable=True),
     sa.Column('avatar_url', sa.String(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('mscb', sa.String(length=255), nullable=False),
+    sa.Column('mscb', sa.String(length=255), nullable=True),
+    sa.Column('date_of_birth', sa.DateTime(), nullable=True),
+    sa.Column('fullname', sa.String(length=255), nullable=True),
+    sa.Column('is_email_verified', sa.Boolean(), nullable=False),
+    sa.Column('verification_code', sa.String(length=6), nullable=True),
+    sa.Column('verification_code_expires_at', sa.DateTime(), nullable=True),
+    sa.Column('password_reset_code', sa.String(length=6), nullable=True),
+    sa.Column('password_reset_code_expires_at', sa.DateTime(), nullable=True),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('email')
@@ -35,18 +44,38 @@ def upgrade() -> None:
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('name', sa.String(length=255), nullable=False),
     sa.Column('email', sa.String(length=255), nullable=False),
+    sa.Column('password', sa.String(length=255), nullable=True),
     sa.Column('avatar_url', sa.String(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('mscb', sa.String(length=10), nullable=True),
+    sa.Column('date_of_birth', sa.DateTime(), nullable=True),
+    sa.Column('fullname', sa.String(length=255), nullable=True),
+    sa.Column('is_email_verified', sa.Boolean(), nullable=False),
+    sa.Column('verification_code', sa.String(length=6), nullable=True),
+    sa.Column('verification_code_expires_at', sa.DateTime(), nullable=True),
+    sa.Column('password_reset_code', sa.String(length=6), nullable=True),
+    sa.Column('password_reset_code_expires_at', sa.DateTime(), nullable=True),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('email')
     )
-    op.create_table('students',
+    op.create_table('student',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('name', sa.String(length=255), nullable=False),
     sa.Column('email', sa.String(length=255), nullable=False),
+    sa.Column('password', sa.String(length=255), nullable=True),
     sa.Column('avatar_url', sa.String(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('mssv', sa.String(length=10), nullable=True),
+    sa.Column('date_of_birth', sa.DateTime(), nullable=True),
+    sa.Column('fullname', sa.String(length=255), nullable=True),
+    sa.Column('is_email_verified', sa.Boolean(), nullable=False),
+    sa.Column('verification_code', sa.String(length=6), nullable=True),
+    sa.Column('verification_code_expires_at', sa.DateTime(), nullable=True),
+    sa.Column('password_reset_code', sa.String(length=6), nullable=True),
+    sa.Column('password_reset_code_expires_at', sa.DateTime(), nullable=True),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('email')
@@ -57,7 +86,7 @@ def upgrade() -> None:
     sa.Column('description', sa.String(length=255), nullable=False),
     sa.Column('timestamp', sa.DateTime(), nullable=False),
     sa.Column('student_id', sa.UUID(), nullable=False),
-    sa.ForeignKeyConstraint(['student_id'], ['students.id'], ),
+    sa.ForeignKeyConstraint(['student_id'], ['student.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('courses',
@@ -69,9 +98,29 @@ def upgrade() -> None:
     sa.Column('end_date', sa.Date(), nullable=True),
     sa.Column('status', sa.Enum('new', 'in_progress', 'completed', name='statustype'), nullable=False),
     sa.Column('image_url', sa.String(), nullable=True),
+    sa.Column('nCredit', sa.Integer(), nullable=True),
+    sa.Column('nSemester', sa.Integer(), nullable=True),
+    sa.Column('courseID', sa.String(), nullable=True),
+    sa.Column('createdByAdminID', sa.String(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
     sa.ForeignKeyConstraint(['professor_id'], ['professors.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('exercises',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('course_id', sa.UUID(), nullable=False),
+    sa.Column('name', sa.String(), nullable=False),
+    sa.Column('description', sa.String(), nullable=True),
+    sa.Column('deadline', sa.DateTime(), nullable=True),
+    sa.Column('time', sa.Integer(), nullable=True),
+    sa.Column('topic', sa.String(), nullable=True),
+    sa.Column('attempts', sa.Integer(), nullable=True),
+    sa.Column('difficulty', sa.Enum('easy', 'medium', 'hard', name='difficultylevel'), nullable=False),
+    sa.Column('questions', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+    sa.Column('max_score', sa.Integer(), nullable=True),
+    sa.Column('type', sa.Enum('original', 'recommended', 'quiz', 'code', name='exercisetype'), nullable=False),
+    sa.ForeignKeyConstraint(['course_id'], ['courses.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('learning_paths',
@@ -80,10 +129,11 @@ def upgrade() -> None:
     sa.Column('end_date', sa.DateTime(), nullable=True),
     sa.Column('objective', sa.String(), nullable=True),
     sa.Column('progress', sa.Float(), nullable=False),
+    sa.Column('llm_response', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
     sa.Column('student_id', sa.UUID(), nullable=False),
     sa.Column('course_id', sa.UUID(), nullable=False),
     sa.ForeignKeyConstraint(['course_id'], ['courses.id'], ),
-    sa.ForeignKeyConstraint(['student_id'], ['students.id'], ),
+    sa.ForeignKeyConstraint(['student_id'], ['student.id'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('student_id', 'course_id', name='uq_student_course')
     )
@@ -93,18 +143,19 @@ def upgrade() -> None:
     sa.Column('title', sa.String(), nullable=False),
     sa.Column('description', sa.String(), nullable=True),
     sa.Column('order', sa.Integer(), nullable=False),
+    sa.Column('learning_outcomes', postgresql.ARRAY(sa.String()), nullable=True),
     sa.ForeignKeyConstraint(['course_id'], ['courses.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('student_courses',
     sa.Column('student_id', sa.UUID(), nullable=False),
     sa.Column('course_id', sa.UUID(), nullable=False),
-    sa.Column('last_accessed', sa.DateTime(), nullable=False),
-    sa.Column('completed_lessons', sa.Integer(), nullable=False),
-    sa.Column('time_spent', sa.Interval(), nullable=False),
-    sa.Column('assignments_done', sa.Integer(), nullable=False),
+    sa.Column('last_accessed', sa.DateTime(), nullable=True),
+    sa.Column('completed_lessons', sa.Integer(), nullable=True),
+    sa.Column('time_spent', sa.Interval(), nullable=True),
+    sa.Column('assignments_done', sa.Integer(), nullable=True),
     sa.ForeignKeyConstraint(['course_id'], ['courses.id'], ),
-    sa.ForeignKeyConstraint(['student_id'], ['students.id'], ),
+    sa.ForeignKeyConstraint(['student_id'], ['student.id'], ),
     sa.PrimaryKeyConstraint('student_id', 'course_id')
     )
     op.create_table('documents',
@@ -116,45 +167,16 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['lesson_id'], ['lessons.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_table('exercises',
-    sa.Column('id', sa.UUID(), nullable=False),
-    sa.Column('lesson_id', sa.UUID(), nullable=False),
-    sa.Column('name', sa.String(), nullable=False),
-    sa.Column('description', sa.String(), nullable=True),
-    sa.Column('type', sa.Enum('original', 'recommended', name='exercisetype'), nullable=False),
-    sa.Column('duration', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['lesson_id'], ['lessons.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
     op.create_table('recommend_lessons',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('learning_path_id', sa.UUID(), nullable=False),
+    sa.Column('lesson_id', sa.UUID(), nullable=True),
     sa.Column('progress', sa.Integer(), nullable=False),
-    sa.Column('learning_outcomes', sa.ARRAY(sa.Text()), nullable=True),
     sa.Column('recommended_content', sa.Text(), nullable=True),
     sa.Column('explain', sa.Text(), nullable=True),
     sa.Column('status', sa.Enum('new', 'in_progress', 'completed', name='statustype'), nullable=False),
-    sa.ForeignKeyConstraint(['id'], ['lessons.id'], ),
     sa.ForeignKeyConstraint(['learning_path_id'], ['learning_paths.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_table('student_lessons',
-    sa.Column('student_id', sa.UUID(), nullable=False),
-    sa.Column('lesson_id', sa.UUID(), nullable=False),
-    sa.Column('course_id', sa.UUID(), nullable=False),
-    sa.Column('bookmark', sa.Boolean(), nullable=False),
-    sa.ForeignKeyConstraint(['course_id'], ['courses.id'], ),
     sa.ForeignKeyConstraint(['lesson_id'], ['lessons.id'], ),
-    sa.ForeignKeyConstraint(['student_id'], ['students.id'], ),
-    sa.PrimaryKeyConstraint('student_id', 'lesson_id', 'course_id')
-    )
-    op.create_table('modules',
-    sa.Column('id', sa.UUID(), nullable=False),
-    sa.Column('recommend_lesson_id', sa.UUID(), nullable=False),
-    sa.Column('title', sa.Text(), nullable=True),
-    sa.Column('objectives', sa.ARRAY(sa.String()), nullable=True),
-    sa.Column('last_accessed', sa.DateTime(), nullable=False),
-    sa.ForeignKeyConstraint(['recommend_lesson_id'], ['recommend_lessons.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('student_exercises',
@@ -166,22 +188,20 @@ def upgrade() -> None:
     sa.Column('submission', sa.Text(), nullable=True),
     sa.Column('time_spent', sa.Integer(), nullable=True),
     sa.Column('completion_date', sa.DateTime(), nullable=True),
+    sa.Column('answer', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
     sa.ForeignKeyConstraint(['exercise_id'], ['exercises.id'], ),
-    sa.ForeignKeyConstraint(['student_id'], ['students.id'], ),
+    sa.ForeignKeyConstraint(['student_id'], ['student.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_student_exercises_exercise_id'), 'student_exercises', ['exercise_id'], unique=False)
     op.create_index(op.f('ix_student_exercises_student_id'), 'student_exercises', ['student_id'], unique=False)
-    op.create_table('quiz_exercises',
+    op.create_table('modules',
     sa.Column('id', sa.UUID(), nullable=False),
-    sa.Column('module_id', sa.UUID(), nullable=False),
-    sa.Column('name', sa.String(), nullable=False),
-    sa.Column('status', sa.Enum('new', 'in_progress', 'completed', name='statustype'), nullable=False),
-    sa.Column('difficulty', sa.Enum('easy', 'medium', 'hard', name='difficultylevel'), nullable=False),
-    sa.Column('score', sa.Float(), nullable=True),
-    sa.Column('max_score', sa.Float(), nullable=False),
-    sa.Column('questions', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
-    sa.ForeignKeyConstraint(['module_id'], ['modules.id'], ),
+    sa.Column('recommend_lesson_id', sa.UUID(), nullable=False),
+    sa.Column('title', sa.Text(), nullable=True),
+    sa.Column('objectives', sa.ARRAY(sa.String()), nullable=True),
+    sa.Column('last_accessed', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['recommend_lesson_id'], ['recommend_lessons.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('recommendDocuments',
@@ -191,27 +211,38 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['module_id'], ['modules.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_table('recommend_quizzes',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('module_id', sa.UUID(), nullable=False),
+    sa.Column('name', sa.String(), nullable=False),
+    sa.Column('status', sa.Enum('new', 'in_progress', 'completed', name='statustype'), nullable=False),
+    sa.Column('difficulty', sa.Enum('easy', 'medium', 'hard', name='difficultylevel'), nullable=False),
+    sa.Column('score', sa.Float(), nullable=True),
+    sa.Column('max_score', sa.Float(), nullable=False),
+    sa.Column('questions', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+    sa.ForeignKeyConstraint(['module_id'], ['modules.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id')
+    )
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     # ### commands auto generated by Alembic - please adjust! ###
+    op.drop_table('recommend_quizzes')
     op.drop_table('recommendDocuments')
-    op.drop_table('quiz_exercises')
+    op.drop_table('modules')
     op.drop_index(op.f('ix_student_exercises_student_id'), table_name='student_exercises')
     op.drop_index(op.f('ix_student_exercises_exercise_id'), table_name='student_exercises')
     op.drop_table('student_exercises')
-    op.drop_table('modules')
-    op.drop_table('student_lessons')
     op.drop_table('recommend_lessons')
-    op.drop_table('exercises')
     op.drop_table('documents')
     op.drop_table('student_courses')
     op.drop_table('lessons')
     op.drop_table('learning_paths')
+    op.drop_table('exercises')
     op.drop_table('courses')
     op.drop_table('activities')
-    op.drop_table('students')
+    op.drop_table('student')
     op.drop_table('professors')
     op.drop_table('admins')
     # ### end Alembic commands ###

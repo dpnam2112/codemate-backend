@@ -5,13 +5,11 @@ from .lessons import LessonsController, DocumentsController
 from .exercises import ExercisesController
 from .recommend import (
     ModulesController,
-    QuizExercisesController,
     RecommendDocumentsController,
     RecommendLessonsController,
     LearningPathsController,
+    RecommendQuizzesController
 )
-
-from .recommend import ModulesController, RecommendQuizzesController, RecommendDocumentsController, RecommendLessonsController, LearningPathsController
 __all__ = [
     "StudentController",
     "ProfessorController",

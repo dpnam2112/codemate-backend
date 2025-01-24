@@ -19,4 +19,4 @@ class RecommendLessons(Base):
     
     lesson = relationship("Lessons", back_populates="recommend_lesson")
     learning_path = relationship("LearningPaths", back_populates="recommend_lessons")
-    modules = relationship("Modules", back_populates="recommend_lesson")
+    modules = relationship("Modules", back_populates="recommend_lesson", cascade="all, delete-orphan")

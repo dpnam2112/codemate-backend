@@ -521,6 +521,7 @@ class BaseRepository(Generic[ModelType]):
         join_: Optional[set[str]] = None,
         order_: Optional[dict] = None,
         relations: Optional[list[str]] = None,
+        options_: Optional[list] = None
     ) -> ModelType | None:
         """Retrieves the first model instance that matches the specified query parameters.
 
@@ -539,6 +540,8 @@ class BaseRepository(Generic[ModelType]):
         if relations:
             for relation in relations:
                 query = query.options(selectinload(relation))
+
+        if options_ is not None: query = query.options(*options_)
         query = await self.session.scalars(query)
         return query.first()
 

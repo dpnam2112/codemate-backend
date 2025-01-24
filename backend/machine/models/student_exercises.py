@@ -10,7 +10,7 @@ class StudentExercises(Base):
     __tablename__ = "student_exercises"
 
     id = Column(UUID, primary_key=True, default=uuid4)
-    student_id = Column(UUID, ForeignKey('students.id'), nullable=False, index=True)
+    student_id = Column(UUID, ForeignKey('student.id'), nullable=False, index=True)
     exercise_id = Column(UUID, ForeignKey('exercises.id'), nullable=False, index=True)
     status = Column(Enum(StatusType), default="new", nullable=False)
     score = Column(Integer, nullable=True)

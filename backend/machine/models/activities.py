@@ -11,6 +11,6 @@ class Activities(Base):
     type = Column(Enum(ActivityType, name="activitytype"), nullable=False)
     description = Column(String(255), nullable=False)
     timestamp = Column(DateTime, default=func.now(), nullable=False)
-    student_id = Column(UUID, ForeignKey("students.id"), nullable=False)
+    student_id = Column(UUID, ForeignKey("student.id"), nullable=False)
 
     student = relationship("Student", back_populates="activities")

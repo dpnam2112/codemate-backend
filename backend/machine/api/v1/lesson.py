@@ -2,7 +2,12 @@ from typing import List
 from fastapi import APIRouter, Depends
 from core.response import Ok
 from machine.schemas.requests.lesson import PutLessonRequest, DeleteLessonRequest
-from machine.schemas.responses.lesson import CreateNewLessonResponse, DocumentResponse, PutLessonResponse, DeleteLessonResponse
+from machine.schemas.responses.lesson import (
+    CreateNewLessonResponse,
+    DocumentResponse,
+    PutLessonResponse,
+    DeleteLessonResponse,
+)
 from machine.providers import InternalProvider
 from machine.controllers import *
 from machine.models import *
@@ -19,6 +24,8 @@ from core.utils.auth_utils import verify_token
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 router = APIRouter(prefix="/lessons", tags=["lesson"])
+
+
 @router.post("/", response_model=Ok[CreateNewLessonResponse])
 async def create_new_lesson(
     title: str = Form(...),
@@ -41,15 +48,13 @@ async def create_new_lesson(
     if not user_id:
         raise BadRequestException(message="Your account is not authorized. Please log in again.")
     user = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
-    if not user:  
+    if not user:
         raise NotFoundException(message="Only professors have the permission to create lesson.")
     # Check if the course exists
-    course = await course_controller.courses_repository.first(
-        where_=[Courses.id == course_id]
-    )
+    course = await course_controller.courses_repository.first(where_=[Courses.id == course_id])
     if not course:
         raise NotFoundException(message="Course not found for the given ID.")
-    
+
     if user.id != course.professor_id:
         raise BadRequestException(message="You are not allowed to create lesson in this course.")
     # Create a new lesson
@@ -64,7 +69,7 @@ async def create_new_lesson(
     created_lesson = await lesson_controller.lessons_repository.create(
         lesson_data,
         commit=True,
-        )
+    )
 
     documents = []
     if files:
@@ -91,10 +96,9 @@ async def create_new_lesson(
                 )
                 documents.append(created_document)
 
-
     # Return the response
     return Ok(
-        data= CreateNewLessonResponse(
+        data=CreateNewLessonResponse(
             id=created_lesson.id,
             title=created_lesson.title,
             description=created_lesson.description,
@@ -105,6 +109,8 @@ async def create_new_lesson(
         ),
         message="Successfully updated the lesson.",
     )
+
+
 @router.put("/", response_model=Ok[PutLessonResponse])
 async def update_lesson(
     put_lesson: PutLessonRequest,
@@ -125,13 +131,13 @@ async def update_lesson(
     lesson = await lesson_controller.lessons_repository.first(
         where_=[Lessons.id == put_lesson.lesson_id],
         relations=[Lessons.course],
-        )
+    )
     if not lesson:
         raise NotFoundException(message="Lesson not found for the given ID.")
-    
+
     if not lesson.course:
         raise NotFoundException(message="Lesson not associated with any course.")
-    
+
     if user.id != lesson.course.professor_id:
         raise BadRequestException(message="You are not allowed to update lesson in this course.")
     # Update the lesson
@@ -139,7 +145,7 @@ async def update_lesson(
     lesson.title = put_lesson.title
     lesson.description = put_lesson.description
     lesson.order = put_lesson.order
-    
+
     # Save the updated lesson
     updated_lesson = await lesson_controller.lessons_repository.update(
         where_=[Lessons.id == put_lesson.lesson_id],
@@ -147,27 +153,31 @@ async def update_lesson(
             "learning_outcomes": lesson.learning_outcomes,
             "title": lesson.title,
             "description": lesson.description,
-            "order": lesson.order
+            "order": lesson.order,
         },
         commit=True,
     )
 
     return Ok(
-        data= PutLessonResponse(
-        lesson_id=updated_lesson.id,
-        title=updated_lesson.title,
-        description=updated_lesson.description,
-        order=updated_lesson.order,
-        learning_outcomes=updated_lesson.learning_outcomes
+        data=PutLessonResponse(
+            lesson_id=updated_lesson.id,
+            title=updated_lesson.title,
+            description=updated_lesson.description,
+            order=updated_lesson.order,
+            learning_outcomes=updated_lesson.learning_outcomes,
         ),
         message="Successfully updated the lesson.",
     )
+
+
 @router.delete("/", response_model=Ok[DeleteLessonResponse])
 async def delete_lesson(
     delete_lesson_request: DeleteLessonRequest,
     token: str = Depends(oauth2_scheme),
     lesson_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
-    recommend_lesson_controller: RecommendLessonsController = Depends(InternalProvider().get_recommendlessons_controller),
+    recommend_lesson_controller: RecommendLessonsController = Depends(
+        InternalProvider().get_recommendlessons_controller
+    ),
     document_controller: DocumentsController = Depends(InternalProvider().get_documents_controller),
     professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
 ):
@@ -190,14 +200,14 @@ async def delete_lesson(
             Lessons.course,
         ],
     )
-    
+
     if not lesson:
         raise NotFoundException(message="Lesson not found for the given ID.")
     if not lesson.course:
         raise NotFoundException(message="Lesson not associated with any course.")
     if not lesson.course.professor_id == user.id:
         raise BadRequestException(message="You are not allowed to delete lesson in this course.")
-    
+
     # Delete related RecommendLessons
     if lesson.recommend_lesson:
         await recommend_lesson_controller.recommend_lessons_repository.delete(
@@ -222,15 +232,17 @@ async def delete_lesson(
         raise Exception("Failed to delete the lesson.")
 
     return Ok(
-        data= DeleteLessonResponse(
-        lesson_id=lesson.id,
-        title=lesson.title,
-        description=lesson.description,
-        order=lesson.order,
-        learning_outcomes=lesson.learning_outcomes,
+        data=DeleteLessonResponse(
+            lesson_id=lesson.id,
+            title=lesson.title,
+            description=lesson.description,
+            order=lesson.order,
+            learning_outcomes=lesson.learning_outcomes,
         ),
         message="Successfully deleted the lesson.",
     )
+
+
 @router.post("/documents", response_model=Ok[List[DocumentResponse]])
 async def add_documents(
     lesson_id: UUID = Form(...),
@@ -247,11 +259,11 @@ async def add_documents(
     user_id = payload.get("sub")
     if not user_id:
         raise BadRequestException(message="Your account is not authorized. Please log in again.")
-    
+
     user = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
     if not user:
         raise NotFoundException(message="Only professors have the permission to upload document.")
-    
+
     lesson = await lesson_controller.lessons_repository.first(
         where_=[Lessons.id == lesson_id],
         relations=[
@@ -264,8 +276,7 @@ async def add_documents(
         raise NotFoundException(message="Lesson not associated with any course.")
     if not lesson.course.professor_id == user.id:
         raise BadRequestException(message="You are not allowed to add documents to this lesson.")
-    
-    
+
     # Validate that files are provided
     if not files or all(file.filename == "" for file in files):
         raise ValueError("No files provided for upload.")
@@ -292,9 +303,7 @@ async def add_documents(
                 "lesson_id": lesson_id,
             }
 
-            created_document = await document_controller.documents_repository.create(
-                document_data, commit=True
-            )
+            created_document = await document_controller.documents_repository.create(document_data, commit=True)
 
             documents.append(created_document)
 
@@ -303,3 +312,32 @@ async def add_documents(
         data=[DocumentResponse(**doc.__dict__) for doc in documents],
         message="Successfully added the documents.",
     )
+
+
+@router.get("/{lessonId}/documents", response_model=Ok[List[DocumentResponse]]) # haven't tested 
+async def get_documents(
+    lessonId: UUID,
+    token: str = Depends(oauth2_scheme),
+    document_controller: DocumentsController = Depends(InternalProvider().get_documents_controller),
+):
+    """
+    Retrieves all documents associated with a specific lesson.
+    """
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+
+    documents = await document_controller.documents_repository._get_many(where_=Documents.lesson_id == lessonId)
+
+    documents_response = [
+        DocumentResponse(
+            name=doc.name,
+            type=doc.type,
+            document_url=doc.document_url,
+            lesson_id=doc.lesson_id,
+        )
+        for doc in documents
+    ]
+
+    return Ok(data=documents_response, message="Successfully retrieved the documents.")

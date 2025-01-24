@@ -1,0 +1,32 @@
+// Match and calculate the learner's proficiency vector
+MATCH (concept:Concept)
+WHERE concept.name IN ['Variables', 'Data Types', 'Functions', 'List Creation', 'Algorithm Implementation', 'Conditional Statements']
+WITH concept
+
+MATCH (learner: User {id: 'c9413c07-5e88-4f04-a3f5-21890b8ef053'})
+WITH concept, learner
+
+OPTIONAL MATCH (learner)-[learn:LEARN]->(concept)
+WITH learner, concept, CASE
+    WHEN learn IS NULL THEN 0
+    ELSE learn.proficiency
+END as proficiency
+RETURN learner
+
+WITH learner, concept, collect(proficiency) AS proficiencies
+
+MATCH (resource:LearningResource)
+OPTIONAL MATCH (resource)-[cover:COVER]->(concept)
+WITH learner,
+     proficiencies,
+     resource,
+     CASE
+        WHEN cover IS NULL THEN 0
+        ELSE coalesce(cover.difficulty, 0)
+     END AS difficulty
+WITH learner,
+     proficiencies, 
+     resource,  // Group by resource to get its difficulty vector
+     collect(difficulty) AS difficulties  // Fill missing difficulties with 0
+     
+RETURN learner, proficiencies, resource, difficulties
