@@ -3,7 +3,7 @@ from machine.models import *
 from core.response import Ok
 from machine.controllers import *
 from machine.schemas.requests import *
-from typing import List, Union, Literal
+from typing import List, Union, Literal, Optional
 from data.constant import expectedHeaders
 from fastapi import APIRouter, Depends, Query
 from machine.providers import InternalProvider
@@ -16,13 +16,14 @@ from machine.schemas.responses.learning_path import LearningPathDTO, Recommended
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 router = APIRouter(prefix="/courses", tags=["courses"])
 
-
 @router.get("/student", response_model=Ok[GetCoursesPaginatedResponse])
 async def get_student_courses(
     token: str = Depends(oauth2_scheme),
+    search_query: Optional[str] = Query(None, description="Search query to filter courses"),
     student_courses_controller: StudentCoursesController = Depends(InternalProvider().get_studentcourses_controller),
     student_controller: StudentController = Depends(InternalProvider().get_student_controller),
 ):
+
     payload = verify_token(token)
     user_id = payload.get("sub")
     if not user_id:
@@ -31,7 +32,10 @@ async def get_student_courses(
     student = await student_controller.student_repository.first(where_=[Student.id == user_id])
     if not student:
         raise NotFoundException(message="Your account is not allowed to access this feature.")
-
+    if search_query:
+        where_conditions = [StudentCourses.student_id == user_id, Courses.name.ilike(f"%{search_query}%")]
+    else:
+        where_conditions = [StudentCourses.student_id == user_id]
     select_fields = [
         Courses.id.label("id"),
         Courses.name.label("name"),
@@ -49,8 +53,6 @@ async def get_student_courses(
     join_conditions = {
         "courses": {"type": "left", "alias": "courses_alias"},
     }
-
-    where_conditions = [StudentCourses.student_id == user_id]
 
     courses = await student_courses_controller.student_courses_repository._get_many(
         where_=where_conditions,
@@ -158,7 +160,7 @@ async def get_course_for_student(
         course_start_date=str(get_course.start_date) if get_course.start_date else "",
         course_end_date=str(get_course.end_date) if get_course.end_date else "",
         course_learning_outcomes=get_course.learning_outcomes or [],
-        course_status=str(get_course.status),
+        course_status=get_course.status,
         course_image=str(get_course.image) if get_course.image else "",
         course_percentage_complete="",
         course_last_accessed=str(get_course.last_accessed) if get_course.last_accessed else "",
@@ -387,7 +389,6 @@ async def create_course(
 
         createCourse = await courses_controller.courses_repository.create(attributes=course_attributes, commit=True)
         if not createCourse:
-            print("Failed to create course")
             raise Exception("Failed to create course")
 
         getStudentIDs = await student_controller.student_repository._get_many(

@@ -11,6 +11,8 @@ from .recommend_quizzes import RecommendQuizzesRepository
 from .recommend_documents import RecommendDocumentsRepository
 from .learning_paths import LearningPathsRepository
 from .recommend_lessons import RecommendLessonsRepository
+from .feedback import FeedbackRepository
+
 __all__ = [
     "StudentRepository",
     "ProfessorRepository",
@@ -28,4 +30,5 @@ __all__ = [
     "LearningPathsRepository",
     "RecommendLessonsRepository",
     "RecommendQuizzesRepository",
+    "FeedbackRepository",
 ]

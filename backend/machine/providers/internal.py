@@ -49,6 +49,8 @@ class InternalProvider:
     
     learning_paths_repository = partial(repo.LearningPathsRepository, model=modl.LearningPaths)
     
+    feedback_repository = partial(repo.FeedbackRepository, model=modl.Feedback)
+    
     def get_student_controller(self, db_session=Depends(db_session_keeper.get_session)):
         return ctrl.StudentController(
             student_repository=self.student_repository(db_session=db_session)
@@ -123,6 +125,11 @@ class InternalProvider:
         return ctrl.LearningPathsController(
             learning_paths_repository=self.learning_paths_repository(db_session=db_session),
             recommended_lesson_repository=self.recommend_lessons_repository(db_session=db_session)
+        )
+        
+    def get_feedback_controller(self, db_session=Depends(db_session_keeper.get_session)):
+        return ctrl.FeedbackController(
+            feedback_repository=self.feedback_repository(db_session=db_session)
         )
 
     async def get_lp_planning_controller(self, db_session=Depends(db_session_keeper.get_session)):

@@ -1,16 +1,16 @@
-import logging
+
 from typing import List
 from core.response import Ok
 from machine.models import *
 from datetime import datetime
+from machine.controllers import *
 from pydantic import ValidationError
 from machine.schemas.requests import *
-from machine.controllers import *
 from machine.providers import InternalProvider
 from machine.schemas.responses.dashboard import *
+from fastapi.security import OAuth2PasswordBearer
 from fastapi import APIRouter, Depends, HTTPException
 from core.exceptions import NotFoundException, BadRequestException
-from fastapi.security import OAuth2PasswordBearer
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 from core.utils.auth_utils import verify_token
@@ -51,7 +51,7 @@ async def get_recent_course(
     data = WelcomeMessageResponse(
         course=recent_course.course.name, course_id=recent_course.course.id, last_accessed=recent_course.last_accessed
     )
-    return Ok(data=data, message="Successfully fetched the welcome message.")
+    return Ok(data=data, message="Successfully fetched the recent course.")
 
 
 @router.get("/student-activities", response_model=Ok[List[GetRecentActivitiesResponse]])

@@ -1,8 +1,9 @@
 from uuid import uuid4
 from core.db import Base
+from sqlalchemy.orm import relationship
 from core.db.mixins import TimestampMixin
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy import Column, String, UUID, DateTime, Boolean, func
+from sqlalchemy import Column, String, UUID, DateTime, Boolean
 
 class Admin(Base, TimestampMixin):
     __tablename__ = "admins"

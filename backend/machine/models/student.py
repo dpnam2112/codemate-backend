@@ -3,7 +3,7 @@ from core.db import Base
 from sqlalchemy.orm import relationship
 from core.db.mixins import TimestampMixin
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy import Column, String, UUID, DateTime, Boolean, func
+from sqlalchemy import Column, String, UUID, DateTime, Boolean
 
 
 class Student(Base, TimestampMixin):
@@ -32,6 +32,7 @@ class Student(Base, TimestampMixin):
 
     is_active = Column(Boolean, default=False, nullable=False) # Active status of the student
 
+    feedbacks = relationship("Feedback", back_populates="student", lazy='dynamic')
     activities = relationship("Activities", back_populates="student")
     student_courses = relationship("StudentCourses", back_populates="student")
     student_exercises = relationship("StudentExercises", back_populates="student")
