@@ -8,22 +8,22 @@ from sqlalchemy import Column, String, UUID, DateTime, Boolean, func
 class Professor(Base, TimestampMixin):
     __tablename__ = "professors"
 
-    id = Column(UUID, primary_key=True, default=uuid4)
-    name = Column(String(255), nullable=False)
-    email = Column(String(255), unique=True, nullable=False)
-    password = Column(String(255), nullable=True)
-    avatar_url = Column(String, nullable=True)
-    mscb = Column(String(10), nullable=True)
-    date_of_birth = Column(DateTime, nullable=True)
-    fullname = Column(String(255), nullable=True)
+    id = Column(UUID, primary_key=True, default=uuid4)  # Unique ID for each professor
+    name = Column(String(255), nullable=False)  # Username of the professor
+    email = Column(String(255), unique=True, nullable=False)    # Email of the professor
+    password = Column(String(255), nullable=True)   # Password of the professor
+    avatar_url = Column(String, nullable=True)  # Avatar URL of the professor
+    mscb = Column(String(10), nullable=True)    # Employee ID
+    date_of_birth = Column(DateTime, nullable=True) # Date of birth of the professor
+    fullname = Column(String(255), nullable=True)   # Full name of the professor
         
-    is_email_verified = Column(Boolean, default=False, nullable=False)
-    verification_code = Column(String(6), nullable=True) 
-    verification_code_expires_at = Column(DateTime, nullable=True) 
+    is_email_verified = Column(Boolean, default=False, nullable=False)  # Email verification status
+    verification_code = Column(String(6), nullable=True)    # Verification code
+    verification_code_expires_at = Column(DateTime, nullable=True)  # Verification code expiration time
 
-    password_reset_code = Column(String(6), nullable=True) 
-    password_reset_code_expires_at = Column(DateTime, nullable=True)
+    password_reset_code = Column(String(6), nullable=True)  # Password reset code
+    password_reset_code_expires_at = Column(DateTime, nullable=True)    # Password reset code expiration time
 
-    is_active = Column(Boolean, default=False, nullable=False)
+    is_active = Column(Boolean, default=False, nullable=False)  # Active status of the professor
     
     courses = relationship("Courses", back_populates="professor")

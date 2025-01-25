@@ -1,8 +1,8 @@
-"""Add default password
+"""adjust feedback table
 
-Revision ID: 84598307cabb
-Revises: 2a131cb26ca2
-Create Date: 2025-01-08 17:28:02.281623
+Revision ID: 03e0c517116c
+Revises: 9287fe306321
+Create Date: 2025-01-24 21:57:27.477165
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '84598307cabb'
-down_revision: Union[str, None] = '2a131cb26ca2'
+revision: str = '03e0c517116c'
+down_revision: Union[str, None] = '9287fe306321'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

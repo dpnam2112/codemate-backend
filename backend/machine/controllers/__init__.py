@@ -1,9 +1,16 @@
 from .user import StudentController, ProfessorController, AdminController
 from .dashboard import StudentCoursesController, ActivitiesController
-from .courses import CoursesController, StudentLessonsController, StudentExercisesController
+from .courses import CoursesController, StudentExercisesController
 from .lessons import LessonsController, DocumentsController
 from .exercises import ExercisesController
-from .recommend import ModulesController, RecommendQuizzesController, RecommendDocumentsController, RecommendLessonsController, LearningPathsController
+from .recommend import (
+    ModulesController,
+    RecommendDocumentsController,
+    RecommendLessonsController,
+    LearningPathsController,
+    RecommendQuizzesController
+)
+from .feedback import FeedbackController
 __all__ = [
     "StudentController",
     "ProfessorController",
@@ -13,7 +20,6 @@ __all__ = [
     "CoursesController",
     "LessonsController",
     "ExercisesController",
-    "StudentLessonsController",
     "StudentExercisesController",
     "ModulesController",
     "RecommendQuizzesController",
@@ -21,4 +27,5 @@ __all__ = [
     "RecommendDocumentsController",
     "RecommendLessonsController",
     "LearningPathsController",
+    "FeedbackController",
 ]

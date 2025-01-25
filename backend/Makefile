@@ -40,7 +40,6 @@ options:
 
 .PHONY: run
 run:
-	@make start-worker &
 	@make start
 
 start-worker: ## Start background workers

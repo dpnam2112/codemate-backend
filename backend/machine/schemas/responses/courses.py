@@ -1,6 +1,6 @@
 from uuid import UUID
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 from core.repository.enum import *
 from datetime import date
 class StudentList(BaseModel):
@@ -19,13 +19,10 @@ class GetCoursesResponse(BaseModel):
     name: str
     start_date: str
     end_date: str
-    student_list: List[StudentList]
-    learning_outcomes: List[str]
-    professor: ProfessorInformation
+    learning_outcomes: Optional[List[str]] 
     status: StatusType
-    image: str
-    percentage_complete: str
     last_accessed: str
+ 
 class GetCoursesPaginatedResponse(BaseModel):
     content: List[GetCoursesResponse]
     currentPage: int
@@ -47,18 +44,17 @@ class GetLessonsResponse(BaseModel):
     id: UUID
     title: str
     description: str 
-    bookmark: bool
+    learning_outcomes: List[str]
     order: int
-    exercises: List[GetExercisesResponse]
-    documents: List[GetDocumentsResponse]
+    # exercises: List[GetExercisesResponse]
+    # documents: List[GetDocumentsResponse]
 class GetCourseDetailResponse(BaseModel):
-    course_id: UUID
+    course_id: str
     course_name: str
     course_start_date: str
     course_end_date: str
     course_learning_outcomes: List[str]
-    course_professor: ProfessorInformation
-    course_status: StatusType
+    course_status: str
     course_image: str
     course_percentage_complete: str
     course_last_accessed: str
@@ -66,6 +62,7 @@ class GetCourseDetailResponse(BaseModel):
     time_spent:str 
     assignments_done: int
     lessons: List[GetLessonsResponse]
+    
 class BookmarkLessonResponse(BaseModel):
     lesson_id: UUID
     student_id: UUID

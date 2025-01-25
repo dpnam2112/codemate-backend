@@ -190,7 +190,7 @@ async def login(
                 commit=True,
             )
 
-        user_response = {"name": new_user.name, "email": new_user.email, "is_active": True, "role": role_response}
+        user_response = {"name": new_user.name, "email": new_user.email, "is_active": True, "is_email_verified": True, "role": role_response}
 
         return Ok(
             data=create_tokens_response(user.id, user_response),
@@ -231,6 +231,7 @@ async def login(
     user_response = {
         "name": user.name,
         "email": user.email,
+        "is_active": user.is_active,
         "is_email_verified": user.is_email_verified,
         "role": role_response,
     }

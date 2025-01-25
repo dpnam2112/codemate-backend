@@ -6,7 +6,7 @@ from sqlalchemy import Column, DateTime, ForeignKey, UUID, Interval, Integer, fu
 class StudentCourses(Base):
     __tablename__ = "student_courses"
 
-    student_id = Column(UUID, ForeignKey('students.id'), primary_key=True, nullable=False)
+    student_id = Column(UUID, ForeignKey('student.id'), primary_key=True, nullable=False)
     course_id = Column(UUID, ForeignKey('courses.id'), primary_key=True, nullable=False)
     last_accessed = Column(DateTime, default=func.now(), nullable=True)
     completed_lessons = Column(Integer, default=0, nullable=True)

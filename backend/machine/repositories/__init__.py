@@ -4,7 +4,6 @@ from .activities import ActivitiesRepository
 from .courses import CoursesRepository
 from .lessons import LessonsRepository
 from .exercises import ExercisesRepository
-from .student_lessons import StudentLessonsRepository
 from .student_exercises import StudentExercisesRepository
 from .documents import DocumentsRepository
 from .modules import ModulesRepository
@@ -12,6 +11,8 @@ from .recommend_quizzes import RecommendQuizzesRepository
 from .recommend_documents import RecommendDocumentsRepository
 from .learning_paths import LearningPathsRepository
 from .recommend_lessons import RecommendLessonsRepository
+from .feedback import FeedbackRepository
+
 __all__ = [
     "StudentRepository",
     "ProfessorRepository",
@@ -29,4 +30,5 @@ __all__ = [
     "LearningPathsRepository",
     "RecommendLessonsRepository",
     "RecommendQuizzesRepository",
+    "FeedbackRepository",
 ]

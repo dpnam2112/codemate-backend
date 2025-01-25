@@ -2,6 +2,8 @@ from functools import partial
 
 from fastapi import Depends
 
+import machine.controllers as ctrl
+from machine.controllers.ai.lp_planning import LPPPlanningController
 import machine.models as modl
 from core.utils import singleton
 import machine.controllers as ctrl
@@ -33,8 +35,6 @@ class InternalProvider:
     
     exercises_repository = partial(repo.ExercisesRepository, model=modl.Exercises)
     
-    student_lessons_repository = partial(repo.StudentLessonsRepository, model=modl.StudentLessons)
-    
     student_exercises_repository = partial(repo.StudentExercisesRepository, model=modl.StudentExercises)
     
     documents_repository = partial(repo.DocumentsRepository, model=modl.Documents)
@@ -48,6 +48,8 @@ class InternalProvider:
     recommend_lessons_repository = partial(repo.RecommendLessonsRepository, model=modl.RecommendLessons)
     
     learning_paths_repository = partial(repo.LearningPathsRepository, model=modl.LearningPaths)
+    
+    feedback_repository = partial(repo.FeedbackRepository, model=modl.Feedback)
     
     def get_student_controller(self, db_session=Depends(db_session_keeper.get_session)):
         return ctrl.StudentController(
@@ -89,11 +91,6 @@ class InternalProvider:
             exercises_repository=self.exercises_repository(db_session=db_session)
         )
         
-    def get_studentlessons_controller(self, db_session=Depends(db_session_keeper.get_session)):
-        return ctrl.StudentLessonsController(
-            student_lessons_repository=self.student_lessons_repository(db_session=db_session)
-        )
-        
     def get_studentexercises_controller(self, db_session=Depends(db_session_keeper.get_session)):
         return ctrl.StudentExercisesController(
             student_exercises_repository=self.student_exercises_repository(db_session=db_session)
@@ -126,5 +123,21 @@ class InternalProvider:
     
     def get_learningpaths_controller(self, db_session=Depends(db_session_keeper.get_session)):
         return ctrl.LearningPathsController(
-            learning_paths_repository=self.learning_paths_repository(db_session=db_session)
+            learning_paths_repository=self.learning_paths_repository(db_session=db_session),
+            recommended_lesson_repository=self.recommend_lessons_repository(db_session=db_session)
         )
+        
+    def get_feedback_controller(self, db_session=Depends(db_session_keeper.get_session)):
+        return ctrl.FeedbackController(
+            feedback_repository=self.feedback_repository(db_session=db_session)
+        )
+
+    async def get_lp_planning_controller(self, db_session=Depends(db_session_keeper.get_session)):
+        async with LPPPlanningController(
+            recommend_lesson_repository=self.recommend_lessons_repository(db_session=db_session),
+            learning_paths_repository=self.learning_paths_repository(db_session=db_session),
+            module_repository=self.modules_repository(db_session=db_session)
+        ) as controller:
+            if controller is None:
+                raise ValueError("Controller is not properly initialized.")
+            yield controller

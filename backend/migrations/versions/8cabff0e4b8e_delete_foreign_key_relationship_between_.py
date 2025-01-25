@@ -1,8 +1,8 @@
-"""fix status type
+"""Delete foreign key relationship between lessons and exercises
 
-Revision ID: 40a38ee6f816
-Revises: bc253897d435
-Create Date: 2025-01-16 10:28:18.694587
+Revision ID: 8cabff0e4b8e
+Revises: d8fd7fd33e56
+Create Date: 2025-01-22 20:22:41.690613
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '40a38ee6f816'
-down_revision: Union[str, None] = 'bc253897d435'
+revision: str = '8cabff0e4b8e'
+down_revision: Union[str, None] = 'd8fd7fd33e56'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

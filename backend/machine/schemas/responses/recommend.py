@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from typing import List
 from core.repository.enum import StatusType,DifficultyLevel
 from typing import Optional
+
 class DocumentResponse(BaseModel):
     id: UUID
     name: str
@@ -25,6 +26,7 @@ class QuizExerciseResponse(BaseModel):
     score: Optional[float] = None  
     max_score: float
     questions: List[QuizQuestionResponse]
+
 class QuizListResponse(BaseModel):
     id: UUID
     name: str
@@ -32,8 +34,6 @@ class QuizListResponse(BaseModel):
     difficulty: DifficultyLevel
     score:  Optional[float] = None  
    
-    
-    
 class ModuleResponse(BaseModel):
     module_id: UUID
     title: str
