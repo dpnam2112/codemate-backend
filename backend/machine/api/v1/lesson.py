@@ -75,7 +75,6 @@ async def create_new_lesson(
                 s3_key = await upload_to_s3(
                     file_content=content,
                     file_name=file.filename,
-                    bucket_name=settings.AWS3_BUCKET_NAME,
                 )
 
                 # Save the document to the database
@@ -266,7 +265,6 @@ async def add_documents(
         raise BadRequestException(message="You are not allowed to add documents to this lesson.")
     
     
-    # Validate that files are provided
     if not files or all(file.filename == "" for file in files):
         raise ValueError("No files provided for upload.")
 
@@ -274,17 +272,13 @@ async def add_documents(
 
     for file in files:
         if file.filename:
-            # Read file content
             content = await file.read()
 
-            # Upload the file to S3
             s3_key = await upload_to_s3(
                 file_content=content,
                 file_name=file.filename,
-                bucket_name=settings.AWS3_BUCKET_NAME,
             )
 
-            # Save the document metadata to the database
             document_data = {
                 "name": file.filename,
                 "type": file.content_type,
@@ -298,7 +292,6 @@ async def add_documents(
 
             documents.append(created_document)
 
-    # Return the response
     return Ok(
         data=[DocumentResponse(**doc.__dict__) for doc in documents],
         message="Successfully added the documents.",

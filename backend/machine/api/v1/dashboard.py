@@ -5,11 +5,15 @@ from machine.models import *
 from datetime import datetime
 from pydantic import ValidationError
 from machine.schemas.requests import *
-from machine.controllers.dashboard import *
+from machine.controllers import *
 from machine.providers import InternalProvider
 from machine.schemas.responses.dashboard import *
 from fastapi import APIRouter, Depends, HTTPException
 from core.exceptions import NotFoundException, BadRequestException
+from fastapi.security import OAuth2PasswordBearer
+from core.utils.auth_utils import verify_token
+import datetime
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -98,3 +102,75 @@ async def add_activity(
         return Ok(data=True, message="Successfully added the activity.")
     except ValidationError as e:
         raise HTTPException(status_code=500, detail=f"Validation error: {e.errors()}")
+
+@router.get("/professors", response_model=Ok[GetDashboardProfessorResponse])
+async def get_professor_dashboard(
+    token: str = Depends(oauth2_scheme), 
+    professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
+    courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
+    lessons_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
+    student_courses_controller: StudentCoursesController = Depends(InternalProvider().get_studentcourses_controller),
+    exercises_controller: ExercisesController = Depends(InternalProvider().get_exercises_controller),
+):
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+
+    professor = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
+
+    if not professor:
+        raise NotFoundException(message="Only professors have the permission to get professor dashboard.")
+    
+    n_courses = await courses_controller.courses_repository.count(where_=[Courses.professor_id == professor.id])
+    courses = await courses_controller.courses_repository.get_many(where_=[Courses.professor_id == professor.id])
+
+    n_lessons = 0
+    n_students_set = set()
+    n_exercises = 0
+    for course in courses:
+        lessons_count = await lessons_controller.lessons_repository.count(where_=[Lessons.course_id == course.id])
+        n_lessons += lessons_count
+
+        student_courses = await student_courses_controller.student_courses_repository.get_many(
+            where_=[StudentCourses.course_id == course.id]
+        )
+        student_ids = [sc.student_id for sc in student_courses]  # Chỉ lấy ID sinh viên
+        n_students_set.update(student_ids)  # Thêm vào set để loại bỏ trùng lặp
+        
+        exercises_count = await exercises_controller.exercises_repository.count(where_=[Exercises.course_id == course.id])
+        n_exercises += exercises_count
+
+    upcoming_exercises_list = []
+    current_time = datetime.datetime.utcnow()
+
+    for course in courses:
+        upcoming_exercises = await exercises_controller.exercises_repository.get_many(
+            where_=[
+                Exercises.course_id == course.id,
+                Exercises.deadline > current_time
+            ],
+        )
+        upcoming_exercises_list.extend(upcoming_exercises)
+
+    upcoming_exercises_list = sorted(upcoming_exercises_list, key=lambda ex: ex.deadline)[:5]
+    upcoming_events = [
+        Events(
+            exercise_id=exercise.id,
+            exercise_name=exercise.name,
+            exercise_deadline=exercise.deadline,
+        )
+        for exercise in upcoming_exercises_list
+    ]
+
+    response = GetDashboardProfessorResponse(
+        professor_id=professor.id,
+        professor_name=professor.name,
+        nCourses=n_courses,
+        nLessons=n_lessons,
+        nStudents=len(n_students_set),
+        nExercises=n_exercises,
+        upcoming_events=upcoming_events
+    )
+
+    return Ok(data=response, message="Successfully fetched professor dashboard.")
