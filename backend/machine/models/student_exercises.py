@@ -14,7 +14,7 @@ class StudentExercises(Base):
     exercise_id = Column(UUID, ForeignKey('exercises.id'), nullable=False, index=True)
     status = Column(Enum(StatusType), default="new", nullable=False)
     score = Column(Integer, nullable=True)
-    submission = Column(Text, nullable=True)
+    # submission = Column(Text, nullable=True)
     time_spent = Column(Integer, default=0)
     completion_date = Column(DateTime, nullable=True)
     answer = Column(MutableList.as_mutable(JSONB), nullable=True)

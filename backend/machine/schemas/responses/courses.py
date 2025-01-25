@@ -2,7 +2,7 @@ from uuid import UUID
 from pydantic import BaseModel
 from typing import List, Optional
 from core.repository.enum import *
-
+from datetime import date
 class StudentList(BaseModel):
     student_id: UUID
     student_name: str
@@ -22,11 +22,6 @@ class GetCoursesResponse(BaseModel):
     learning_outcomes: Optional[List[str]] 
     status: StatusType
     last_accessed: str
-    nCredit: int
-    nSemester: int
-    courseID: str
-    image: str
-    # percentage_complete: str
  
 class GetCoursesPaginatedResponse(BaseModel):
     content: List[GetCoursesResponse]
@@ -66,7 +61,7 @@ class GetCourseDetailResponse(BaseModel):
     completed_lessons: int
     time_spent:str 
     assignments_done: int
-    # lessons: List[GetLessonsResponse]
+    lessons: List[GetLessonsResponse]
     
 class BookmarkLessonResponse(BaseModel):
     lesson_id: UUID
@@ -85,3 +80,48 @@ class GetLessonsRecommendationResponse(BaseModel):
 class PutLearningOutcomesCoursesResponse(BaseModel):
     course_id: UUID
     learning_outcomes: list[str]
+class GetDocumentsProfessor(BaseModel):
+    id: UUID
+    name: str
+    type: str
+    url: str
+class GetExercisesProfessor(BaseModel):
+    id: UUID
+    name: str
+    description: str
+    type: ExerciseType
+class GetLessonProfessor(BaseModel):
+    id: UUID
+    title: str
+    description: str 
+    order: int
+    documents: List[GetDocumentsProfessor]
+class GetProfessorCoursesResponse(BaseModel):
+    id: UUID
+    name: str
+    start_date: date
+    end_date: date
+    student_list: List[StudentList]
+    learning_outcomes: List[str]
+    professor: ProfessorInformation
+    status: StatusType
+    image: str
+class GetProfessorCoursesPaginatedResponse(BaseModel):
+    content: List[GetProfessorCoursesResponse]
+    currentPage: int
+    pageSize: int
+    totalRows: int
+    totalPages: int
+class GetCourseDetailProfessorResponse(BaseModel):
+    course_id: UUID
+    course_name: str
+    course_start_date: str
+    course_end_date: str
+    course_learning_outcomes: List[str]
+    course_professor: ProfessorInformation
+    course_status: StatusType
+    course_image: str
+    exercises: List[GetExercisesProfessor]
+    students: List[StudentList]
+    lessons: List[GetLessonProfessor]  
+    
