@@ -22,7 +22,6 @@ class ExerciseQuizResponse(BaseModel):
     deadline: Optional[datetime]
     time : Optional[int]
     topic: Optional[str]
-    attempts : Optional[int]
     difficulty: DifficultyLevel
     questions: List[QuestionModel]
     max_score: Optional[int]
@@ -35,7 +34,6 @@ class ExerciseCodeResponse(BaseModel):
     deadline: Optional[datetime]
     time : Optional[int]
     topic: Optional[str]
-    attempts : Optional[int]
     difficulty: DifficultyLevel
     questions: list[CodeModel]
     max_score: Optional[int]

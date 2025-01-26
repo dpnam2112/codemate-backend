@@ -10,18 +10,19 @@ from sqlalchemy.ext.mutable import MutableList
 class Exercises(Base):
     __tablename__ = "exercises"
 
-    id = Column(UUID, primary_key=True, default=uuid4)
-    course_id = Column(UUID, ForeignKey("courses.id"), nullable=False)
-    name = Column(String, nullable=False)
-    description = Column(String, nullable=True)
-    deadline = Column(DateTime, nullable=True)
-    time = Column(Integer, nullable=True)
-    topic = Column(String, nullable=True)
-    attempts = Column(Integer, nullable=True)
-    difficulty = Column(Enum(DifficultyLevel), nullable=False)
-    questions = Column(MutableList.as_mutable(JSONB), nullable=False) #Quiz rule in schema lesson (ExerciseQuizResponse) & Code rule in schema lesson (ExerciseCodeResponse)
-    max_score = Column(Integer, nullable=True)
-    type = Column(Enum(ExerciseType), nullable=False)
+    id = Column(UUID, primary_key=True, default=uuid4) # Unique identifier for each exercise
+    course_id = Column(UUID, ForeignKey("courses.id"), nullable=False) # Foreign key linking the exercise to a specific course in the "courses" table
+    name = Column(String, nullable=False) # The name of the exercise
+    description = Column(String, nullable=True)  # A brief description of the exercise
+    deadline = Column(DateTime, nullable=True) # The deadline for completing the exercise
+    time = Column(Integer, nullable=True)  # The estimated time (in minutes) allocated for completing the exercise
+    topic = Column(String, nullable=True) # The topic or subject area of the exercise
+    difficulty = Column(Enum(DifficultyLevel), nullable=False) # The difficulty level of the exercise
+    questions = Column(MutableList.as_mutable(JSONB), nullable=False) 
+    # For quizzes: stores the structure defined in ExerciseQuizResponse.
+    # For coding exercises: stores the structure defined in ExerciseCodeResponse.
+    max_score = Column(Integer, nullable=True) # The maximum score that can be achieved for this exercise 
+    type = Column(Enum(ExerciseType), nullable=False) # The type of exercise, represented as an enumerated value (e.g., Quiz, Code)
     
     course = relationship("Courses", back_populates="exercises")
     student_exercises = relationship("StudentExercises", back_populates="exercise")

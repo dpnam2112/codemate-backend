@@ -19,5 +19,7 @@ class Feedback(Base):
     created_at = Column(DateTime, default=func.now(), nullable=False)
     resolved_at = Column(DateTime, nullable=True)
     status = Column(Enum(FeedbackStatusType), default="pending", nullable=False)
-
+    course_id = Column(UUID, ForeignKey("courses.id"), nullable=True)
+    
+    course = relationship("Courses", back_populates="feedbacks")
     student = relationship("Student", back_populates="feedbacks")
