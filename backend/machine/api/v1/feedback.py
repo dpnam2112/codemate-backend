@@ -4,7 +4,7 @@ from core.response import Ok
 from machine.controllers import *
 from machine.schemas.requests.feedback import *
 from machine.schemas.responses.feedback import *
-from typing import List, Union, Literal, Optional
+from typing import List
 from data.constant import expectedHeaders
 from fastapi import APIRouter, Depends, Query
 from machine.providers import InternalProvider
@@ -67,3 +67,59 @@ async def create_feedback(
     )
     
     return Ok(data=feedback_response, message="Feedback created successfully.")
+
+@router.get("/courses/{course_id}", response_model=Ok[List[GetFeedbackProfessorResponse]])
+async def get_feedback_professor(
+    course_id: str,
+    token: str = Depends(oauth2_scheme),
+    feedback_controller: FeedbackController = Depends(InternalProvider().get_feedback_controller),
+    professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
+    student_controller: StudentController = Depends(InternalProvider().get_student_controller),
+    courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
+):
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+
+    professor = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
+    if not professor:
+        raise BadRequestException(message="You are not allowed to get feedbacks.")
+
+    course = await courses_controller.courses_repository.first(
+        where_=[
+            Courses.id == course_id,
+            Courses.professor_id == professor.id
+        ]
+    )
+    if not course:
+        raise BadRequestException(message="Course not found.")
+
+    feedbacks = await feedback_controller.feedback_repository.get_many(
+        where_=[Feedback.course_id == course_id]
+    )
+        
+    feedback_response = []
+    for feedback in feedbacks:
+        student = await student_controller.student_repository.first(where_=[Student.id == feedback.student_id])
+        if not student:
+            raise BadRequestException(message=f"Student not found for feedback ID: {feedback.id}")
+        
+        feedback_response.append(
+            GetFeedbackProfessorResponse(
+                id=feedback.id,
+                type=feedback.feedback_type,
+                title=feedback.title,
+                category=feedback.category,
+                description=feedback.description,
+                rate=feedback.rate,
+                status=feedback.status,
+                created_at=str(feedback.created_at),
+                resolved_at=str(feedback.resolved_at) if feedback.resolved_at else "",
+                student_id=feedback.student_id,
+                student_name=student.name,
+                student_email=student.email,
+            )
+        )
+
+    return Ok(data=feedback_response)
