@@ -21,7 +21,6 @@ class ExerciseRequest(BaseModel):
     deadline: Optional[datetime]
     time : Optional[int]
     topic: Optional[str]
-    attempts : Optional[int]
     difficulty: DifficultyLevel
     questions: list[QuestionModel]
     max_score: Optional[int]
@@ -33,7 +32,6 @@ class ExerciseCodeRequest(BaseModel):
     deadline: Optional[datetime]
     time : Optional[int]
     topic: Optional[str]
-    attempts : Optional[int]
     difficulty: DifficultyLevel
     questions: list[CodeModel]
     code: str

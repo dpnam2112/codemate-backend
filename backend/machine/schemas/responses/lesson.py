@@ -50,7 +50,6 @@ class ExerciseQuizResponse(BaseModel):
     deadline: Optional[datetime]
     time : Optional[int]
     topic: Optional[str]
-    attempts : Optional[int]
     difficulty: DifficultyLevel
     questions: List[QuestionModel]
     lesson_id: UUID

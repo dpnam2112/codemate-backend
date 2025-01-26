@@ -9,7 +9,7 @@ class Lessons(Base):
     __tablename__ = "lessons"
 
     id = Column(UUID, primary_key=True, default=uuid4)
-    course_id = Column(UUID, ForeignKey("courses.id"), nullable=False)  
+    course_id = Column(UUID, ForeignKey("courses.id", ondelete="CASCADE"), nullable=False)  
     title = Column(String, nullable=False)
     description = Column(String, nullable=True)
     order = Column(Integer, nullable=False) 

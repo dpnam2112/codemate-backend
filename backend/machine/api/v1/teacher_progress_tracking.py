@@ -106,11 +106,11 @@ async def get_grades(
 
     course = await courses_controller.courses_repository.first(
         where_=[Courses.id == course_id],
-        relations=[Courses.student_courses, Courses.exercises, Courses.professor],
+        relations=[Courses.student_courses, Courses.exercises],
     )
     if not course:
         raise NotFoundException(message="No courses found.")
-    if not course.professor_id == user_id:
+    if not course.professor_id == user.id:
         raise BadRequestException(message="You are not authorized to access the grades course.")
     student_courses = await student_courses_controller.student_courses_repository.get_many(
         where_=[StudentCourses.course_id == course_id]
@@ -219,7 +219,7 @@ async def get_exercise_grades(
     if not course:
         raise NotFoundException(message="No courses found.")
     
-    if course.professor_id != user_id:
+    if course.professor_id != user.id:
         raise BadRequestException(message="You are not authorized to access the grades course.")
     
     student_courses = await student_courses_controller.student_courses_repository.get_many(

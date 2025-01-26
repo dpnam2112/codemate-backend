@@ -57,7 +57,11 @@ class ExcelLinkSettings(BaseSettings):
 class GoogleAPI(BaseSettings):
     CLIENT_AUTH: str
     GOOGLE_API_URL: str
-
+class AWS3Settings(BaseSettings):
+    AWS3_ACCESS_KEY_ID: str
+    AWS3_SECRET_ACCESS_KEY: str 
+    AWS3_REGION: str 
+    AWS3_BUCKET_NAME: str
 class Settings(
     CoreSettings,
     TestSettings,
@@ -69,7 +73,8 @@ class Settings(
     GoogleAPI,
     Neo4jSettings,
     GoogleGenAISettings,
-    OpenAISettings
+    OpenAISettings,
+    AWS3Settings
 ): ...
 
 class DevelopmentSettings(Settings):

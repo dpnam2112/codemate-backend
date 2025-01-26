@@ -10,8 +10,8 @@ class RecommendLessons(Base):
     __tablename__ = "recommend_lessons"
 
     id = Column(UUID, primary_key=True, default=uuid4)
-    learning_path_id = Column(UUID, ForeignKey("learning_paths.id"), nullable=False)
-    lesson_id = Column(UUID, ForeignKey("lessons.id"), nullable=True)
+    learning_path_id = Column(UUID, ForeignKey("learning_paths.id", ondelete="CASCADE"), nullable=False)
+    lesson_id = Column(UUID, ForeignKey("lessons.id", ondelete="CASCADE"), nullable=True)
     progress = Column(Integer, default=0, nullable=False)
     recommended_content = Column(Text, nullable=True)
     explain = Column(Text, nullable=True)

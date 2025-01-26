@@ -51,7 +51,6 @@ class ExerciseRequest(BaseModel):
     deadline: Optional[datetime]
     time : Optional[int]
     topic: Optional[str]
-    attempts : Optional[int]
     difficulty: DifficultyLevel
     questions: list[QuestionModel]
     lesson_id: UUID

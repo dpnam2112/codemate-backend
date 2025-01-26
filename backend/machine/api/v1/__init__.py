@@ -13,7 +13,7 @@ from machine.api.v1.exercise import router as exercise_router
 from machine.api.v1.teacher_progress_tracking import router as teacher_progress_tracking
 from .ai.router import router as ai_router
 from machine.api.v1.feedback import router as feedback_router
-
+from machine.api.v1.professor import router as professor_router
 router = APIRouter(prefix="/v1")
 router.include_router(auth_router)
 # router.include_router(user_router)
@@ -23,6 +23,7 @@ router.include_router(courses_router)
 router.include_router(lesson_router)
 router.include_router(exercise_router)
 router.include_router(recommend_router)
+router.include_router(professor_router)
 router.include_router(teacher_progress_tracking)
 router.include_router(module_quiz_router)
 # router.include_router(progress_tracking_router)

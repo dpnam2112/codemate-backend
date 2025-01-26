@@ -61,7 +61,6 @@ async def add_exercises(
         "deadline": body.deadline,
         "time": body.time,
         "topic": body.topic,
-        "attempts": body.attempts,
         "difficulty": body.difficulty,
         "max_score": body.max_score,
         "type": body.type,
@@ -83,7 +82,6 @@ async def add_exercises(
             deadline=created_exercise.deadline,
             time=created_exercise.time,
             topic=created_exercise.topic,
-            attempts=created_exercise.attempts,
             difficulty=created_exercise.difficulty,
             type=created_exercise.type,
             max_score=created_exercise.max_score,
@@ -157,7 +155,6 @@ async def update_exercise(
     exercise.deadline = body.deadline
     exercise.time = body.time
     exercise.topic = body.topic
-    exercise.attempts = body.attempts
     exercise.difficulty = body.difficulty
     exercise.type = body.type
     exercise.max_score = body.max_score
@@ -173,7 +170,6 @@ async def update_exercise(
             "deadline": exercise.deadline,
             "time": exercise.time,
             "topic": exercise.topic,
-            "attempts": exercise.attempts,
             "difficulty": exercise.difficulty,
             "type": exercise.type,
             "max_score": exercise.max_score,
@@ -192,7 +188,6 @@ async def update_exercise(
             deadline=updated_exercise.deadline,
             time=updated_exercise.time,
             topic=updated_exercise.topic,
-            attempts=updated_exercise.attempts,
             difficulty=updated_exercise.difficulty,
             type=updated_exercise.type,
             max_score=updated_exercise.max_score,
@@ -253,7 +248,6 @@ async def delete_exercise(
             deadline=exercise.deadline,
             time=exercise.time,
             topic=exercise.topic,
-            attempts=exercise.attempts,
             difficulty=exercise.difficulty,
             type=exercise.type,
             max_score=exercise.max_score,
@@ -315,7 +309,6 @@ async def add_exercises(
         "deadline": body.deadline,
         "time": body.time,
         "topic": body.topic,
-        "attempts": body.attempts,
         "difficulty": body.difficulty,
         "max_score": body.max_score,
         "type": body.type,
@@ -337,7 +330,6 @@ async def add_exercises(
             deadline=created_exercise.deadline,
             time=created_exercise.time,
             topic=created_exercise.topic,
-            attempts=created_exercise.attempts,
             difficulty=created_exercise.difficulty,
             type=created_exercise.type,
             max_score=created_exercise.max_score,
@@ -409,7 +401,6 @@ async def update_code_exercise(
     exercise.deadline = body.deadline
     exercise.time = body.time
     exercise.topic = body.topic
-    exercise.attempts = body.attempts
     exercise.difficulty = body.difficulty
     exercise.type = body.type
     exercise.max_score = body.max_score
@@ -425,7 +416,6 @@ async def update_code_exercise(
             "deadline": exercise.deadline,
             "time": exercise.time,
             "topic": exercise.topic,
-            "attempts": exercise.attempts,
             "difficulty": exercise.difficulty,
             "type": exercise.type,
             "max_score": exercise.max_score,
@@ -444,7 +434,6 @@ async def update_code_exercise(
             deadline=updated_exercise.deadline,
             time=updated_exercise.time,
             topic=updated_exercise.topic,
-            attempts=updated_exercise.attempts,
             difficulty=updated_exercise.difficulty,
             type=updated_exercise.type,
             max_score=updated_exercise.max_score,
@@ -507,7 +496,6 @@ async def delete_exercise(
             deadline=exercise.deadline,
             time=exercise.time,
             topic=exercise.topic,
-            attempts=exercise.attempts,
             difficulty=exercise.difficulty,
             type=exercise.type,
             max_score=exercise.max_score,
