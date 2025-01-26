@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from core.response import Ok
-from machine.schemas.requests.exercise import  ExerciseRequest, QuestionModel, ExerciseCodeRequest, CodeModel, TestCaseModel
-from machine.schemas.responses.exercise import  ExerciseQuizResponse, ExerciseCodeResponse
+from machine.schemas.requests.exercise import  *
+from machine.schemas.responses.exercise import  *
 from machine.providers import InternalProvider
 from machine.controllers import *
 from machine.models import *
@@ -158,7 +158,6 @@ async def update_exercise(
     exercise.difficulty = body.difficulty
     exercise.type = body.type
     exercise.max_score = body.max_score
-    exercise.course_id = body.course_id
     exercise.questions = questions_data
 
     # Update the exercise
@@ -173,7 +172,6 @@ async def update_exercise(
             "difficulty": exercise.difficulty,
             "type": exercise.type,
             "max_score": exercise.max_score,
-            "course_id": exercise.course_id,
             "questions": exercise.questions,
         },
         commit=True,
@@ -181,7 +179,7 @@ async def update_exercise(
 
     # Return the response
     return Ok(
-        data=ExerciseQuizResponse(
+        data=PutExerciseQuizResponse(
             exercise_id=updated_exercise.id,
             name=updated_exercise.name,
             description=updated_exercise.description,
@@ -191,7 +189,6 @@ async def update_exercise(
             difficulty=updated_exercise.difficulty,
             type=updated_exercise.type,
             max_score=updated_exercise.max_score,
-            course_id=updated_exercise.course_id,
             questions=[
                 QuestionModel(
                     question=q["question"],
@@ -404,7 +401,6 @@ async def update_code_exercise(
     exercise.difficulty = body.difficulty
     exercise.type = body.type
     exercise.max_score = body.max_score
-    exercise.course_id = body.course_id
     exercise.questions = questions_data
 
     # Update the exercise
@@ -419,7 +415,6 @@ async def update_code_exercise(
             "difficulty": exercise.difficulty,
             "type": exercise.type,
             "max_score": exercise.max_score,
-            "course_id": exercise.course_id,
             "questions": exercise.questions,
         },
         commit=True,
@@ -427,7 +422,7 @@ async def update_code_exercise(
 
     # Return the response
     return Ok(
-        data=ExerciseCodeResponse(
+        data=PutExerciseCodeResponse(
             exercise_id=updated_exercise.id,
             name=updated_exercise.name,
             description=updated_exercise.description,
@@ -437,7 +432,6 @@ async def update_code_exercise(
             difficulty=updated_exercise.difficulty,
             type=updated_exercise.type,
             max_score=updated_exercise.max_score,
-            course_id=updated_exercise.course_id,
             questions=[
                 CodeModel(
                     question=q["question"],

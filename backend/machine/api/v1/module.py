@@ -9,26 +9,45 @@ from machine.schemas.responses.document import *
 from machine.controllers import *
 from machine.providers import InternalProvider
 from core.exceptions import NotFoundException, BadRequestException
-
+from fastapi.security import OAuth2PasswordBearer
+from core.utils.auth_utils import verify_token
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 router = APIRouter(prefix="/modules", tags=["recomendation"])
 
 
 @router.get("/{moduleId}/quizzes", response_model=Ok[ModuleQuizResponse])
 async def get_module_by_quiz(
     moduleId: UUID,
+    token: str = Depends(oauth2_scheme),
     modules_controller: ModulesController = Depends(InternalProvider().get_modules_controller),
+    recommend_lessons_controller: RecommendLessonsController = Depends(InternalProvider().get_recommendlessons_controller),
+    student_controller: StudentController = Depends(InternalProvider().get_student_controller),
 ):
-    request = RecommendModuleRequest(module_id=moduleId)
-    if not request.module_id:
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    user = await student_controller.student_repository.first(where_=[Student.id == user_id])
+    if not user:
+        raise NotFoundException(message="Only Student have the permission to get this module.")
+    if not moduleId:
         raise BadRequestException(message="Module ID is required.")
 
     module = await modules_controller.modules_repository.first(
-        where_=[Modules.id == request.module_id],
+        where_=[Modules.id == moduleId],
         relations=[Modules.quizzes],
     )
-
     if not module:
         raise NotFoundException(message="Module not found for the given ID.")
+    recommend_lesson = await recommend_lessons_controller.recommend_lessons_repository.first(
+        where_=[RecommendLessons.id == module.recommend_lesson_id],
+        relations=[RecommendLessons.learning_path],
+    )
+    if not recommend_lesson:
+        raise NotFoundException(message="Recommend Lesson not found for the given ID.")
+    
+    if not recommend_lesson.learning_path.student_id == user.id:
+        raise NotFoundException(message="You are not authorized to access this module.")
 
     response_data = ModuleQuizResponse(
         module_id=module.id,
@@ -48,22 +67,40 @@ async def get_module_by_quiz(
     )
 
     return Ok(data=response_data, message="Successfully fetched the module and quizzes.")
-@router.get("/{moduleId}/quizzes/{quizId}", response_model=Ok[QuizExerciseResponse])
+@router.get("/quizzes/{quizId}", response_model=Ok[QuizExerciseResponse])
 async def get_quiz_exercise(
-    moduleId: UUID,
     quizId: UUID,
+    token: str = Depends(oauth2_scheme),
+    student_controller: StudentController = Depends(InternalProvider().get_student_controller),
+    modules_controller: ModulesController = Depends(InternalProvider().get_modules_controller),
+    recommend_lessons_controller: RecommendLessonsController = Depends(InternalProvider().get_recommendlessons_controller),
     recommend_quizzes_controller: RecommendQuizzesController = Depends(InternalProvider().get_recommend_quizzes_controller),
 ):
-    module = await recommend_quizzes_controller.recommend_quizzes_repository.first(where_=[Modules.id == moduleId])
-    if not module:
-        raise NotFoundException(message="Module not found for the given ID.")
-
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    user = await student_controller.student_repository.first(where_=[Student.id == user_id])
+    if not user:
+        raise NotFoundException(message="Only Student have the permission to get this quiz.")
+    
+    
     quiz = await recommend_quizzes_controller.recommend_quizzes_repository.first(
-        where_=[RecommendQuizzes.id == quizId, RecommendQuizzes.module_id == moduleId]
+        where_=[RecommendQuizzes.id == quizId],
     )
     if not quiz:
         raise NotFoundException(message="Quiz not found for the given ID in the specified module.")
-
+    module = await modules_controller.modules_repository.first(where_=[Modules.id == quiz.module_id])
+    if not module:
+        raise NotFoundException(message="Module not found for the given ID.")
+    recommend_lesson = await recommend_lessons_controller.recommend_lessons_repository.first(
+        where_=[RecommendLessons.id == module.recommend_lesson_id],
+        relations=[RecommendLessons.learning_path],
+    )
+    if not recommend_lesson:
+        raise NotFoundException(message="Recommend Lesson not found for the given ID.")
+    if not recommend_lesson.learning_path.student_id == user.id:
+        raise NotFoundException(message="You are not authorized to access this quiz.")
     try:
         questions = quiz.questions 
         parsed_questions = [
@@ -94,20 +131,41 @@ async def get_quiz_exercise(
     return Ok(data=response_data, message="Successfully fetched quiz details.")
 
 
-@router.put("/{moduleId}/quizzes/{quizId}/submit", response_model=Ok[QuizScoreResponse])
+@router.put("/quizzes/{quizId}/submit", response_model=Ok[QuizScoreResponse])
 async def submit_quiz_answers(
-    moduleId: UUID,
     quizId: UUID,
     request: QuizAnswerRequest,
+    token: str = Depends(oauth2_scheme),
+    student_controller: StudentController = Depends(InternalProvider().get_student_controller),
+    modules_controller: ModulesController = Depends(InternalProvider().get_modules_controller),
+    recommend_lessons_controller: RecommendLessonsController = Depends(InternalProvider().get_recommendlessons_controller),
     recommend_quizzes_controller: RecommendQuizzesController = Depends(InternalProvider().get_recommend_quizzes_controller),
 ):  
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    user = await student_controller.student_repository.first(where_=[Student.id == user_id])
+    if not user:
+        raise NotFoundException(message="Only Student have the permission to submit this quiz.")
     quiz = await recommend_quizzes_controller.recommend_quizzes_repository.first(
         where_=[RecommendQuizzes.id == quizId],
     )
 
     if not quiz:
         raise NotFoundException(message="Quiz not found for the given ID.")
-
+    module = await modules_controller.modules_repository.first(where_=[Modules.id == quiz.module_id])
+    if not module:
+        raise NotFoundException(message="Module not found for the given ID.")
+    recommend_lesson = await recommend_lessons_controller.recommend_lessons_repository.first(
+        where_=[RecommendLessons.id == module.recommend_lesson_id],
+        relations=[RecommendLessons.learning_path],
+    )
+    if not recommend_lesson:
+        raise NotFoundException(message="Recommend Lesson not found for the given ID.")
+    if not recommend_lesson.learning_path.student_id == user.id:
+        raise NotFoundException(message="You are not authorized to submit this quiz.")
+    
     if len(request.answers) != len(quiz.questions):
         raise BadRequestException(message="Number of answers does not match the number of questions.")
 
@@ -144,18 +202,40 @@ async def submit_quiz_answers(
 
     return Ok(data=response, message="Quiz answers submitted successfully.")
 
-@router.put("/{moduleId}/quizzes/{quizId}/clear", response_model=Ok[bool])
+@router.put("/quizzes/{quizId}/clear", response_model=Ok[bool])
 async def clear_quiz_answers(
-    moduleId: UUID,
     quizId: UUID,
+    token: str = Depends(oauth2_scheme),
+    student_controller: StudentController = Depends(InternalProvider().get_student_controller),
+    modules_controller: ModulesController = Depends(InternalProvider().get_modules_controller),
+    recommend_lessons_controller: RecommendLessonsController = Depends(InternalProvider().get_recommendlessons_controller),
     recommend_quizzes_controller: RecommendQuizzesController = Depends(InternalProvider().get_recommend_quizzes_controller),
 ):
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    user = await student_controller.student_repository.first(where_=[Student.id == user_id])
+    if not user:
+        raise NotFoundException(message="Only Student have the permission to clear answer this quiz.")
     quiz = await recommend_quizzes_controller.recommend_quizzes_repository.first(
         where_=[RecommendQuizzes.id == quizId],
     )
     if not quiz:
         raise NotFoundException(message="Quiz not found for the given ID.")
 
+    module = await modules_controller.modules_repository.first(where_=[Modules.id == quiz.module_id])
+    if not module:
+        raise NotFoundException(message="Module not found for the given ID.")
+    recommend_lesson = await recommend_lessons_controller.recommend_lessons_repository.first(
+        where_=[RecommendLessons.id == module.recommend_lesson_id],
+        relations=[RecommendLessons.learning_path],
+    )
+    if not recommend_lesson:
+        raise NotFoundException(message="Recommend Lesson not found for the given ID.")
+    if not recommend_lesson.learning_path.student_id == user.id:
+        raise NotFoundException(message="You are not authorized to clear answers for this quiz.")
+    
     for question in quiz.questions:
         question['user_choice'] = None
 
@@ -174,11 +254,36 @@ async def clear_quiz_answers(
 @router.get("/{moduleId}/documents", response_model=Ok[DocumentResponse])
 async def get_document(
     moduleId: UUID,
+    token: str = Depends(oauth2_scheme),
+    student_controller: StudentController = Depends(InternalProvider().get_student_controller),
+    modules_controller: ModulesController = Depends(InternalProvider().get_modules_controller),
+    recommend_lessons_controller: RecommendLessonsController = Depends(InternalProvider().get_recommendlessons_controller),
     recommend_documents_controller: RecommendDocumentsController = Depends(InternalProvider().get_recommenddocuments_controller),
 ):
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    user = await student_controller.student_repository.first(where_=[Student.id == user_id])
+    if not user:
+        raise NotFoundException(message="Only Student have the permission to get this document.")
+    
     if not moduleId:
         raise BadRequestException(message="Document ID is required.")
-
+    module = await modules_controller.modules_repository.first(
+        where_=[Modules.id == moduleId],
+    )
+    if not module:
+        raise NotFoundException(message="Module not found for the given ID.")
+    recommend_lesson = await recommend_lessons_controller.recommend_lessons_repository.first(
+        where_=[RecommendLessons.id == module.recommend_lesson_id],
+        relations=[RecommendLessons.learning_path],
+    )
+    if not recommend_lesson:
+        raise NotFoundException(message="Recommend Lesson not found for the given ID.")
+    if not recommend_lesson.learning_path.student_id == user.id:
+        raise NotFoundException(message="You are not authorized to access this document.")
+    
     document = await recommend_documents_controller.recommend_documents_repository.first(
         where_=[RecommendDocuments.module_id == moduleId],
         relations=[RecommendDocuments.module], 

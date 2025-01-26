@@ -27,6 +27,17 @@ class ExerciseQuizResponse(BaseModel):
     max_score: Optional[int]
     type: ExerciseType
     course_id: UUID
+class PutExerciseQuizResponse(BaseModel):
+    exercise_id: UUID
+    name: str
+    description: Optional[str]
+    deadline: Optional[datetime]
+    time : Optional[int]
+    topic: Optional[str]
+    difficulty: DifficultyLevel
+    questions: List[QuestionModel]
+    max_score: Optional[int]
+    type: ExerciseType
 class ExerciseCodeResponse(BaseModel):
     exercise_id: UUID
     name: str
@@ -39,3 +50,14 @@ class ExerciseCodeResponse(BaseModel):
     max_score: Optional[int]
     type: ExerciseType
     course_id: UUID
+class PutExerciseCodeResponse(BaseModel):
+    exercise_id: UUID
+    name: str
+    description: Optional[str]
+    deadline: Optional[datetime]
+    time : Optional[int]
+    topic: Optional[str]
+    difficulty: DifficultyLevel
+    questions: list[CodeModel]
+    max_score: Optional[int]
+    type: ExerciseType

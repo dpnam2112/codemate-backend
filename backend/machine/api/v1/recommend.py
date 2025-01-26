@@ -18,18 +18,29 @@ router = APIRouter(prefix="/recommend_lessons", tags=["recomendation"])
 @router.get("/{recommendLessonId}", response_model=Ok[RecommendLessonResponse])
 async def recommend_lesson(
     recommendLessonId: UUID,
+    token : str = Depends(oauth2_scheme),
+    student_controller: StudentController = Depends(InternalProvider().get_student_controller),
     recommend_lessons_controller: RecommendLessonsController = Depends(InternalProvider().get_recommendlessons_controller),
 ):
-   
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    user = await student_controller.student_repository.first(where_=[Student.id == user_id])
+    if not user:
+        raise NotFoundException(message="Only Student have the permission to get this recommend lesson.")
     # Fetch the lesson recommendation details
     recommend_lesson = await recommend_lessons_controller.recommend_lessons_repository.first(
         where_=[RecommendLessons.id == recommendLessonId],
-        relations=[RecommendLessons.modules,  RecommendLessons.lesson],
+        relations=[RecommendLessons.modules,  RecommendLessons.lesson, RecommendLessons.learning_path],
     )
 
     if not recommend_lesson:
         raise NotFoundException(message="Recommend Lesson not found for the given ID.")
 
+    if not recommend_lesson.learning_path.student_id == user.id:
+        raise NotFoundException(message="You are not authorized to access this recommend lesson.")
+    
     lesson = recommend_lesson.lesson
     if not lesson:
         raise NotFoundException(message="Associated Lesson not found for the given Recommend Lesson.")
