@@ -1,16 +1,55 @@
-# from typing import List, Union
+from typing import List, Union
 
-# from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query
+from core.response import Ok
+from core.exceptions import *
+from machine.controllers import *
+from machine.models import *
+from machine.providers import InternalProvider
+from core.utils.auth_utils import verify_token
+from fastapi.security import OAuth2PasswordBearer
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+router = APIRouter(prefix="/users", tags=["users"])
 
-# from core.exceptions import BadRequestException
-# from machine.controllers import UserController
-# from machine.models import User
-# from machine.providers import InternalProvider
-# from machine.schemas.requests.user import UserRequest
-# from machine.schemas.responses.user import UserResponse
-# from machine.api.v1.protected import verify_token
+@router.get("/count")
+async def count_user(
+    role: str = Query(None),  
+    token: str = Depends(oauth2_scheme),
+    student_controller: StudentController = Depends(InternalProvider().get_student_controller),
+    professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
+    admin_controller: AdminController = Depends(InternalProvider().get_admin_controller),
+):
+    payload = verify_token(token)
+    user_id = payload.get("sub")
 
-# router = APIRouter(prefix="/users", tags=["users"])
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+
+    check_role = await admin_controller.admin_repository.first(where_=Admin.id == user_id)
+    if not check_role:
+        raise ForbiddenException(message="You are not allowed to access this feature.")
+
+    if not role: 
+        total_count = (
+            await student_controller.student_repository.count()
+            + await professor_controller.professor_repository.count()
+            + await admin_controller.admin_repository.count()
+        )
+        return Ok(data=total_count, message="Counted all users")
+
+    role_mapping = {
+        "student": student_controller.student_repository.count,
+        "professor": professor_controller.professor_repository.count,
+        "admin": admin_controller.admin_repository.count
+    }
+    
+    if role in role_mapping:
+        count = await role_mapping[role]()
+        return Ok(data=count, message=f"Counted {role}s")
+    
+    raise BadRequestException("Invalid role")
+
+    
 
 
 # @router.post("/", response_model=Union[UserResponse, List[UserResponse]])

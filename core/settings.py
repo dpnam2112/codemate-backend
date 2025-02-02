@@ -16,8 +16,8 @@ class TestSettings(BaseSettings):
     PYTEST_UNIT: bool = False
 
 class DatabaseSettings(BaseSettings):
-    SQLALCHEMY_POSTGRES_URI: str = "postgresql+asyncpg://nam:123@127.0.0.1:5432/edu"
-    SQLALCHEMY_ECHO: bool = False
+    SQLALCHEMY_POSTGRES_URI: str = os.getenv("SQLALCHEMY_POSTGRES_URI","")
+    SQLALCHEMY_ECHO: bool = os.getenv("SQLALCHEMY_ECHO", False)
 
 class RedisSettings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379"

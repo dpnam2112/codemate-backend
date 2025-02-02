@@ -110,7 +110,7 @@ async def get_course_for_student(
 
     student = await student_controller.student_repository.first(where_=[Student.id == user_id])
     if not student:
-        raise NotFoundException(message="Your account is not allowed to access this feature.")
+        raise ForbiddenException(message="Your account is not allowed to access this feature.")
 
     select_fields = [
         Courses.name.label("name"),
@@ -581,3 +581,23 @@ async def delete_learning_path(
         raise BadRequestException(message="Your account is not authorized. Please log in again.")
     await lp_controller.delete_learning_path(user_id=student_id, course_id=course_id)
     return Ok(data=None, message="Successfully deleted the learning path.")
+
+
+@router.get("/count/", response_model=Ok[int])
+async def count_courses(
+    token: str = Depends(oauth2_scheme),
+    admin_controller: AdminController = Depends(InternalProvider().get_admin_controller),
+    courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
+):
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    
+    check_role = await admin_controller.admin_repository.exists(where_=[Admin.id == user_id])
+    if not check_role:
+        raise ForbiddenException(message="You are not allowed to access this feature.")
+
+    count = await courses_controller.courses_repository.count(where_=None)
+
+    return Ok(data=count, message="Successfully fetched the count of courses.")
