@@ -26,3 +26,16 @@ class GetFeedbackProfessorResponse(BaseModel):
     student_name: str
     student_email: str
     
+class GetFeedbackListResponse(BaseModel):
+    id: str
+    type: str
+    title: str
+    category: str
+    description: str
+    rate: int
+    status: str
+    created_at: str
+    resolved_at: str
+    student_id: str
+    student_name: str
+    student_email: str

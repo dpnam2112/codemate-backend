@@ -49,6 +49,37 @@ async def count_user(
     
     raise BadRequestException("Invalid role")
 
+@router.get("/{user_id}", description="Get user information")
+async def get_user_information(
+    user_id: str,
+    token: str = Depends(oauth2_scheme),
+    student_controller: StudentController = Depends(InternalProvider().get_student_controller),
+    professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
+    admin_controller: AdminController = Depends(InternalProvider().get_admin_controller),
+):
+    payload = verify_token(token)
+    user_id_from_token = payload.get("sub")
+
+    if not user_id_from_token:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+
+    check_role = await admin_controller.admin_repository.first(where_=Admin.id == user_id_from_token)
+    if not check_role:
+        raise ForbiddenException(message="You are not allowed to access this feature.")
+
+    check_user = await student_controller.student_repository.first(where_=Student.id == user_id)
+    if not check_user:
+        check_user = await professor_controller.professor_repository.first(where_=Professor.id == user_id)
+        if not check_user:
+            check_user = await admin_controller.admin_repository.first(where_=Admin.id == user_id)
+            if not check_user:
+                raise NotFoundException(message="User not found")
+    user_response = {
+        "id": check_user.id,
+        "name": check_user.name,
+        "email": check_user.email,
+    }
+    return Ok(data=user_response, message="User information")
     
 
 

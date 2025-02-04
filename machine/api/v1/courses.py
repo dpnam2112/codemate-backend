@@ -585,8 +585,8 @@ async def delete_learning_path(
 
 @router.get("/count/", response_model=Ok[int])
 async def count_courses(
-    token: str = Depends(oauth2_scheme),
     admin_controller: AdminController = Depends(InternalProvider().get_admin_controller),
+    token: str = Depends(oauth2_scheme),
     courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
 ):
     payload = verify_token(token)
