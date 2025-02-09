@@ -12,6 +12,11 @@ langchain = "^0.3.15"
 langgraph = "^0.2.67"
 jupyter = "^1.1.1"
 jupytext = "^1.16.6"
+sqlalchemy = "^2.0.38"
+fastapi = "^0.115.8"
+uvicorn = "^0.34.0"
+pydantic = "^2.10.6"
+pydantic-settings = "^2.7.1"
 
 
 [build-system]
