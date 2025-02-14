@@ -1,4 +1,3 @@
-#!parser_module.py
 from typing import List, Dict
 from llama_parse import LlamaParse
 
@@ -6,14 +5,20 @@ from llama_parse import LlamaParse
 class DocumentParser:
     """Wrapper for LlamaParse to parse documents."""
 
-    def __init__(self, result_type: str = "markdown") -> None:
+    def __init__(
+        self,
+        llamaparse_api_key: str,
+        result_type: str = "markdown"
+    ) -> None:
         """Initialize the DocumentParser.
 
         Args:
             result_type: The result type for parsing.
-            premium_mode: Whether to use premium mode.
         """
-        self.parser = LlamaParse(result_type=result_type)
+        self.parser = LlamaParse(
+            result_type=result_type,
+            api_key=llamaparse_api_key
+        )
 
     def parse_document(self, pdf_path: str, image_download_dir: str) -> List[Dict]:
         """Parse a document to extract markdown pages and images.

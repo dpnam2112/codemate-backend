@@ -1,16 +1,22 @@
-from typing import Literal
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings
 
-class Settings(BaseSettings):
-    # Define your settings with defaults and corresponding environment variable names
-    HOST: str
-    PORT: int
-    LOG_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "FATAL"] = "DEBUG"
-    DEBUG: bool
-    POSTGRES_PGVECTOR_DB_URI: str
 
-    # Use the new configuration syntax in Pydantic v2
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+class AppSettings(BaseSettings):
+    pdf_path: str = "paper.pdf"
+    image_download_dir: str = "paper_images"
+    storage_dir_index: str = "paper_nodes"
+    storage_dir_index_base: str = "paper_nodes_base"
+    llama_parse_result_type: str = "markdown"
+    fsspec_protocol: str = "file"
+    vector_index_id: str = "vector_index"
+    multimodal_model: str = "gpt-4o"
+    multimodal_max_new_tokens: int = 4096
+    pgvector_connection_string: str
+    pgvector_async_connection_string: str
+    openai_api_key: str
+    llamaparse_api_key: str
 
-# Instantiate the settings; this will load variables from .env
-env_settings = Settings()
+    class Config:
+        env_file = ".env"
+
+env_settings = AppSettings()
