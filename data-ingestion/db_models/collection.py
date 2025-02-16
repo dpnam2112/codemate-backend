@@ -1,12 +1,14 @@
+import uuid
 from sqlalchemy.orm import relationship, Mapped, mapped_column
-from sqlalchemy import String, Integer, DateTime, func, Text
+from sqlalchemy import String, DateTime, func
+from sqlalchemy.dialects.postgresql import UUID
 from .base import Base
 
-class Collection(Base):
+class DocumentCollection(Base):
     """Model to store document collections.
 
     Attributes:
-        id (int): Unique identifier for the collection.
+        id (UUID): Unique identifier for the collection.
         name (str): Name of the collection.
         description (str): Optional description of the collection.
         created_at (DateTime): Timestamp when the collection was created.
@@ -15,9 +17,11 @@ class Collection(Base):
     """
     __tablename__ = "collections"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
-    description: Mapped[str] = mapped_column(Text, nullable=True)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    name: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    description: Mapped[str] = mapped_column(String, nullable=True)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -27,3 +31,4 @@ class Collection(Base):
 
     def __repr__(self) -> str:
         return f"<Collection(id={self.id}, name='{self.name}')>"
+
