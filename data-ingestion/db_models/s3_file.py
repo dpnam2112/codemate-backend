@@ -14,7 +14,6 @@ class S3File(Base):
     __tablename__ = "s3_files"
 
     id: Mapped[UUID] = mapped_column(pgUUID(as_uuid=True), primary_key=True, default=UUID)
-    bucket_name: Mapped[str] = mapped_column(String, nullable=False)
     file_key: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     content_hash: Mapped[str] = mapped_column(String, unique=True, nullable=False) 
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
