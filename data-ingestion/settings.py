@@ -11,8 +11,12 @@ class AppSettings(BaseSettings):
     vector_index_id: str = "vector_index"
     multimodal_model: str = "gpt-4o"
     multimodal_max_new_tokens: int = 4096
+    host: str = "localhost"
+    port: int = 8080
+    debug: bool = True
     pgvector_connection_string: str
     pgvector_async_connection_string: str
+    sqlalchemy_postgres_uri: str
     openai_api_key: str
     llamaparse_api_key: str
 
