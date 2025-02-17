@@ -40,7 +40,7 @@ async def create_collection(
 @router.post("{id_}/documents")
 async def ingest_documents():
     """
-    Ingest a document to the collection.
+    Ingest a document/multiple documents to the collection.
     This endpoint takes a file as input, add the file to the file system using fsspec (why? since I
     want to make it easier to switch between local filesystem and s3). Finally, ingest the document
     to the vector database.

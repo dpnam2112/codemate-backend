@@ -1,7 +1,13 @@
-from typing import Optional
+from typing import Literal, Optional
 from urllib.parse import urlparse
 from pydantic_settings import BaseSettings
 
+class AWSS3Settings(BaseSettings):
+    aws_access_key_id: Optional[str] = None
+    aws_secret_access_key: Optional[str] = None
+    aws_region: str = "us-east-1"  # Default region
+    s3_bucket: str
+    s3_endpoint_url: Optional[str] = None  # e.g., for local testing with something like localstack
 
 class PgVectorSettings(BaseSettings):
     pgvector_connection_string: str
@@ -15,18 +21,18 @@ class PgVectorSettings(BaseSettings):
         return urlparse(self.pgvector_connection_string).port or 5432  # Default PostgreSQL port
 
     @property
-    def database(self) -> str:
+    def pgvector_database(self) -> str:
         return urlparse(self.pgvector_connection_string).path.lstrip('/') or ""
 
     @property
-    def username(self) -> str:
+    def pgvector_username(self) -> str:
         parsed_value = urlparse(self.pgvector_connection_string).username
         if parsed_value is None:
             raise ValueError("Username is missing in the connection string")
         return parsed_value
 
     @property
-    def password(self) -> str:
+    def pgvector_password(self) -> str:
         parsed_value = urlparse(self.pgvector_connection_string).password
         if parsed_value is None:
             raise ValueError("Password is missing in the connection string")
@@ -44,7 +50,8 @@ class PgVectorSettings(BaseSettings):
         )
 
 class CoreSettings(BaseSettings):
-    pdf_path: str = "paper.pdf"
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "FATAL"] = "DEBUG"
+    pdf_path: str = "1706.03762v7-pages.pdf"
     image_download_dir: str = "paper_images"
     storage_dir_index: str = "paper_nodes"
     storage_dir_index_base: str = "paper_nodes_base"
@@ -60,7 +67,7 @@ class CoreSettings(BaseSettings):
     openai_api_key: str
     llamaparse_api_key: str
 
-class AppSettings(CoreSettings, PgVectorSettings):
+class AppSettings(CoreSettings, PgVectorSettings, AWSS3Settings):
     class Config:
         env_file = ".env"
 
