@@ -37,7 +37,11 @@ class ExerciseType(Enum):
     quiz = "quiz"
     code = "code"
 
-
+class GradingMethodType(Enum):
+    highest = "highest"
+    average = "average"
+    latest = "latest"
+    first = "first"
 class LessonType(Enum):
     original = "original"
     recommended = "recommended"

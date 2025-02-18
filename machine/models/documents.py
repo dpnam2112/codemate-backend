@@ -12,6 +12,7 @@ class Documents(Base):
     lesson_id = Column(UUID, ForeignKey("lessons.id", ondelete="CASCADE"), nullable=False)
     name = Column(String, nullable=False)
     type = Column(String, nullable=False)
+    description = Column(String, nullable=False)
     document_url = Column(Text, nullable=False)
 
     lesson = relationship("Lessons", back_populates="documents")

@@ -7,6 +7,7 @@ from machine.schemas.responses.lesson import (
     DocumentResponse,
     PutLessonResponse,
     DeleteLessonResponse,
+    GetDocumentResponse
 )
 from machine.providers import InternalProvider
 from machine.controllers import *
@@ -246,6 +247,7 @@ async def delete_lesson(
 async def add_documents(
     lesson_id: UUID = Form(...),
     files: List[UploadFile] = File(...),
+    descriptions: List[str] = Form(...),
     token: str = Depends(oauth2_scheme),
     document_controller: DocumentsController = Depends(InternalProvider().get_documents_controller),
     professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
@@ -280,10 +282,11 @@ async def add_documents(
     # Validate that files are provided
     if not files or all(file.filename == "" for file in files):
         raise ValueError("No files provided for upload.")
-
+    if len(files) != len(descriptions):
+        raise BadRequestException(message="Number of descriptions must match number of files")
     documents = []
 
-    for file in files:
+    for file,description in zip(files, descriptions):
         if file.filename:
             content = await file.read()
 
@@ -296,6 +299,7 @@ async def add_documents(
                 "name": file.filename,
                 "type": file.content_type,
                 "document_url": s3_key,
+                "description": description,
                 "lesson_id": lesson_id,
             }
 
@@ -309,7 +313,7 @@ async def add_documents(
     )
 
 
-@router.get("/{lessonId}/documents", response_model=Ok[List[DocumentResponse]]) # haven't tested 
+@router.get("/{lessonId}/documents", response_model=Ok[List[GetDocumentResponse]])
 async def get_documents(
     lessonId: UUID,
     token: str = Depends(oauth2_scheme),
@@ -323,14 +327,15 @@ async def get_documents(
     if not user_id:
         raise BadRequestException(message="Your account is not authorized. Please log in again.")
 
-    documents = await document_controller.documents_repository._get_many(where_=Documents.lesson_id == lessonId)
+    documents = await document_controller.documents_repository.get_many(where_=Documents.lesson_id == lessonId)
 
     documents_response = [
-        DocumentResponse(
+        GetDocumentResponse(
+            id=doc.id,
             name=doc.name,
             type=doc.type,
             document_url=doc.document_url,
-            lesson_id=doc.lesson_id,
+            description=doc.description,
         )
         for doc in documents
     ]
