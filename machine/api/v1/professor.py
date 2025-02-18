@@ -9,7 +9,6 @@ from machine.schemas.responses.courses import *
 from fastapi.security import OAuth2PasswordBearer
 from core.exceptions import BadRequestException, NotFoundException, ForbiddenException
 from core.utils.file import generate_presigned_url
-
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 router = APIRouter(prefix="/professors", tags=["professors"])
 
@@ -100,78 +99,61 @@ async def get_course_detail_for_professor(
     student_courses_controller: StudentCoursesController = Depends(InternalProvider().get_studentcourses_controller),
     lessons_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
     exercises_controller: ExercisesController = Depends(InternalProvider().get_exercises_controller),
-    student_controller: StudentController = Depends(InternalProvider().get_student_controller),
     document_controller: DocumentsController = Depends(InternalProvider().get_documents_controller),
 ):
+    # Verify token
     payload = verify_token(token)
     user_id = payload.get("sub")
     if not user_id:
         raise BadRequestException(message="Your account is not authorized. Please log in again.")
     
-    professor = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
+    # Check professor
+    professor = await professor_controller.professor_repository.first(
+        where_=[Professor.id == user_id]
+    )
     if not professor:
         raise NotFoundException(message="Your account is not allowed to get professor courses detail.")
-    course = await courses_controller.courses_repository.first(where_=[Courses.id == course_id])
+
+    # Get course
+    course = await courses_controller.courses_repository.first(
+        where_=[Courses.id == course_id]
+    )
     if not course:
         raise NotFoundException(message="Course not found.")
 
     if course.professor_id != professor.id:
         raise ForbiddenException(message="You are not authorized to access this course details.")
 
-    exercises = await exercises_controller.exercises_repository.get_many(where_=[Exercises.course_id == course_id])
-
-    students = await student_courses_controller.student_courses_repository.get_many(where_=[StudentCourses.course_id == course_id])
-    student_list = []
-    for student in students:
-        student_info = await student_controller.student_repository.first(where_=[Student.id == student.student_id])
-        student_list.append(StudentList(
-            student_id=student_info.id,
-            student_name=student_info.name,
-            student_email=student_info.email,
-            student_avatar=student_info.avatar_url
-        ))
-
-    lessons = await lessons_controller.lessons_repository.get_many(where_=[Lessons.course_id == course_id])
-    lessons_list = []
+    student_courses = await student_courses_controller.student_courses_repository.get_many(
+            where_=[StudentCourses.course_id == course.id]
+        )
+    exercises_count = await exercises_controller.exercises_repository.count(where_=[Exercises.course_id == course.id])
+    lessons = await lessons_controller.lessons_repository.get_many(
+        where_=[Lessons.course_id == course_id]
+    )
+    
+    documents_count = 0
     for lesson in lessons:
-        lesson_documents = await document_controller.documents_repository.get_many(where_=[Documents.lesson_id == lesson.id])
-        documents = [GetDocumentsProfessor(
-            id=document.id,
-            name=document.name,
-            type=document.type,
-            url=generate_presigned_url(document.document_url)
-        ) for document in lesson_documents]
+        doc_count = await document_controller.documents_repository.count(
+            where_=[Documents.lesson_id == lesson.id]
+        )
+        documents_count += doc_count
         
-        lessons_list.append(GetLessonProfessor(
-            id=lesson.id,
-            title=lesson.title,
-            description=lesson.description,
-            order=lesson.order,
-            documents=documents
-        ))
-
     course_detail = GetCourseDetailProfessorResponse(
         course_id=course.id,
         course_name=course.name,
         course_start_date=course.start_date.isoformat(),
         course_end_date=course.end_date.isoformat(),
         course_learning_outcomes=course.learning_outcomes,
-        course_professor=ProfessorInformation(
-            professor_id=professor.id,
-            professor_name=professor.name,
-            professor_email=professor.email,
-            professor_avatar=professor.avatar_url
-        ),
         course_status=course.status,
-        course_image=course.image_url,
-        exercises=[GetExercisesProfessor(
-            id=exercise.id,
-            name=exercise.name,
-            description=exercise.description,
-            type=exercise.type
-        ) for exercise in exercises],
-        students=student_list,
-        lessons=lessons_list
+        course_image_url=course.image_url,
+        course_nCredit=course.nCredit,
+        course_nSemester=course.nSemester,
+        course_courseID=course.courseID,
+        nStudents=len(student_courses),
+        nLessons=len(lessons),
+        nExercises=exercises_count,
+        nDocuments=documents_count
     )
 
     return Ok[GetCourseDetailProfessorResponse](data=course_detail)

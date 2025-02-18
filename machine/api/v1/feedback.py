@@ -115,6 +115,7 @@ async def get_feedback_professor(
                 student_id=feedback.student_id,
                 student_name=student.name,
                 student_email=student.email,
+                student_mssv=student.mssv,
             )
         )
 

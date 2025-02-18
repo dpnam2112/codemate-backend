@@ -2,7 +2,7 @@ from typing import List,Optional, Union
 from uuid import UUID
 from pydantic import BaseModel
 from datetime import datetime
-from core.repository.enum import DifficultyLevel, QuestionType, ExerciseType
+from core.repository.enum import DifficultyLevel, QuestionType, ExerciseType,GradingMethodType
 class QuestionModel(BaseModel):
     question: str
     answer: List[str]
@@ -61,3 +61,13 @@ class PutExerciseCodeResponse(BaseModel):
     questions: list[CodeModel]
     max_score: Optional[int]
     type: ExerciseType
+class GetExercise(BaseModel):
+    id: UUID
+    name: str
+    description: str
+    type: ExerciseType
+    time_open: str
+    time_close: str
+    time_limit: int
+    attempts_allowed: int
+    grading_method: GradingMethodType

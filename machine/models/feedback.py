@@ -14,7 +14,8 @@ class Feedback(Base):
     category = Column(Enum(FeedbackCategory), default="other", nullable=False)
     description = Column(Text, nullable=True)
     rate = Column(Integer, nullable=False)
-    student_id = Column(UUID, ForeignKey("student.id"), nullable=False)
+    student_id = Column(UUID, ForeignKey("student.id"), nullable=True)
+    professor_id = Column(UUID, ForeignKey("professors.id"), nullable=True)
     feedback_type = Column(Enum(FeedbackType), default="system", nullable=False)
     created_at = Column(DateTime, default=func.now(), nullable=False)
     resolved_at = Column(DateTime, nullable=True)
@@ -23,3 +24,4 @@ class Feedback(Base):
     
     course = relationship("Courses", back_populates="feedbacks")
     student = relationship("Student", back_populates="feedbacks")
+    professor = relationship("Professor", back_populates="feedbacks")

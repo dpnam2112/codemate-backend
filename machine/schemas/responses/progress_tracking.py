@@ -12,16 +12,15 @@ from core.repository.enum import *
 #     course_learning_outcomes: List[str]
 #     percentage_complete: str
 #     last_accessed: str
-class CourseNameResponse(BaseModel):
+
+class GetCoursesListResponse(BaseModel):
     course_id: UUID
     course_name: str
-class GetCoursesListResponse(BaseModel):
-    course_name_list: List[CourseNameResponse]
-class ExerciseNameResponse(BaseModel):
-    exercise_id: UUID
-    exercise_name: str
-class GetExercisesListResponse(BaseModel):
-    exercises_name_list: List[ExerciseNameResponse]
+    course_courseID: str
+    course_nSemester: int
+    course_start_date: Optional[date]
+    course_end_date: Optional[date]
+
 class LessonInLearningPath(BaseModel):
     lesson_id: UUID
     lesson_name: str

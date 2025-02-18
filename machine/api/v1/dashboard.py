@@ -186,17 +186,22 @@ async def get_professor_dashboard(
         upcoming_exercises = await exercises_controller.exercises_repository.get_many(
             where_=[
                 Exercises.course_id == course.id,
-                Exercises.deadline > current_time
+                Exercises.time_close > current_time
             ],
         )
         upcoming_exercises_list.extend(upcoming_exercises)
 
-    upcoming_exercises_list = sorted(upcoming_exercises_list, key=lambda ex: ex.deadline)[:5]
+    upcoming_exercises_list = sorted(upcoming_exercises_list, key=lambda ex: ex.time_close)[:5]
     upcoming_events = [
         Events(
             exercise_id=exercise.id,
             exercise_name=exercise.name,
-            exercise_deadline=exercise.deadline,
+            exercise_time_open=exercise.time_open,
+            exercise_time_close=exercise.time_close,
+            course_name = course.name,
+            course_id = course.id,
+            course_courseID = course.courseID,
+            course_nSemeter = course.nSemester
         )
         for exercise in upcoming_exercises_list
     ]

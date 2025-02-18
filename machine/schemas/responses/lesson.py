@@ -8,11 +8,20 @@ class DocumentResponse(BaseModel):
     name: str
     type: str 
     document_url: str
+    description: str
     lesson_id: UUID
 
     class Config:
         from_attributes = True
+class GetDocumentResponse(BaseModel):
+    id: UUID
+    name: str
+    type: str 
+    document_url: str
+    description: str
 
+    class Config:
+        from_attributes = True
 class CreateNewLessonResponse(BaseModel):
     id: UUID
     title: str
