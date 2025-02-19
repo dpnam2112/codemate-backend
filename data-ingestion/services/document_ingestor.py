@@ -1,18 +1,20 @@
+#!services/document_ingestor.py
 import os
 import re
 import shutil
 import tempfile
 import time
+import uuid
+import base64
+import asyncio
 from copy import deepcopy
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from fsspec.spec import AbstractFileSystem
 from llama_index.core import StorageContext, VectorStoreIndex
 from llama_index.core.base.embeddings.base import Embedding
-from llama_index.core.schema import TextNode
+from llama_index.core.schema import BaseNode, ImageNode, TextNode
 from llama_index.core.llms import LLM, ChatMessage
-from llama_index.core.vector_stores.types import VectorStore
-from llama_index.multi_modal_llms.openai.base import MultiModalLLM
 from llama_index.vector_stores.postgres import PGVectorStore
 from logger import syslog
 from services.parser import DocumentParser
@@ -22,63 +24,63 @@ class DocumentIngestor:
     """Class responsible for ingesting documents into a vector store.
 
     This class reads documents from an abstract file system, parses them to extract
-    markdown and image data, converts the parsed output into text nodes (and then contextual nodes),
+    markdown and image data, converts the parsed output into text nodes (and contextual nodes),
     and finally indexes these nodes into an injected vector store.
-
-    Attributes:
-        vector_store (Any): The injected vector store instance with an `add()` method.
-        fs (AbstractFileSystem): The file system used to access stored documents.
-        parser (DocumentParser): The parser instance for document processing.
-        text_llm (Any): LLM instance used for processing text nodes.
-        multimodal_llm (Any): LLM instance used for processing multimodal data.
     """
 
     def __init__(
         self,
         vector_store: PGVectorStore,
         fs: AbstractFileSystem,
+        document_bucket_name: str,
+        image_bucket_name: str,
         llamaparse_api_key: str,
         text_llm: LLM,
-        multimodal_llm: MultiModalLLM,
+        multimodal_llm: LLM,
         embed_model: Embedding
     ) -> None:
         """Initialize the DocumentIngestor.
 
         Args:
-            vector_store (Any): The vector store where parsed nodes will be indexed.
+            vector_store (PGVectorStore): The vector store where parsed nodes will be indexed.
             fs (AbstractFileSystem): The file system used to retrieve stored documents.
+            document_bucket_name (str): Bucket or directory name for documents.
+            image_bucket_name (str): Bucket or directory name for images.
             llamaparse_api_key (str): API key for initializing the document parser.
-            text_llm (Optional[Any]): LLM for processing text nodes.
-            multimodal_llm (Optional[Any]): LLM for processing multimodal data.
+            text_llm (LLM): LLM for processing text nodes.
+            multimodal_llm (LLM): LLM for processing multimodal data.
+            embed_model (Embedding): Embedding model instance.
         """
         self.vector_store = vector_store
         self.fs = fs
+        self.image_bucket_name = image_bucket_name
+        self.document_bucket_name = document_bucket_name
         self.parser = DocumentParser(result_type="markdown", llamaparse_api_key=llamaparse_api_key)
         self.text_llm = text_llm
         self.multimodal_llm = multimodal_llm
         self.embed_model = embed_model
 
-    def ingest(self, file_key: str):
-        """Ingest a stored document into the vector store.
+    async def ingest(self, file_key: str) -> VectorStoreIndex:
+        """Asynchronously ingest a stored document into the vector store.
 
         This method performs the following steps:
           1. Reads the document from the abstract file system.
           2. Writes the file to a temporary location.
           3. Creates a temporary directory for downloading parsed images.
           4. Parses the document to extract markdown content and images.
-          5. Generates text nodes and then contextual nodes using the configured text LLM.
+          5. Generates text and image nodes using the configured LLMs.
           6. Indexes the nodes into the injected vector store.
 
         Args:
             file_key (str): The key/path of the document in the abstract file system.
 
         Returns:
-            VectorStoreIndex (str): The vector store index.
+            VectorStoreIndex: The vector store index built from the document nodes.
 
         Raises:
             Exception: If any step of the ingestion process fails.
         """
-        with self.fs.open(file_key, mode="rb") as remote_file:
+        with self.fs.open(f"{self.document_bucket_name}/{file_key}", mode="rb") as remote_file:
             file_content = remote_file.read()
 
         file_extension = os.path.splitext(file_key)[1] or ".pdf"
@@ -87,18 +89,12 @@ class DocumentIngestor:
             tmp_file.write(file_content)
             tmp_file_path = tmp_file.name
 
-        image_download_dir = tempfile.mkdtemp(prefix="images_")
+        image_download_dir = tempfile.mkdtemp(prefix=f"images_{file_key}")
         try:
-            md_json_list = self.parser.parse_document(tmp_file_path, image_download_dir)
-            text_nodes = self._get_text_nodes(image_download_dir, md_json_list)
-            contextual_nodes = self._create_contextual_nodes(text_nodes)
-
+            llamaparse_pages = self.parser.parse_document(tmp_file_path, image_download_dir)
+            nodes = await self.create_nodes_from_llamaparse_pages(llamaparse_pages, image_download_dir)
             index = VectorStoreIndex.from_vector_store(embed_model=self.embed_model, vector_store=self.vector_store)
-            index.build_index_from_nodes(
-                nodes=contextual_nodes
-            )
-
-            index.build_index_from_nodes(contextual_nodes)
+            index.build_index_from_nodes(nodes)
             return index
         finally:
             try:
@@ -110,75 +106,148 @@ class DocumentIngestor:
             except Exception:
                 pass
 
-    def _get_text_nodes(self, image_dir: str, json_dicts: List[Dict]) -> List[TextNode]:
-        """Generate text nodes from parsed markdown and image data.
+    async def create_nodes_from_llamaparse_pages(
+        self, llamaparse_pages: List[dict], local_image_dir: str
+    ) -> List[BaseNode]:
+        """Asynchronously create text and image nodes from parsed document pages.
+
+        For each page, text nodes are generated by chunking the markdown content,
+        and image nodes are generated for each image found in the page.
 
         Args:
-            image_dir (str): The directory containing image files.
-            json_dicts (List[Dict]): Parsed markdown data.
+            llamaparse_pages (List[dict]): List of parsed page dictionaries.
+            local_image_dir (str): Local directory where images are downloaded.
+
+        Returns:
+            List[BaseNode]: A list of text and image nodes.
+        """
+        nodes: List[BaseNode] = []
+        whole_document_content = self.concatenate_text_content(llamaparse_pages)
+        tasks = []
+        for page in llamaparse_pages:
+            page_num = page.get("page", 0)
+            tasks.append(self._process_page(page, whole_document_content, local_image_dir, page_num))
+        page_nodes = await asyncio.gather(*tasks)
+        for sublist in page_nodes:
+            nodes.extend(sublist)
+        return nodes
+
+    async def _process_page(
+        self, page: dict, whole_document_content: str, local_image_dir: str, page_num: int
+    ) -> List[BaseNode]:
+        """Process a single page to create text and image nodes.
+
+        Args:
+            page (dict): Parsed page data.
+            whole_document_content (str): The entire document content.
+            local_image_dir (str): Directory of downloaded images.
+            page_num (int): The page number.
+
+        Returns:
+            List[BaseNode]: Nodes generated from the page.
+        """
+        nodes: List[BaseNode] = []
+        text_nodes = await self.create_text_nodes(page, whole_document_content, page_num)
+        nodes.extend(text_nodes)
+        image_names = list(map(lambda x: x.get("name"), page.get("images", [])))
+        if image_names:
+            image_nodes = await self.create_image_nodes(local_image_dir, page.get("md", ""), page_num)
+            nodes.extend(image_nodes)
+        return nodes
+
+    async def create_text_nodes(
+        self, llamaparse_page: dict, whole_document_content: str, page_num: int
+    ) -> List[TextNode]:
+        """Asynchronously create text nodes using LlamaIndex's built-in chunking utility.
+
+        This leverages LlamaIndex's TokenTextSplitter to split the markdown content into chunks.
+
+        Args:
+            llamaparse_page (dict): A page dictionary from the LlamaParse API.
+            whole_document_content (str): The full document text for context.
+            page_num (int): The page number.
 
         Returns:
             List[TextNode]: A list of text nodes.
         """
-        image_files = self._get_sorted_image_files(image_dir)
-        md_texts = [d["md"] for d in json_dicts if "md" in d]
-        nodes: List[TextNode] = []
-        for idx, md_text in enumerate(md_texts):
-            metadata = {
-                "page_num": idx + 1,
-                "image_path": image_files[idx] if idx < len(image_files) else "",
-                "parsed_text_markdown": md_text,
-            }
-            node = TextNode(text="", metadata=metadata)
-            nodes.append(node)
+        from llama_index.core.node_parser import TokenTextSplitter
+
+        markdown = llamaparse_page.get("md", "")
+        splitter = TokenTextSplitter(chunk_size=200, chunk_overlap=20)
+        chunks = splitter.split_text(markdown)
+        nodes = [TextNode(text=chunk, metadata={"page": page_num}) for chunk in chunks]
+        if self.text_llm:
+            nodes = await self.create_contextual_nodes(nodes, whole_document_content)
         return nodes
 
-    def _get_sorted_image_files(self, image_dir: str) -> List[str]:
-        """Get image files sorted by page number.
+    async def create_image_nodes(
+        self,
+        local_image_dir: str,
+        context_str: str,
+        page_num: int
+    ) -> List[ImageNode]:
+        """Asynchronously create image nodes from all image files in the given directory,
+        filtering by valid image file extensions.
 
         Args:
-            image_dir (str): The directory containing image files.
+            local_image_dir (str): Directory containing image files.
+            context_str (str): Contextual text from the page.
+            page_num (int): The page number.
 
         Returns:
-            List[str]: Sorted list of image file paths.
+            List[ImageNode]: A list of image nodes.
         """
-        def get_page_number(file_name: str) -> int:
-            """Extract page number from a filename."""
-            match = re.search(r"-page_(\d+)\.jpg$", file_name)
-            return int(match.group(1)) if match else 0
+        allowed_extensions = {".jpg", ".jpeg", ".png", ".gif", ".bmp"}
+        image_nodes = []
+        for image_name in [
+            f for f in os.listdir(local_image_dir)
+            if os.path.isfile(os.path.join(local_image_dir, f)) and os.path.splitext(f)[1].lower() in allowed_extensions
+        ]:
+            local_image_path = os.path.join(local_image_dir, image_name)
+            node = await self.create_image_node(local_image_path, context_str)
+            if not hasattr(node, "metadata") or not isinstance(node.metadata, dict):
+                node.metadata = {}
+            node.metadata["page"] = page_num
+            image_nodes.append(node)
+        return image_nodes
 
-        files = self.fs.glob(f"{image_dir}/*-page_*.jpg")
-        sorted_files = sorted(files, key=get_page_number)
-        return sorted_files
+    def concatenate_text_content(self, llamaparse_pages: List[dict]) -> str:
+        """Concatenates markdown content from all pages into a single document string.
 
-    def _create_contextual_nodes(self, nodes: List[TextNode]) -> List[TextNode]:
-        """Enhance text nodes with contextual information using the text-only LLM.
+        Args:
+            llamaparse_pages (List[dict]): List of parsed pages.
 
-        This method uses the configured text LLM to add context metadata to each node.
+        Returns:
+            str: The concatenated markdown text.
+        """
+        return "\n\n".join(page.get("md", "") for page in llamaparse_pages if "md" in page)
+
+    async def create_contextual_nodes(
+        self, nodes: List[TextNode], document_content: str
+    ) -> List[TextNode]:
+        """Enhance text nodes with contextual information using the text LLM.
 
         Args:
             nodes (List[TextNode]): A list of text nodes.
+            document_content (str): Full document content for context.
 
         Returns:
-            List[TextNode]: A list of contextualized text nodes.
+            List[TextNode]: Contextualized text nodes.
 
         Raises:
-            Exception: If the text LLM is not configured.
+            Exception: If text LLM is not configured.
         """
         if not self.text_llm:
             raise Exception("Text LLM is not configured for contextualization.")
 
-        whole_doc_text = "Here is the entire document.\n<document>\n{WHOLE_DOCUMENT}\n</document>"
-        chunk_text = (
-            "Here is the chunk we want to situate within the whole document\n<chunk>\n{CHUNK_CONTENT}\n</chunk>\n"
-            "Please give a short succinct context to situate this chunk within the overall document for "
-            "the purposes of improving search retrieval of the chunk. Answer only with the succinct context and nothing else."
+        whole_doc_text = f"Here is the entire document.\n<document>\n{document_content}\n</document>"
+        prompt = (
+            "You are a powerful algorithm used to generate text chunks for retrieval-augmented generation. "
+            "Given the following text chunk, create an improved version that incorporates context from the full document."
+            "JUST RETURN the improved chunk only."
         )
-
-        nodes_modified: List[TextNode] = []
-        doc_text = "\n".join([n.get_content(metadata_mode="all") for n in nodes])
-        for idx, node in enumerate(nodes):
-            start_time = time.time()
+        new_nodes = []
+        for node in nodes:
             new_node = deepcopy(node)
             messages = [
                 ChatMessage(role="system", content="You are a helpful AI Assistant."),
@@ -186,20 +255,76 @@ class DocumentIngestor:
                     role="user",
                     content=[
                         {
-                            "text": whole_doc_text.format(WHOLE_DOCUMENT=doc_text),
+                            "text": whole_doc_text,
                             "block_type": "text",
                             "cache_control": {"type": "ephemeral"},
                         },
                         {
-                            "text": chunk_text.format(CHUNK_CONTENT=node.get_content(metadata_mode="all")),
+                            "text": f"{prompt}\nChunk: {node.text}",
                             "block_type": "text",
                         },
                     ],
                 ),
             ]
-            new_response = self.text_llm.chat(messages, extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"})
-            new_node.metadata["context"] = str(new_response)
-            nodes_modified.append(new_node)
-            syslog.debug(f"Completed node {idx} in {time.time() - start_time:.2f} seconds")
-        return nodes_modified
+            new_response = await self.text_llm.achat(messages)
+            new_node.text = str(new_response)
+            new_node.node_id = str(uuid.uuid1())
+            new_nodes.append(new_node)
+            syslog.info(
+                f"Completed contextualizing node, id = {new_node.node_id},"
+                "contextualized chunk content:", new_node.text
+            )
+        return new_nodes
+
+    async def create_image_node(self, local_image_path: str, context_str: str) -> ImageNode:
+        """Asynchronously create an image node by captioning the image using the multimodal LLM.
+
+        Args:
+            local_image_path (str): Local file path of the image.
+            context_str (str): Contextual text for caption generation.
+
+        Returns:
+            ImageNode: The generated image node.
+        """
+        with open(local_image_path, "rb") as f:
+            image_bytes = f.read()
+        image_b64 = base64.b64encode(image_bytes).decode("utf-8")
+        image_doc = ImageNode(image=image_b64)
+        prompt = (
+            "Based on the following context, return a detailed description for the provided image.\n"
+            "If no context is provided, try your best to describe the image in detail.\n"
+            "=============\n"
+            f"{context_str}\n"
+            "============="
+        )
+        response = await self.multimodal_llm.acomplete(
+            prompt=prompt,
+            image_documents=[image_doc]
+        )
+        fs_path = self._persist_image_to_fs(local_image_path)
+        image_node = ImageNode(path=fs_path, text=response.text)
+        image_node.node_id = str(uuid.uuid1())
+        syslog.info(
+            f"Completed captioning image, id = {image_node.node_id}, local_image_path = {local_image_path}"
+            ", generated image description:", image_node.text
+        )
+        return image_node
+
+    def _persist_image_to_fs(self, local_fpath: str) -> str:
+        """Persist an image file to the file system.
+
+        Args:
+            local_fpath (str): Local file path of the image.
+
+        Returns:
+            str: The file system path where the image is stored.
+        """
+        unique_filename = f"{uuid.uuid4()}_{os.path.basename(local_fpath)}"
+        fs_path = f"{self.image_bucket_name}/{unique_filename}"
+        with open(local_fpath, "rb") as f:
+            image_bytes = f.read()
+        with self.fs.open(fs_path, "wb+") as s3_file:
+            s3_file.write(image_bytes)
+        return fs_path
+
 

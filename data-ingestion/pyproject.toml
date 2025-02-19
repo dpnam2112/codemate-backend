@@ -29,6 +29,7 @@ llama-parse = "^0.6.0"
 loguru = "^0.7.3"
 alembic = "^1.14.1"
 asyncpg = "^0.30.0"
+nest-asyncio = "^1.6.0"
 
 
 [build-system]
