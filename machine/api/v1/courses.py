@@ -17,10 +17,12 @@ from machine.schemas.responses.learning_path import LearningPathDTO, Recommended
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 router = APIRouter(prefix="/courses", tags=["courses"])
-
+# Fixed routes should come first
 @router.get("/student", response_model=Ok[GetCoursesPaginatedResponse])
 async def get_student_courses(
     token: str = Depends(oauth2_scheme),
+    page: int = Query(1, description="Page number"),
+    page_size: int = Query(10, description="Number of items per page"),
     search_query: Optional[str] = Query(None, description="Search query to filter courses"),
     student_courses_controller: StudentCoursesController = Depends(InternalProvider().get_studentcourses_controller),
     student_controller: StudentController = Depends(InternalProvider().get_student_controller),
@@ -61,8 +63,8 @@ async def get_student_courses(
         fields=select_fields,
         join_=join_conditions,
         order_={"asc": ["last_accessed"]},
-        limit=10,
-        skip=0,
+        limit=page_size,
+        skip=(page - 1) * page_size,
     )
 
     if not courses:
@@ -87,14 +89,105 @@ async def get_student_courses(
             )
             for course in courses
         ],
-        "pageSize": 10,
-        "currentPage": 1,
+        "pageSize": page_size,
+        "currentPage": page,
         "totalRows": len(courses),
         "totalPages": total_page,
     }
 
     return Ok(data=courses_response, message="Successfully fetched the courses.")
 
+@router.get("/count/", response_model=Ok[int])
+async def count_courses(
+    admin_controller: AdminController = Depends(InternalProvider().get_admin_controller),
+    token: str = Depends(oauth2_scheme),
+    courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
+):
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    
+    check_role = await admin_controller.admin_repository.exists(where_=[Admin.id == user_id])
+    if not check_role:
+        raise ForbiddenException(message="You are not allowed to access this feature.")
+
+    count = await courses_controller.courses_repository.count(where_=None)
+
+    return Ok(data=count, message="Successfully fetched the count of courses.")
+
+@router.get("/admin", description="Get all courses for admin", response_model=Ok[GetAdminCoursesPaginatedResponse])
+async def get_courses(
+    token: str = Depends(oauth2_scheme),
+    search_query: Optional[str] = Query(None, description="Search query to filter courses"),
+    page: int = Query(1, description="Page number"),
+    page_size: int = Query(10, description="Number of items per page"),
+    courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
+    admin_controller: AdminController = Depends(InternalProvider().get_admin_controller),
+):
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+
+    check_role = await admin_controller.admin_repository.first(where_=[Admin.id == user_id])
+    print(check_role)
+    if not check_role:
+        raise ForbiddenException(message=f"You are not allowed to access this feature {check_role}")
+
+    if search_query:
+        where_conditions = [Courses.name.ilike(f"%{search_query}%")]
+    else:
+        where_conditions = None
+
+    select_fields = [
+        Courses.id.label("id"),
+        Courses.name.label("name"),
+        Courses.start_date.label("start_date"),
+        Courses.end_date.label("end_date"),
+        Courses.learning_outcomes.label("learning_outcomes"),
+        Courses.status.label("status"),
+        Courses.image_url.label("image"),
+        Courses.nCredit.label("nCredit"),
+        Courses.nSemester.label("nSemester"),
+        Courses.courseID.label("courseID"),
+    ]
+
+    courses = await courses_controller.courses_repository._get_many(
+        where_=where_conditions,
+        fields=select_fields,
+        order_={"asc": ["name"]},
+        limit=page_size,
+        skip=(page - 1) * page_size,
+    )
+
+    if not courses:
+        return Ok(data=[], message="No courses found.")
+
+    total_rows = await courses_controller.courses_repository.count(where_=where_conditions)
+    total_pages = int(total_rows / page_size)
+
+    courses_response = {
+        "content": [
+            GetAdminCoursesResponse(
+                id=course.id,
+                name=course.name,
+                start_date=str(course.start_date),
+                end_date=str(course.end_date),
+                status=course.status,
+                nCredit=course.nCredit,
+                nSemester=course.nSemester,
+                courseID=course.courseID,
+            )
+            for course in courses
+        ],
+        "pageSize": page_size,
+        "currentPage": page,
+        "totalRows": total_rows,
+        "totalPages": total_pages,
+    }
+    
+    return Ok(data=courses_response, message="Successfully fetched the courses.")
 
 @router.get("/{courseId}", response_model=Ok[GetCourseDetailResponse])
 async def get_course_for_student(
@@ -110,7 +203,7 @@ async def get_course_for_student(
 
     student = await student_controller.student_repository.first(where_=[Student.id == user_id])
     if not student:
-        raise ForbiddenException(message="Your account is not allowed to access this feature.")
+        raise ForbiddenException(message=f"Your account is not allowed to access this feature. {student}")
 
     select_fields = [
         Courses.name.label("name"),
@@ -583,21 +676,3 @@ async def delete_learning_path(
     return Ok(data=None, message="Successfully deleted the learning path.")
 
 
-@router.get("/count/", response_model=Ok[int])
-async def count_courses(
-    admin_controller: AdminController = Depends(InternalProvider().get_admin_controller),
-    token: str = Depends(oauth2_scheme),
-    courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
-):
-    payload = verify_token(token)
-    user_id = payload.get("sub")
-    if not user_id:
-        raise BadRequestException(message="Your account is not authorized. Please log in again.")
-    
-    check_role = await admin_controller.admin_repository.exists(where_=[Admin.id == user_id])
-    if not check_role:
-        raise ForbiddenException(message="You are not allowed to access this feature.")
-
-    count = await courses_controller.courses_repository.count(where_=None)
-
-    return Ok(data=count, message="Successfully fetched the count of courses.")

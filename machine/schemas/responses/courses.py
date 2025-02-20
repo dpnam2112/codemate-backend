@@ -29,6 +29,25 @@ class GetCoursesPaginatedResponse(BaseModel):
     pageSize: int
     totalRows: int
     totalPages: int
+    
+class GetAdminCoursesResponse(BaseModel):
+    id: UUID
+    name: str
+    start_date: str
+    end_date: str
+    status: StatusType
+    nCredit: int
+    nSemester: int
+    courseID: str
+    
+class GetAdminCoursesPaginatedResponse(BaseModel):
+    content: List[GetAdminCoursesResponse]
+    currentPage: int
+    pageSize: int
+    totalRows: int
+    totalPages: int
+    
+    
 class GetDocumentsResponse(BaseModel):
     id: UUID
     name: str
