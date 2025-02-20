@@ -1,19 +1,20 @@
+import math
 from sqlalchemy import and_
 from machine.models import *
 from core.response import Ok
 from machine.controllers import *
 from machine.schemas.requests import *
-from typing import List, Union, Literal, Optional
 from data.constant import expectedHeaders
 from fastapi import APIRouter, Depends, Query
 from machine.providers import InternalProvider
 from core.utils.auth_utils import verify_token
 from machine.schemas.responses.courses import *
+from typing import List, Union, Literal, Optional
 from machine.schemas.responses.exercise import  *
-from machine.schemas.responses.progress_tracking import GetCoursesListResponse
 from fastapi.security import OAuth2PasswordBearer
-from core.exceptions import BadRequestException, NotFoundException, ForbiddenException
 from core.utils.file import generate_presigned_url
+from machine.schemas.responses.progress_tracking import GetCoursesListResponse
+from core.exceptions import BadRequestException, NotFoundException, ForbiddenException
 from machine.schemas.responses.learning_path import LearningPathDTO, RecommendedLessonDTO
 
 
@@ -114,7 +115,7 @@ async def get_student_courses(
     if not courses:
         return Ok(data=[], message="No courses found.")
 
-    total_page = int(len(courses) / 10)
+    total_page = math.ceil(len(courses) / page_size)
 
     courses_response = {
         "content": [
@@ -175,7 +176,6 @@ async def get_courses(
         raise BadRequestException(message="Your account is not authorized. Please log in again.")
 
     check_role = await admin_controller.admin_repository.first(where_=[Admin.id == user_id])
-    print(check_role)
     if not check_role:
         raise ForbiddenException(message=f"You are not allowed to access this feature {check_role}")
 
@@ -206,10 +206,18 @@ async def get_courses(
     )
 
     if not courses:
-        return Ok(data=[], message="No courses found.")
+        if not courses:
+            empty_response = {
+                "content": [],
+                "pageSize": page_size,
+                "currentPage": page,
+                "totalRows": 0,
+                "totalPages": 0,
+            }
+            return Ok(data=empty_response, message="No courses found.")
 
     total_rows = await courses_controller.courses_repository.count(where_=where_conditions)
-    total_pages = int(total_rows / page_size)
+    total_pages = math.ceil(total_rows / page_size)
 
     courses_response = {
         "content": [
