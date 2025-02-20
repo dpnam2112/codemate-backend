@@ -25,6 +25,7 @@ class GetFeedbackProfessorResponse(BaseModel):
     student_id: UUID
     student_name: str
     student_email: str
+    student_mssv: str
     
 class GetFeedbackListResponse(BaseModel):
     id: str

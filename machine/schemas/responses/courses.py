@@ -131,16 +131,32 @@ class GetProfessorCoursesPaginatedResponse(BaseModel):
     pageSize: int
     totalRows: int
     totalPages: int
+# class GetCourseDetailProfessorResponse(BaseModel):
+#     course_id: UUID
+#     course_name: str
+#     course_start_date: str
+#     course_end_date: str
+#     course_learning_outcomes: List[str]
+#     course_professor: ProfessorInformation
+#     course_status: StatusType
+#     course_image: str
+#     exercises: List[GetExercisesProfessor]
+#     students: List[StudentList]
+#     lessons: List[GetLessonProfessor]  
+
 class GetCourseDetailProfessorResponse(BaseModel):
     course_id: UUID
     course_name: str
     course_start_date: str
     course_end_date: str
     course_learning_outcomes: List[str]
-    course_professor: ProfessorInformation
     course_status: StatusType
-    course_image: str
-    exercises: List[GetExercisesProfessor]
-    students: List[StudentList]
-    lessons: List[GetLessonProfessor]  
+    course_image_url: str
+    course_nCredit: int
+    course_nSemester: int
+    course_courseID: str
+    nStudents: int
+    nLessons: int
+    nExercises: int
+    nDocuments: int
     

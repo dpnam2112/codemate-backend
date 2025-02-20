@@ -27,3 +27,4 @@ class Professor(Base, TimestampMixin):
     is_active = Column(Boolean, default=False, nullable=False)  # Active status of the professor
     
     courses = relationship("Courses", back_populates="professor")
+    feedbacks = relationship("Feedback", back_populates="professor", lazy='dynamic')
