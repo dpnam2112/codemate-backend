@@ -4,7 +4,6 @@ from machine.models import *
 from core.response import Ok
 from machine.controllers import *
 from machine.schemas.requests import *
-from data.constant import expectedHeaders
 from fastapi import APIRouter, Depends, Query
 from machine.providers import InternalProvider
 from core.utils.auth_utils import verify_token
@@ -496,7 +495,7 @@ async def get_lessons_recommendation(
 
 @router.post("/", response_model=Ok[Union[CreateCourseResponse, List[CreateCourseResponse]]])
 async def create_course(
-    request: CreateCourseRequest,
+    request: List[CreateCourseRequest],
     token: str = Depends(oauth2_scheme),
     courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
     professors_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
@@ -512,28 +511,24 @@ async def create_course(
     user = await admin_controller.admin_repository.first(where_=[Admin.id == user_id])
     if not user:
         raise NotFoundException(message="Your account is not allowed to create a course.")
-
-    if not request.headers or not request.courses:
-        raise BadRequestException(message="Headers and Courses are required.")
-
-    if not request.headers == expectedHeaders:
-        raise BadRequestException(message="Headers must match the fixed values: {expectedHeaders}")
-
-    if len(request.courses) == 0:
+    
+    if not request or len(request) == 0:
         raise BadRequestException(message="At least one course is required.")
 
-    if len(request.courses) == 1:
+    if len(request) == 1:
         saveProfessorId = await professors_controller.professor_repository.first(
-            Professor.email == request.courses[0].professor_email
+            Professor.mscb == request[0].professorID
         )
         saveProfessorId = saveProfessorId.id
         course_attributes = {
-            "name": request.courses[0].name,
+            "name": request[0].name,
             "professor_id": saveProfessorId,
-            "nCredit": request.courses[0].nCredit,
-            "nSemester": request.courses[0].nSemester,
+            "nCredit": request[0].creditNumber,
+            "nSemester": request[0].nSemester,
             "createdByAdminID": user_id,
-            "courseID": request.courses[0].courseID,
+            "courseID": request[0].courseID,
+            "start_date": request[0].startDate,
+            "end_date": request[0].endDate,
         }
 
         createCourse = await courses_controller.courses_repository.create(attributes=course_attributes, commit=True)
@@ -541,8 +536,9 @@ async def create_course(
             raise Exception("Failed to create course")
 
         getStudentIDs = await student_controller.student_repository._get_many(
-            where_=Student.email.in_([student for student in request.courses[0].student_list]), fields=[Student.id]
-        )
+    where_=[Student.mssv.in_(request[0].studentIDs)],
+    fields=[Student.id]
+)
 
         student_courses_attributes = [
             {
@@ -562,13 +558,14 @@ async def create_course(
 
         student_courses_response = [
             {
-                "student_id": create_student_courses.id,
+                "student_id": create_student_course.student_id,
                 "course_id": createCourse.id,
-                "last_accessed": str(create_student_courses.last_accessed),
-                "completed_lessons": create_student_courses.completed_lessons,
-                "time_spent": str(create_student_courses.time_spent),
-                "assignments_done": create_student_courses.assignments_done,
+                "last_accessed": str(create_student_course.last_accessed),
+                "completed_lessons": create_student_course.completed_lessons,
+                "time_spent": str(create_student_course.time_spent),
+                "assignments_done": create_student_course.assignments_done,
             }
+            for create_student_course in create_student_courses
         ]
 
         course_response = {
@@ -587,30 +584,32 @@ async def create_course(
         }
         return Ok(data=course_response, message="Successfully created the course.")
     else:
-        professor_emails = [course.professor_email for course in request.courses]
+        professor_ids = [course.professorID for course in request]
         professors = await professors_controller.professor_repository._get_many(
-            where_=[Professor.email.in_(professor_emails)], fields=[Professor.id, Professor.email]
+            where_=[Professor.mscb.in_(professor_ids)], fields=[Professor.id, Professor.mscb]
         )
 
-        professor_id_map = {prof["email"]: prof["id"] for prof in professors}
+        professor_id_map = {prof["mscb"]: prof["id"] for prof in professors}
 
         courses_attributes = []
-        for course in request.courses:
+        for course in request:
             if not course.name:
                 raise BadRequestException(message="Course name is required.")
 
-            professor_id = professor_id_map.get(course.professor_email)
+            professor_id = professor_id_map.get(course.professorID)
             if not professor_id:
-                raise NotFoundException(message=f"Professor with email {course.professor_email} not found")
+                raise NotFoundException(message=f"Professor with mscb {course.professorID} not found")
 
             course_attr = {
                 "name": course.name,
                 "professor_id": professor_id,
-                "nCredit": course.nCredit,
+                "nCredit": course.creditNumber,
                 "nSemester": course.nSemester,
                 "createdByAdminID": user_id,
                 "status": "new",
                 "courseID": course.courseID,
+                "start_date": course.startDate,
+                "end_date": course.endDate,
             }
             # if hasattr(course, 'start_date') and course.start_date:
             #     course_attr["start_date"] = course.start_date
@@ -628,11 +627,11 @@ async def create_course(
             raise Exception("Failed to create courses")
 
         courses_response = []
-        for created_course, request_course in zip(create_courses, request.courses):
+        for created_course, request_course in zip(create_courses, request):
 
-            student_emails = request_course.student_list
+            student_ids = request_course.studentIDs
             students = await student_controller.student_repository._get_many(
-                where_=[Student.email.in_(student_emails)], fields=[Student.id, Student.email]
+                where_=[Student.mssv.in_(student_ids)], fields=[Student.id, Student.mssv]
             )
 
             student_courses_attributes = [

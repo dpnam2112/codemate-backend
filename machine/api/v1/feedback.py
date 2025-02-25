@@ -5,7 +5,6 @@ from machine.controllers import *
 from machine.schemas.requests.feedback import *
 from machine.schemas.responses.feedback import *
 from typing import List
-from data.constant import expectedHeaders
 from fastapi import APIRouter, Depends, Query
 from machine.providers import InternalProvider
 from core.utils.auth_utils import verify_token

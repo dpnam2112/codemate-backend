@@ -1,23 +1,23 @@
-from pydantic import BaseModel, validator, Field
+from pydantic import BaseModel
 from typing import Optional, List
 from uuid import UUID
-from data.constant import expectedHeaders
+from datetime import date
 
 class BookmarkLessonRequest(BaseModel):
     student_id: UUID
     lesson_id: UUID
     course_id: UUID
     
-class CreateCourseRequest_Course(BaseModel):
-    professor_email: str
-    name: str
-    nCredit: int
-    nSemester: int
-    student_list: List[str]
-    courseID: str
 class CreateCourseRequest(BaseModel):
-    headers: List[str]
-    courses: List[CreateCourseRequest_Course]
+      id: Optional[int]
+      name: str
+      professorID: str
+      creditNumber: int
+      studentIDs: List[str]
+      nSemester: int
+      courseID: str
+      startDate: date
+      endDate: date
     
 class StudentCoursesListResponse(BaseModel):
     student_id: UUID

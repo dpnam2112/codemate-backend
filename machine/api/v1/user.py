@@ -211,6 +211,42 @@ async def update_user_information(
 
     else:
         raise BadRequestException(message="Invalid role provided for user")
+    
+@router.get("/", description="Get profile")
+async def get_profile(
+    token: str = Depends(oauth2_scheme),
+    student_controller: StudentController = Depends(InternalProvider().get_student_controller),
+    professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
+    admin_controller: AdminController = Depends(InternalProvider().get_admin_controller),
+):
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    role = "student"
+    check_user = await student_controller.student_repository.first(where_=[Student.id == user_id])
+    if not check_user:
+        check_user = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
+        role = "professor"
+        if not check_user:
+            check_user = await admin_controller.admin_repository.first(where_=[Admin.id == user_id])
+            role = "admin"
+            if not check_user:
+                raise NotFoundException(message="User not found")
+            
+    
+    user_response = {
+        "id": check_user.id,
+        "name": check_user.name,
+        "fullname": check_user.fullname,
+        "avatar": check_user.avatar_url,
+        "email": check_user.email,
+        "ms": check_user.mssv if hasattr(check_user, "mssv") else check_user.mscb,
+        "date_of_birth": check_user.date_of_birth,
+        "role": role
+    }
+    return Ok(data=user_response, message="User profile")
 
 @router.get("/count")
 async def count_user(
@@ -443,7 +479,7 @@ async def get_all_users(
     except Exception as e:
         raise SystemException(f"Error fetching users: {str(e)}")
 
-@router.get("/{user_id}", description="Get user information")
+@router.get("/{user_id}", description="Get user information for admin")
 async def get_user_information(
     user_id: str,
     token: str = Depends(oauth2_scheme),
@@ -472,5 +508,10 @@ async def get_user_information(
         "id": check_user.id,
         "name": check_user.name,
         "email": check_user.email,
+        "avatar": check_user.avatar_url,
+        "fullname": check_user.fullname,
+        "ms": check_user.mssv if hasattr(check_user, "mssv") else check_user.mscb,
     }
     return Ok(data=user_response, message="User information")
+
+
