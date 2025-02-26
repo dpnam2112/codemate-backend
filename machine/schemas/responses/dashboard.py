@@ -17,12 +17,12 @@ class GetRecentActivitiesResponse(BaseModel):
 class Events(BaseModel):
     exercise_id: UUID
     exercise_name: str
-    exercise_time_open: datetime
-    exercise_time_close: datetime
+    exercise_time_open: str
+    exercise_time_close: str
     course_name: str
     course_id: UUID
     course_courseID: str
-    course_nSemeter: int
+    course_nSemester: int
     
 class GetDashboardProfessorResponse(BaseModel):
     professor_id: UUID

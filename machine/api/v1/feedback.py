@@ -21,16 +21,21 @@ async def create_feedback(
     token: str = Depends(oauth2_scheme),
     feedback_controller: FeedbackController = Depends(InternalProvider().get_feedback_controller),
     student_controller: StudentController = Depends(InternalProvider().get_student_controller),
+    professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
 ):
     payload = verify_token(token)
     user_id = payload.get("sub")
     if not user_id:
         raise BadRequestException(message="Your account is not authorized. Please log in again.")
 
-    student = await student_controller.student_repository.first(where_=Student.id == user_id)
-    if not student:
+    student = await student_controller.student_repository.first(where_=[Student.id == user_id])
+    professor = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
+    
+    if not student and not professor:
         raise BadRequestException(message="You are not allowed to create feedback.")
 
+    user_type = "student" if student else "professor"
+    
     feedback_attributes = {
         "feedback_type": request.type,
         "title": request.title,
@@ -38,7 +43,9 @@ async def create_feedback(
         "description": request.description,
         "rate": request.rate,
         "status": "pending",
-        "student_id": user_id,
+        "course_id": request.course_id,
+        "student_id": user_id if user_type == "student" else None,
+        "professor_id": user_id if user_type == "professor" else None,
     }
 
     try:
@@ -49,6 +56,7 @@ async def create_feedback(
     except Exception as e:
         raise BadRequestException(message=f"Failed to create feedback: {str(e)}")
 
+    
     feedback_response = CreateFeedbackResponse(
         id=str(feedback.id),
         type=feedback.feedback_type,

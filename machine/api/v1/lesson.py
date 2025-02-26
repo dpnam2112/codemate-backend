@@ -22,7 +22,7 @@ from core.repository import SynchronizeSessionEnum
 import uuid
 from fastapi.security import OAuth2PasswordBearer
 from core.utils.auth_utils import verify_token
-
+from core.utils.file import generate_presigned_url
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 router = APIRouter(prefix="/lessons", tags=["lesson"])
 
@@ -35,6 +35,7 @@ async def create_new_lesson(
     order: int = Form(...),
     learning_outcomes: List[str] = Form(...),
     files: List[UploadFile] = File(None),
+    description_file: List[str] = Form(None),
     token: str = Depends(oauth2_scheme),
     lesson_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
     document_controller: DocumentsController = Depends(InternalProvider().get_documents_controller),
@@ -42,23 +43,24 @@ async def create_new_lesson(
     professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
 ):
     """
-    Creates a new lesson with optional documents.
+    Creates a new lesson with optional documents and descriptions.
     """
     payload = verify_token(token)
     user_id = payload.get("sub")
     if not user_id:
         raise BadRequestException(message="Your account is not authorized. Please log in again.")
+
     user = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
     if not user:
         raise NotFoundException(message="Only professors have the permission to create lesson.")
-    # Check if the course exists
+
     course = await course_controller.courses_repository.first(where_=[Courses.id == course_id])
     if not course:
         raise NotFoundException(message="Course not found for the given ID.")
 
     if user.id != course.professor_id:
-        raise BadRequestException(message="You are not allowed to create lesson in this course.")
-    # Create a new lesson
+        raise BadRequestException(message="You are not allowed to create a lesson in this course.")
+
     lesson_data = {
         "id": str(uuid.uuid4()),
         "title": title,
@@ -74,20 +76,23 @@ async def create_new_lesson(
 
     documents = []
     if files:
-        for file in files:
+        if description_file and len(files) != len(description_file):
+            raise BadRequestException(message="Number of descriptions must match number of files.")
+
+        for file, desc in zip(files, description_file or []):
             if file.filename:
-                # Upload file to S3
                 content = await file.read()
+
                 s3_key = await upload_to_s3(
                     file_content=content,
                     file_name=file.filename,
                 )
-
-                # Save the document to the database
+                
                 document_data = {
                     "name": file.filename,
                     "type": file.content_type,
                     "document_url": s3_key,
+                    "description": desc,
                     "lesson_id": created_lesson.id,
                 }
                 created_document = await document_controller.documents_repository.create(
@@ -96,7 +101,6 @@ async def create_new_lesson(
                 )
                 documents.append(created_document)
 
-    # Return the response
     return Ok(
         data=CreateNewLessonResponse(
             id=created_lesson.id,
@@ -107,7 +111,7 @@ async def create_new_lesson(
             learning_outcomes=created_lesson.learning_outcomes,
             documents=[DocumentResponse(**doc.__dict__) for doc in documents],
         ),
-        message="Successfully updated the lesson.",
+        message="Successfully created the lesson.",
     )
 
 
@@ -327,14 +331,14 @@ async def get_documents(
     if not user_id:
         raise BadRequestException(message="Your account is not authorized. Please log in again.")
 
-    documents = await document_controller.documents_repository.get_many(where_=Documents.lesson_id == lessonId)
+    documents = await document_controller.documents_repository.get_many(where_=[Documents.lesson_id == lessonId])
 
     documents_response = [
         GetDocumentResponse(
             id=doc.id,
             name=doc.name,
             type=doc.type,
-            document_url=doc.document_url,
+            document_url=generate_presigned_url(doc.document_url),
             description=doc.description,
         )
         for doc in documents

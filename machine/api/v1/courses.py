@@ -11,7 +11,6 @@ from machine.schemas.responses.courses import *
 from typing import List, Union, Literal, Optional
 from machine.schemas.responses.exercise import  *
 from fastapi.security import OAuth2PasswordBearer
-from core.utils.file import generate_presigned_url
 from machine.schemas.responses.progress_tracking import GetCoursesListResponse
 from core.exceptions import BadRequestException, NotFoundException, ForbiddenException
 from machine.schemas.responses.learning_path import LearningPathDTO, RecommendedLessonDTO
@@ -21,47 +20,48 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 router = APIRouter(prefix="/courses", tags=["courses"])
 # Fixed routes should come first
 
-# @router.get("/", response_model=Ok[List[GetCoursesListResponse]])
-# async def get_courses(
-#     token: str = Depends(oauth2_scheme),
-#     professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
-#     student_controller: StudentController = Depends(InternalProvider().get_student_controller),
-#     courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
-# ):
-#     """
-#     Get the list of courses
-#     """
-#     payload = verify_token(token)
-#     user_id = payload.get("sub")
-#     if not user_id:
-#         raise BadRequestException(message="Your account is not authorized. Please log in again.")
+@router.get("/", response_model=Ok[List[GetCoursesListResponse]])
+async def get_courses(
+    token: str = Depends(oauth2_scheme),
+    professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
+    student_controller: StudentController = Depends(InternalProvider().get_student_controller),
+    courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
+):
+    """
+    Get the list of courses
+    """
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
     
-#     # Check if user is professor or student
-#     professor = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
-#     is_professor = professor is not None
+    # Check if user is professor or student
+    professor = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
+    is_professor = professor is not None
     
-#     if not is_professor:
-#         student = await student_controller.student_repository.first(where_=[Student.id == user_id])
-#         if not student:
-#             raise NotFoundException(message="User not found for the given ID.")
-    
-#     courses = await courses_controller.courses_repository.get_many(
-#         where_=[Courses.professor_id == user_id],
-#     )
-#     if not courses:
-#         raise NotFoundException(message="No courses found.")
+    if not is_professor:
+        student = await student_controller.student_repository.first(where_=[Student.id == user_id])
+        if not student:
+            raise NotFoundException(message="User not found for the given ID.")
+    if is_professor:
+        courses = await courses_controller.courses_repository.get_many(
+            where_=[Courses.professor_id == user_id],
+        )
+            
+    if not courses:
+        raise NotFoundException(message="No courses found.")
 
-#     course_list = [
-#         GetCoursesListResponse(
-#         course_id = course.id,
-#         course_name = course.name,
-#         course_courseID = course.courseID,
-#         course_nSemester = course.nSemester,
-#         course_start_date = course.start_date,
-#         course_end_date = course.end_date,
-#         ) for course in courses
-#     ]
-#     return Ok(data=course_list, message="Successfully fetched the course list.")
+    course_list = [
+        GetCoursesListResponse(
+        course_id = course.id,
+        course_name = course.name,
+        course_courseID = course.courseID,
+        course_nSemester = course.nSemester,
+        course_start_date = course.start_date,
+        course_end_date = course.end_date,
+        ) for course in courses
+    ]
+    return Ok(data=course_list, message="Successfully fetched the course list.")
 @router.get("/student", response_model=Ok[GetCoursesPaginatedResponse])
 async def get_student_courses(
     token: str = Depends(oauth2_scheme),
@@ -735,6 +735,7 @@ async def get_course_exercises(
     professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
     exercises_controller: ExercisesController = Depends(InternalProvider().get_exercises_controller),
     student_controller: StudentController = Depends(InternalProvider().get_student_controller),
+    courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller)
 ):
     # Verify access
     payload = verify_token(token)
@@ -758,21 +759,22 @@ async def get_course_exercises(
     current_time = datetime.now()
     if not is_professor:
         conditions.append(Exercises.time_open <= current_time)
-    
+    course = await courses_controller.courses_repository.first(where_=[Courses.id == course_id])
+    if not course:
+        raise NotFoundException(message="Course not found for the given ID.")
     # Get exercises with ordering
     exercises = await exercises_controller.exercises_repository.get_many(
         where_=conditions,
         order_={"desc": ["time_open"]},  
     )
-    
     return Ok[List[GetExercise]](data=[
         GetExercise(
             id=exercise.id,
             name=exercise.name,
             description=exercise.description,
             type=exercise.type,
-            time_open=exercise.time_open.isoformat(),
-            time_close=exercise.time_close.isoformat(),
+            time_open=exercise.time_open.strftime("%H:%M %d/%m/%Y"),
+            time_close=exercise.time_close.strftime("%H:%M %d/%m/%Y"),
             time_limit=exercise.time_limit,
             attempts_allowed=exercise.attempts_allowed,
             grading_method=exercise.grading_method,
