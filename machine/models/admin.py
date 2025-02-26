@@ -3,7 +3,7 @@ from core.db import Base
 from sqlalchemy.orm import relationship
 from core.db.mixins import TimestampMixin
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy import Column, String, UUID, DateTime, Boolean
+from sqlalchemy import Column, String, UUID, DateTime, Boolean, Date
 
 class Admin(Base, TimestampMixin):
     __tablename__ = "admins"
@@ -14,7 +14,7 @@ class Admin(Base, TimestampMixin):
     password = Column(String(255), nullable=True)   # Password of the admin
     avatar_url = Column(String, nullable=True)  # Avatar URL of the admin
     mscb = Column(String(255), nullable=True)   # Employee ID
-    date_of_birth = Column(DateTime, nullable=True) # Date of birth of the admin
+    date_of_birth = Column(Date, nullable=True) # Date of birth of the admin
     fullname = Column(String(255), nullable=True)   # Full name of the admin
     
     is_email_verified = Column(Boolean, default=False, nullable=False)  # Email verification status

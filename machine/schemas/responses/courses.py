@@ -29,6 +29,25 @@ class GetCoursesPaginatedResponse(BaseModel):
     pageSize: int
     totalRows: int
     totalPages: int
+    
+class GetAdminCoursesResponse(BaseModel):
+    id: UUID
+    name: str
+    start_date: str
+    end_date: str
+    status: StatusType
+    nCredit: int
+    nSemester: int
+    courseID: str
+    
+class GetAdminCoursesPaginatedResponse(BaseModel):
+    content: List[GetAdminCoursesResponse]
+    currentPage: int
+    pageSize: int
+    totalRows: int
+    totalPages: int
+    
+    
 class GetDocumentsResponse(BaseModel):
     id: UUID
     name: str
@@ -46,7 +65,6 @@ class GetLessonsResponse(BaseModel):
     description: str 
     learning_outcomes: List[str]
     order: int
-    nDocuments: int
     # exercises: List[GetExercisesResponse]
     # documents: List[GetDocumentsResponse]
 class GetCourseDetailResponse(BaseModel):
@@ -81,7 +99,22 @@ class GetLessonsRecommendationResponse(BaseModel):
 class PutLearningOutcomesCoursesResponse(BaseModel):
     course_id: UUID
     learning_outcomes: list[str]
-
+class GetDocumentsProfessor(BaseModel):
+    id: UUID
+    name: str
+    type: str
+    url: str
+class GetExercisesProfessor(BaseModel):
+    id: UUID
+    name: str
+    description: str
+    type: ExerciseType
+class GetLessonProfessor(BaseModel):
+    id: UUID
+    title: str
+    description: str 
+    order: int
+    documents: List[GetDocumentsProfessor]
 class GetProfessorCoursesResponse(BaseModel):
     id: UUID
     name: str
@@ -98,6 +131,18 @@ class GetProfessorCoursesPaginatedResponse(BaseModel):
     pageSize: int
     totalRows: int
     totalPages: int
+# class GetCourseDetailProfessorResponse(BaseModel):
+#     course_id: UUID
+#     course_name: str
+#     course_start_date: str
+#     course_end_date: str
+#     course_learning_outcomes: List[str]
+#     course_professor: ProfessorInformation
+#     course_status: StatusType
+#     course_image: str
+#     exercises: List[GetExercisesProfessor]
+#     students: List[StudentList]
+#     lessons: List[GetLessonProfessor]  
 
 class GetCourseDetailProfessorResponse(BaseModel):
     course_id: UUID

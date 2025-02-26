@@ -1,4 +1,4 @@
-expectedHeaders = ["Course ID", "Course Name", "Credit", "Semester", "Professor Email", "Student Email List"]
+
 
 progress_tracking_test_student = [
     {

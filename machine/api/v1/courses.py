@@ -1,23 +1,24 @@
+import math
 from sqlalchemy import and_
 from machine.models import *
 from core.response import Ok
 from machine.controllers import *
 from machine.schemas.requests import *
-from typing import List, Union, Literal, Optional
-from data.constant import expectedHeaders
 from fastapi import APIRouter, Depends, Query
 from machine.providers import InternalProvider
 from core.utils.auth_utils import verify_token
 from machine.schemas.responses.courses import *
+from typing import List, Union, Literal, Optional
 from machine.schemas.responses.exercise import  *
-from machine.schemas.responses.progress_tracking import GetCoursesListResponse
 from fastapi.security import OAuth2PasswordBearer
+from machine.schemas.responses.progress_tracking import GetCoursesListResponse
 from core.exceptions import BadRequestException, NotFoundException, ForbiddenException
 from machine.schemas.responses.learning_path import LearningPathDTO, RecommendedLessonDTO
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 router = APIRouter(prefix="/courses", tags=["courses"])
+# Fixed routes should come first
 
 @router.get("/", response_model=Ok[List[GetCoursesListResponse]])
 async def get_courses(
@@ -64,6 +65,8 @@ async def get_courses(
 @router.get("/student", response_model=Ok[GetCoursesPaginatedResponse])
 async def get_student_courses(
     token: str = Depends(oauth2_scheme),
+    page: int = Query(1, description="Page number"),
+    page_size: int = Query(10, description="Number of items per page"),
     search_query: Optional[str] = Query(None, description="Search query to filter courses"),
     student_courses_controller: StudentCoursesController = Depends(InternalProvider().get_studentcourses_controller),
     student_controller: StudentController = Depends(InternalProvider().get_student_controller),
@@ -104,14 +107,14 @@ async def get_student_courses(
         fields=select_fields,
         join_=join_conditions,
         order_={"asc": ["last_accessed"]},
-        limit=10,
-        skip=0,
+        limit=page_size,
+        skip=(page - 1) * page_size,
     )
 
     if not courses:
         return Ok(data=[], message="No courses found.")
 
-    total_page = int(len(courses) / 10)
+    total_page = math.ceil(len(courses) / page_size)
 
     courses_response = {
         "content": [
@@ -130,14 +133,112 @@ async def get_student_courses(
             )
             for course in courses
         ],
-        "pageSize": 10,
-        "currentPage": 1,
+        "pageSize": page_size,
+        "currentPage": page,
         "totalRows": len(courses),
         "totalPages": total_page,
     }
 
     return Ok(data=courses_response, message="Successfully fetched the courses.")
 
+@router.get("/count/", response_model=Ok[int])
+async def count_courses(
+    admin_controller: AdminController = Depends(InternalProvider().get_admin_controller),
+    token: str = Depends(oauth2_scheme),
+    courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
+):
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    
+    check_role = await admin_controller.admin_repository.exists(where_=[Admin.id == user_id])
+    if not check_role:
+        raise ForbiddenException(message="You are not allowed to access this feature.")
+
+    count = await courses_controller.courses_repository.count(where_=None)
+
+    return Ok(data=count, message="Successfully fetched the count of courses.")
+
+@router.get("/admin", description="Get all courses for admin", response_model=Ok[GetAdminCoursesPaginatedResponse])
+async def get_courses(
+    token: str = Depends(oauth2_scheme),
+    search_query: Optional[str] = Query(None, description="Search query to filter courses"),
+    page: int = Query(1, description="Page number"),
+    page_size: int = Query(10, description="Number of items per page"),
+    courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
+    admin_controller: AdminController = Depends(InternalProvider().get_admin_controller),
+):
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+
+    check_role = await admin_controller.admin_repository.first(where_=[Admin.id == user_id])
+    if not check_role:
+        raise ForbiddenException(message=f"You are not allowed to access this feature {check_role}")
+
+    if search_query:
+        where_conditions = [Courses.name.ilike(f"%{search_query}%")]
+    else:
+        where_conditions = None
+
+    select_fields = [
+        Courses.id.label("id"),
+        Courses.name.label("name"),
+        Courses.start_date.label("start_date"),
+        Courses.end_date.label("end_date"),
+        Courses.learning_outcomes.label("learning_outcomes"),
+        Courses.status.label("status"),
+        Courses.image_url.label("image"),
+        Courses.nCredit.label("nCredit"),
+        Courses.nSemester.label("nSemester"),
+        Courses.courseID.label("courseID"),
+    ]
+
+    courses = await courses_controller.courses_repository._get_many(
+        where_=where_conditions,
+        fields=select_fields,
+        order_={"asc": ["name"]},
+        limit=page_size,
+        skip=(page - 1) * page_size,
+    )
+
+    if not courses:
+        if not courses:
+            empty_response = {
+                "content": [],
+                "pageSize": page_size,
+                "currentPage": page,
+                "totalRows": 0,
+                "totalPages": 0,
+            }
+            return Ok(data=empty_response, message="No courses found.")
+
+    total_rows = await courses_controller.courses_repository.count(where_=where_conditions)
+    total_pages = math.ceil(total_rows / page_size)
+
+    courses_response = {
+        "content": [
+            GetAdminCoursesResponse(
+                id=course.id,
+                name=course.name,
+                start_date=str(course.start_date),
+                end_date=str(course.end_date),
+                status=course.status,
+                nCredit=course.nCredit,
+                nSemester=course.nSemester,
+                courseID=course.courseID,
+            )
+            for course in courses
+        ],
+        "pageSize": page_size,
+        "currentPage": page,
+        "totalRows": total_rows,
+        "totalPages": total_pages,
+    }
+    
+    return Ok(data=courses_response, message="Successfully fetched the courses.")
 
 @router.get("/{courseId}", response_model=Ok[GetCourseDetailResponse])
 async def get_course_for_student(
@@ -153,7 +254,7 @@ async def get_course_for_student(
 
     student = await student_controller.student_repository.first(where_=[Student.id == user_id])
     if not student:
-        raise ForbiddenException(message="Your account is not allowed to access this feature.")
+        raise ForbiddenException(message=f"Your account is not allowed to access this feature. {student}")
 
     select_fields = [
         Courses.name.label("name"),
@@ -394,7 +495,7 @@ async def get_lessons_recommendation(
 
 @router.post("/", response_model=Ok[Union[CreateCourseResponse, List[CreateCourseResponse]]])
 async def create_course(
-    request: CreateCourseRequest,
+    request: List[CreateCourseRequest],
     token: str = Depends(oauth2_scheme),
     courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
     professors_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
@@ -410,28 +511,24 @@ async def create_course(
     user = await admin_controller.admin_repository.first(where_=[Admin.id == user_id])
     if not user:
         raise NotFoundException(message="Your account is not allowed to create a course.")
-
-    if not request.headers or not request.courses:
-        raise BadRequestException(message="Headers and Courses are required.")
-
-    if not request.headers == expectedHeaders:
-        raise BadRequestException(message="Headers must match the fixed values: {expectedHeaders}")
-
-    if len(request.courses) == 0:
+    
+    if not request or len(request) == 0:
         raise BadRequestException(message="At least one course is required.")
 
-    if len(request.courses) == 1:
+    if len(request) == 1:
         saveProfessorId = await professors_controller.professor_repository.first(
-            Professor.email == request.courses[0].professor_email
+            Professor.mscb == request[0].professorID
         )
         saveProfessorId = saveProfessorId.id
         course_attributes = {
-            "name": request.courses[0].name,
+            "name": request[0].name,
             "professor_id": saveProfessorId,
-            "nCredit": request.courses[0].nCredit,
-            "nSemester": request.courses[0].nSemester,
+            "nCredit": request[0].creditNumber,
+            "nSemester": request[0].nSemester,
             "createdByAdminID": user_id,
-            "courseID": request.courses[0].courseID,
+            "courseID": request[0].courseID,
+            "start_date": request[0].startDate,
+            "end_date": request[0].endDate,
         }
 
         createCourse = await courses_controller.courses_repository.create(attributes=course_attributes, commit=True)
@@ -439,8 +536,9 @@ async def create_course(
             raise Exception("Failed to create course")
 
         getStudentIDs = await student_controller.student_repository._get_many(
-            where_=Student.email.in_([student for student in request.courses[0].student_list]), fields=[Student.id]
-        )
+    where_=[Student.mssv.in_(request[0].studentIDs)],
+    fields=[Student.id]
+)
 
         student_courses_attributes = [
             {
@@ -460,13 +558,14 @@ async def create_course(
 
         student_courses_response = [
             {
-                "student_id": create_student_courses.id,
+                "student_id": create_student_course.student_id,
                 "course_id": createCourse.id,
-                "last_accessed": str(create_student_courses.last_accessed),
-                "completed_lessons": create_student_courses.completed_lessons,
-                "time_spent": str(create_student_courses.time_spent),
-                "assignments_done": create_student_courses.assignments_done,
+                "last_accessed": str(create_student_course.last_accessed),
+                "completed_lessons": create_student_course.completed_lessons,
+                "time_spent": str(create_student_course.time_spent),
+                "assignments_done": create_student_course.assignments_done,
             }
+            for create_student_course in create_student_courses
         ]
 
         course_response = {
@@ -485,30 +584,32 @@ async def create_course(
         }
         return Ok(data=course_response, message="Successfully created the course.")
     else:
-        professor_emails = [course.professor_email for course in request.courses]
+        professor_ids = [course.professorID for course in request]
         professors = await professors_controller.professor_repository._get_many(
-            where_=[Professor.email.in_(professor_emails)], fields=[Professor.id, Professor.email]
+            where_=[Professor.mscb.in_(professor_ids)], fields=[Professor.id, Professor.mscb]
         )
 
-        professor_id_map = {prof["email"]: prof["id"] for prof in professors}
+        professor_id_map = {prof["mscb"]: prof["id"] for prof in professors}
 
         courses_attributes = []
-        for course in request.courses:
+        for course in request:
             if not course.name:
                 raise BadRequestException(message="Course name is required.")
 
-            professor_id = professor_id_map.get(course.professor_email)
+            professor_id = professor_id_map.get(course.professorID)
             if not professor_id:
-                raise NotFoundException(message=f"Professor with email {course.professor_email} not found")
+                raise NotFoundException(message=f"Professor with mscb {course.professorID} not found")
 
             course_attr = {
                 "name": course.name,
                 "professor_id": professor_id,
-                "nCredit": course.nCredit,
+                "nCredit": course.creditNumber,
                 "nSemester": course.nSemester,
                 "createdByAdminID": user_id,
                 "status": "new",
                 "courseID": course.courseID,
+                "start_date": course.startDate,
+                "end_date": course.endDate,
             }
             # if hasattr(course, 'start_date') and course.start_date:
             #     course_attr["start_date"] = course.start_date
@@ -526,11 +627,11 @@ async def create_course(
             raise Exception("Failed to create courses")
 
         courses_response = []
-        for created_course, request_course in zip(create_courses, request.courses):
+        for created_course, request_course in zip(create_courses, request):
 
-            student_emails = request_course.student_list
+            student_ids = request_course.studentIDs
             students = await student_controller.student_repository._get_many(
-                where_=[Student.email.in_(student_emails)], fields=[Student.id, Student.email]
+                where_=[Student.mssv.in_(student_ids)], fields=[Student.id, Student.mssv]
             )
 
             student_courses_attributes = [
@@ -627,25 +728,6 @@ async def delete_learning_path(
     await lp_controller.delete_learning_path(user_id=student_id, course_id=course_id)
     return Ok(data=None, message="Successfully deleted the learning path.")
 
-
-@router.get("/count/", response_model=Ok[int])
-async def count_courses(
-    admin_controller: AdminController = Depends(InternalProvider().get_admin_controller),
-    token: str = Depends(oauth2_scheme),
-    courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
-):
-    payload = verify_token(token)
-    user_id = payload.get("sub")
-    if not user_id:
-        raise BadRequestException(message="Your account is not authorized. Please log in again.")
-    
-    check_role = await admin_controller.admin_repository.exists(where_=[Admin.id == user_id])
-    if not check_role:
-        raise ForbiddenException(message="You are not allowed to access this feature.")
-
-    count = await courses_controller.courses_repository.count(where_=None)
-
-    return Ok(data=count, message="Successfully fetched the count of courses.")
 @router.get("/{course_id}/exercises", response_model=Ok[List[GetExercise]])
 async def get_course_exercises(
     course_id: UUID,
