@@ -196,12 +196,12 @@ async def get_professor_dashboard(
         Events(
             exercise_id=exercise.id,
             exercise_name=exercise.name,
-            exercise_time_open=exercise.time_open,
-            exercise_time_close=exercise.time_close,
+            exercise_time_open=exercise.time_open.strftime("%H:%M %d/%m/%Y"),
+            exercise_time_close=exercise.time_close.strftime("%H:%M %d/%m/%Y"),
             course_name = course.name,
             course_id = course.id,
             course_courseID = course.courseID,
-            course_nSemeter = course.nSemester
+            course_nSemester = course.nSemester
         )
         for exercise in upcoming_exercises_list
     ]

@@ -8,7 +8,6 @@ from core.utils.auth_utils import verify_token
 from machine.schemas.responses.courses import *
 from fastapi.security import OAuth2PasswordBearer
 from core.exceptions import BadRequestException, NotFoundException, ForbiddenException
-from core.utils.file import generate_presigned_url
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 router = APIRouter(prefix="/professors", tags=["professors"])
 
