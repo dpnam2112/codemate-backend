@@ -44,6 +44,7 @@ async def create_feedback(
         "description": request.description,
         "rate": request.rate,
         "status": "pending",
+        "course_id": request.course_id,
         "student_id": user_id if user_type == "student" else None,
         "professor_id": user_id if user_type == "professor" else None,
     }
@@ -227,50 +228,3 @@ async def get_feedback_list(
     #     )
     
     return Ok(data=feedback_response, message="Feedbacks retrieved successfully.")
-@router.post("/professors")
-async def create_feedback(
-    request: CreateFeedbackRequest,
-    token: str = Depends(oauth2_scheme),
-    feedback_controller: FeedbackController = Depends(InternalProvider().get_feedback_controller),
-    student_controller: StudentController = Depends(InternalProvider().get_student_controller),
-):
-    payload = verify_token(token)
-    user_id = payload.get("sub")
-    if not user_id:
-        raise BadRequestException(message="Your account is not authorized. Please log in again.")
-
-    student = await student_controller.student_repository.first(where_=Student.id == user_id)
-    if not student:
-        raise BadRequestException(message="You are not allowed to create feedback.")
-
-    feedback_attributes = {
-        "feedback_type": request.type,
-        "title": request.title,
-        "category": request.category,
-        "description": request.description,
-        "rate": request.rate,
-        "status": "pending",
-        "student_id": user_id,
-    }
-
-    try:
-        feedback = await feedback_controller.feedback_repository.create(
-            attributes=feedback_attributes, 
-            commit=True
-        )
-    except Exception as e:
-        raise BadRequestException(message=f"Failed to create feedback: {str(e)}")
-
-    feedback_response = CreateFeedbackResponse(
-        id=str(feedback.id),
-        type=feedback.feedback_type,
-        title=feedback.title,
-        category=feedback.category,
-        description=feedback.description,
-        rate=feedback.rate,
-        status=feedback.status,
-        created_at=str(feedback.created_at),
-        resolved_at=str(feedback.resolved_at) if feedback.resolved_at else "",
-    )
-    
-    return Ok(data=feedback_response, message="Feedback created successfully.")
