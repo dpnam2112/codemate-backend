@@ -61,7 +61,7 @@ async def get_grades(
         )
         student_id = student.id
         student_name = student.name
-
+        student_mssv = student.mssv
         learning_path_progress = await learning_paths_controller.learning_paths_repository.first(
             where_=[LearningPaths.course_id == course_id, LearningPaths.student_id == student_id]
         )
@@ -115,6 +115,7 @@ async def get_grades(
         students_list.append(StudentProgressInCourse(
             student_id=student_id,
             student_name=student_name,
+            student_mssv=student_mssv,
             exercises=exercise_student,
             learning_path=learning_path,
             average_score=average_score,
@@ -143,7 +144,6 @@ async def get_exercise_grades(
         raise BadRequestException(message="Your account is not authorized. Please log in again.")
 
     user = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
-
     if not user:
         raise NotFoundException(message="Only professors have the permission to get grades.")
 
@@ -162,7 +162,6 @@ async def get_exercise_grades(
     )
     if not student_courses:
         raise NotFoundException(message="No students found in the course.")
-
     students_list = []
 
     for student_course in student_courses:
@@ -171,7 +170,7 @@ async def get_exercise_grades(
         )
         student_id = student.id
         student_name = student.name
-
+        student_mssv = student.mssv
         exercise = await exercises_controller.exercises_repository.first(
             where_=[Exercises.id == exercise_id],
         )
@@ -181,8 +180,10 @@ async def get_exercise_grades(
         if not student_exercise:
             score = 0
             question_answers = []
+            completion_date = None
         else:
             score = student_exercise.score
+            completion_date = student_exercise.completion_date
             question_answers = [
                 AnswerQuizExercise(
                     question=answer.get('question', '') if isinstance(answer, dict) else '',
@@ -193,8 +194,9 @@ async def get_exercise_grades(
         students_list.append(StudentProgressInExercise(
             student_id=student_id,
             student_name=student_name,
+            student_mssv=student_mssv,
             score=score,
-            date=student_exercise.completion_date,
+            date=completion_date,
             question_answers=question_answers,
         ))
 
