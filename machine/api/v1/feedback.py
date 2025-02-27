@@ -4,7 +4,7 @@ from core.response import Ok
 from machine.controllers import *
 from machine.schemas.requests.feedback import *
 from machine.schemas.responses.feedback import *
-from typing import List
+from typing import List, Union
 from fastapi import APIRouter, Depends, Query
 from machine.providers import InternalProvider
 from core.utils.auth_utils import verify_token
@@ -15,9 +15,13 @@ from machine.schemas.responses.learning_path import LearningPathDTO, Recommended
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 router = APIRouter(prefix="/feedback", tags=["feedback"])
 
+from typing import Union
+from fastapi import Depends
+from pydantic import BaseModel
+
 @router.post("/")
 async def create_feedback(
-    request: CreateFeedbackRequest,
+    request: Union[CreateFeedbackRequest, CreateFeedbackCourseRequest],  # Use Union for type hinting
     token: str = Depends(oauth2_scheme),
     feedback_controller: FeedbackController = Depends(InternalProvider().get_feedback_controller),
     student_controller: StudentController = Depends(InternalProvider().get_student_controller),
@@ -30,12 +34,12 @@ async def create_feedback(
 
     student = await student_controller.student_repository.first(where_=[Student.id == user_id])
     professor = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
-    
+
     if not student and not professor:
         raise BadRequestException(message="You are not allowed to create feedback.")
 
     user_type = "student" if student else "professor"
-    
+
     feedback_attributes = {
         "feedback_type": request.type,
         "title": request.title,
@@ -43,10 +47,14 @@ async def create_feedback(
         "description": request.description,
         "rate": request.rate,
         "status": "pending",
-        "course_id": request.course_id,
         "student_id": user_id if user_type == "student" else None,
         "professor_id": user_id if user_type == "professor" else None,
     }
+
+    if isinstance(request, CreateFeedbackCourseRequest):
+        if not request.course_id:
+            raise BadRequestException(message="Course ID is required for course feedback.")
+        feedback_attributes["course_id"] = request.course_id
 
     try:
         feedback = await feedback_controller.feedback_repository.create(
@@ -56,7 +64,6 @@ async def create_feedback(
     except Exception as e:
         raise BadRequestException(message=f"Failed to create feedback: {str(e)}")
 
-    
     feedback_response = CreateFeedbackResponse(
         id=str(feedback.id),
         type=feedback.feedback_type,
@@ -68,8 +75,9 @@ async def create_feedback(
         created_at=str(feedback.created_at),
         resolved_at=str(feedback.resolved_at) if feedback.resolved_at else "",
     )
-    
+
     return Ok(data=feedback_response, message="Feedback created successfully.")
+
 
 @router.get("/courses/{course_id}", response_model=Ok[List[GetFeedbackProfessorResponse]])
 async def get_feedback_professor(
