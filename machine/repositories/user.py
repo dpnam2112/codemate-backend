@@ -1,6 +1,6 @@
 from core.repository import BaseRepository
 from sqlalchemy.sql.expression import Select
-from machine.models import Student, Professor, Admin, StudentCourses, Courses
+from machine.models import Student, Professor, Admin, StudentCourses, Courses, UserLogins
 
 
 class StudentRepository(BaseRepository[Student]):
@@ -58,5 +58,13 @@ class AdminRepository(BaseRepository[Admin]):
     Repository for Admin model operations.
     No specific join methods needed for basic admin functionality.
     Add methods here if admin-specific queries are needed.
+    """
+    pass
+
+class UserLoginsRepository(BaseRepository[UserLogins]):
+    """
+    Repository for UserLogins model operations.
+    No specific join methods needed for basic user logins functionality.
+    Add methods here if user logins-specific queries are needed.
     """
     pass

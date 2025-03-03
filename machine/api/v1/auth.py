@@ -78,16 +78,21 @@ def generate_code(length: int = 6) -> str:
     return "".join(random.choices(string.digits, k=length))
 
 
-def get_role_from_excel(email: str):
-    excel_professors = ExcelUtils(EXCEL_FILE_PATH, "Professor")
-    if excel_professors.check_email_exist(email):
+async def check_exist_and_get_role_for_user(email: str, student_controller: StudentController, professor_controller: ProfessorController, admin_controller: AdminController):
+    student = await student_controller.student_repository.first(where_=[Student.email == email])
+    if student:
+        return "student"
+
+    professor = await professor_controller.professor_repository.first(where_=[Professor.email == email])
+    if professor:
         return "professor"
 
-    excel_admins = ExcelUtils(EXCEL_FILE_PATH, "Admin")
-    if excel_admins.check_email_exist(email):
+    admin = await admin_controller.admin_repository.first(where_=[Admin.email == email])
+    if admin:
         return "admin"
 
     return None
+    
 
 
 async def verify_google_token(access_token: str):
@@ -127,7 +132,7 @@ async def login(
     if not validate_email(request.email):
         raise UnauthorizedException("Invalid email")
 
-    role = get_role_from_excel(request.email)
+    role = await check_exist_and_get_role_for_user(request.email, student_controller=student_controller, professor_controller=professor_controller, admin_controller=admin_controller)
 
     user = None
     role_response = None
@@ -303,7 +308,7 @@ async def verify_email(
     if not request.email or not request.code:
         raise UnauthorizedException("Email and code are required")
 
-    role = get_role_from_excel(request.email)
+    role = await check_exist_and_get_role_for_user(request.email, student_controller=student_controller, professor_controller=professor_controller, admin_controller=admin_controller)
     user = None
 
     if role == "professor":
@@ -367,7 +372,7 @@ async def resend_verification_code(
     if not request.email:
         raise UnauthorizedException("Email is required")
 
-    role = get_role_from_excel(request.email)
+    role = await check_exist_and_get_role_for_user(request.email, student_controller=student_controller, professor_controller=professor_controller, admin_controller=admin_controller)
     user = None
 
     if role == "professor":
@@ -422,7 +427,7 @@ async def forgot_password(
     if not request.email:
         raise UnauthorizedException("Email is required!")
 
-    role = get_role_from_excel(request.email)
+    role = await check_exist_and_get_role_for_user(request.email, student_controller=student_controller, professor_controller=professor_controller, admin_controller=admin_controller)
     user = None
 
     if role == "professor":
@@ -477,7 +482,7 @@ async def reset_password(
     if not request.email or not request.code or not request.new_password:
         raise UnauthorizedException("Email, code, and password are required")
 
-    role = get_role_from_excel(request.email)
+    role = await check_exist_and_get_role_for_user(request.email, student_controller=student_controller, professor_controller=professor_controller, admin_controller=admin_controller)
     user = None
 
     if role == "professor":
@@ -536,7 +541,7 @@ async def google_login(
     if google_token_info["email"] != auth_request.user_info.email:
         raise UnauthorizedException("Email does not match")
 
-    role = get_role_from_excel(auth_request.user_info.email)
+    role = await check_exist_and_get_role_for_user(auth_request.user_info.email, student_controller=student_controller, professor_controller=professor_controller, admin_controller=admin_controller)
 
     user = None
     role_response = None

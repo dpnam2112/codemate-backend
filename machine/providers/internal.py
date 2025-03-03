@@ -51,6 +51,8 @@ class InternalProvider:
     
     feedback_repository = partial(repo.FeedbackRepository, model=modl.Feedback)
     
+    user_logins_repository = partial(repo.UserLoginsRepository, model=modl.UserLogins)
+    
     def get_student_controller(self, db_session=Depends(db_session_keeper.get_session)):
         return ctrl.StudentController(
             student_repository=self.student_repository(db_session=db_session)
@@ -141,3 +143,8 @@ class InternalProvider:
             if controller is None:
                 raise ValueError("Controller is not properly initialized.")
             yield controller
+    
+    def get_user_logins_controller(self, db_session=Depends(db_session_keeper.get_session)):
+        return ctrl.UserLoginsController(
+            user_logins_repository=self.user_logins_repository(db_session=db_session)
+        )

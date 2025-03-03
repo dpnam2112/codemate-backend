@@ -286,7 +286,7 @@ async def count_user(
     
     raise BadRequestException("Invalid role")
 
-@router.get("/", description="Get all users")
+@router.get("/admin", description="Get all users")
 async def get_all_users(
     role: str = Query(None, title="Role", description="Filter by role", example="student"),
     status: str = Query(None, title="Status", description="Filter by status", example="True"),
@@ -478,6 +478,70 @@ async def get_all_users(
         return Ok(data=users, message="Filtered users")
     except Exception as e:
         raise SystemException(f"Error fetching users: {str(e)}")
+    
+    
+
+@router.get("/user-logs", description="Get user login logs")
+async def get_user_login_logs(
+    token: str = Depends(oauth2_scheme),
+    admin_controller: AdminController = Depends(InternalProvider().get_admin_controller
+    ),
+    user_logins_controller: UserLoginsController = Depends(InternalProvider().get_user_logins_controller),
+):
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+
+    check_role = await admin_controller.admin_repository.first(where_=Admin.id == user_id)
+    if not check_role:
+        raise ForbiddenException(message="You are not allowed to access this feature.")
+
+    user_logins = await user_logins_controller.user_logins_repository.get_many()
+    user_logins_response = [
+        {
+            "id": user_login.id,
+            "user_id": user_login.user_id,
+            "user_role": user_login.user_role,
+            "login_timestamp": user_login.login_timestamp,
+        }
+        for user_login in user_logins
+    ]
+    return Ok(data=user_logins_response, message="User login logs")
+
+@router.post("/user-logs", description="Create user login log")
+async def create_user_login_log(
+    user_login: UserLoginCreate,
+    token: str = Depends(oauth2_scheme),
+    admin_controller: AdminController = Depends(InternalProvider().get_admin_controller),
+    user_logins_controller: UserLoginsController = Depends(InternalProvider().get_user_logins_controller),
+):
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+
+    check_role = await admin_controller.admin_repository.first(where_=Admin.id == user_id)
+    if not check_role:
+        raise ForbiddenException(message="You are not allowed to access this feature.")
+    
+    user_logins_attributes = {
+        "user_id": user_id,
+        "user_role": user_login.user_role,
+        "login_timestamp": user_login.login_timestamp.astimezone().replace(tzinfo=None),
+    }
+
+    created_user_login = await user_logins_controller.user_logins_repository.create(attributes=user_logins_attributes, commit=True)
+    
+    user_logins_response = {
+        "id": created_user_login.id,
+        "user_id": created_user_login.user_id,
+        "user_role": created_user_login.user_role,
+        "login_timestamp": created_user_login.login_timestamp
+    }
+    return Ok(data=user_logins_response, message="User login log created successfully")
 
 @router.get("/{user_id}", description="Get user information for admin")
 async def get_user_information(
@@ -513,5 +577,3 @@ async def get_user_information(
         "ms": check_user.mssv if hasattr(check_user, "mssv") else check_user.mscb,
     }
     return Ok(data=user_response, message="User information")
-
-

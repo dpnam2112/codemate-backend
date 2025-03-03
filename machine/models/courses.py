@@ -20,6 +20,7 @@ class Courses(Base, TimestampMixin):
     image_url = Column(String, nullable=True)
     nCredit = Column(Integer, nullable=True)
     nSemester = Column(Integer, nullable=True)
+    class_name=Column(String, nullable=True)
     courseID = Column(String, nullable=True) # Course ID. EX: CS101
     createdByAdminID = Column(String, nullable=True)
 

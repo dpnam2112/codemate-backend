@@ -138,13 +138,17 @@ async def get_feedback_professor(
 
 
 
-@router.get("/") #, response_model=Ok[List[GetFeedbackListResponse]])
+from datetime import date
+
+@router.get("/", description="Get all feedbacks")
 async def get_feedback_list(
     month: int = Query(None, ge=1, le=12), 
     year: int = Query(None),
     feedback_type: str = Query(None, title="Feedback Type", description="Type of feedback", example="system"), 
     status: str = Query(None, title="Feedback Status", description="Status of feedback", example="pending"),
     category: str = Query(None, title="Feedback Category", description="Category of feedback", example="user_interface"),
+    start_date: date = Query(None, description="Start date for feedback creation (format: YYYY-MM-DD)"),
+    end_date: date = Query(None, description="End date for feedback creation (format: YYYY-MM-DD)"),
     token: str = Depends(oauth2_scheme),
     feedback_controller: FeedbackController = Depends(InternalProvider().get_feedback_controller),
     admin_controller: AdminController = Depends(InternalProvider().get_admin_controller),
@@ -177,9 +181,16 @@ async def get_feedback_list(
         
     if month:
         filters.append(extract('month', Feedback.created_at) == month)  
+    
     if year:
         filters.append(extract('year', Feedback.created_at) == year) 
-        
+    
+    # Handle the start_date and end_date for the created_at range filter
+    if start_date:
+        filters.append(Feedback.created_at >= start_date)  # Greater than or equal to the start date
+    if end_date:
+        filters.append(Feedback.created_at <= end_date)  # Less than or equal to the end date
+
     join_conditions = {
         "student": {"type": "left", "alias": "student_alias"},
     }
@@ -235,3 +246,4 @@ async def get_feedback_list(
     #     )
     
     return Ok(data=feedback_response, message="Feedbacks retrieved successfully.")
+

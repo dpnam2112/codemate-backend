@@ -1,4 +1,4 @@
-from .user import StudentRepository, ProfessorRepository, AdminRepository
+from .user import StudentRepository, ProfessorRepository, AdminRepository, UserLoginsRepository
 from .student_courses import StudentCoursesRepository
 from .activities import ActivitiesRepository
 from .courses import CoursesRepository
@@ -31,4 +31,5 @@ __all__ = [
     "RecommendLessonsRepository",
     "RecommendQuizzesRepository",
     "FeedbackRepository",
+    "UserLoginsRepository"
 ]

@@ -18,6 +18,7 @@ class CreateCourseRequest(BaseModel):
       courseID: str
       startDate: date
       endDate: date
+      class_name: str
     
 class StudentCoursesListResponse(BaseModel):
     student_id: UUID
