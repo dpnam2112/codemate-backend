@@ -18,6 +18,7 @@ class GetCoursesListResponse(BaseModel):
     course_name: str
     course_courseID: str
     course_nSemester: int
+    course_class_name: str
     course_start_date: Optional[date]
     course_end_date: Optional[date]
 

@@ -30,7 +30,7 @@ async def get_professor_courses(
         raise NotFoundException(message="Your account is not allowed to get professor courses list.")
     courses = await courses_controller.courses_repository.get_many(
         where_=[Courses.professor_id == professor.id],
-        order_={"asc": ["name"]}
+        order_={"desc": ["start_date"]},
     )
     courses_response = []
 
@@ -68,7 +68,11 @@ async def get_professor_courses(
                 professor_avatar=professor.avatar_url,
             ),
             status=course.status,
-            image=course.image_url,
+            image_url=generate_presigned_url(course.image_url, expiration=604800) if course.image_url else "",
+            nSemester=course.nSemester,
+            nCredit=course.nCredit,
+            courseID=course.courseID,
+            class_name=course.class_name,
         )
 
         courses_response.append(course_data)
@@ -152,6 +156,7 @@ async def get_course_detail_for_professor(
         course_nCredit=course.nCredit,
         course_nSemester=course.nSemester,
         course_courseID=course.courseID,
+        course_class_name=course.class_name,
         nStudents=len(student_courses),
         nLessons=len(lessons),
         nExercises=exercises_count,
