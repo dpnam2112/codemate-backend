@@ -8,6 +8,7 @@ from core.utils.auth_utils import verify_token
 from machine.schemas.responses.courses import *
 from fastapi.security import OAuth2PasswordBearer
 from core.exceptions import BadRequestException, NotFoundException, ForbiddenException
+from core.utils.file import generate_presigned_url 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 router = APIRouter(prefix="/professors", tags=["professors"])
 
@@ -137,7 +138,9 @@ async def get_course_detail_for_professor(
             where_=[Documents.lesson_id == lesson.id]
         )
         documents_count += doc_count
-        
+    image_url = ""
+    if course.image_url:
+        image_url = generate_presigned_url(course.image_url, expiration=604800)
     course_detail = GetCourseDetailProfessorResponse(
         course_id=course.id,
         course_name=course.name,
@@ -145,7 +148,7 @@ async def get_course_detail_for_professor(
         course_end_date=course.end_date.isoformat(),
         course_learning_outcomes=course.learning_outcomes,
         course_status=course.status,
-        course_image_url=course.image_url,
+        course_image_url=image_url,
         course_nCredit=course.nCredit,
         course_nSemester=course.nSemester,
         course_courseID=course.courseID,
