@@ -14,8 +14,9 @@ from fastapi.security import OAuth2PasswordBearer
 from machine.schemas.responses.progress_tracking import GetCoursesListResponse
 from core.exceptions import BadRequestException, NotFoundException, ForbiddenException
 from machine.schemas.responses.learning_path import LearningPathDTO, RecommendedLessonDTO
-
-
+from fastapi import File, UploadFile
+from core.utils.file import update_course_image_s3, get_s3_image, generate_presigned_url
+import os
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 router = APIRouter(prefix="/courses", tags=["courses"])
 # Fixed routes should come first
@@ -62,6 +63,64 @@ async def get_courses(
         ) for course in courses
     ]
     return Ok(data=course_list, message="Successfully fetched the course list.")
+@router.put("/{course_id}/image", response_model=Ok)
+async def update_course_image(
+    course_id: str,
+    file: UploadFile = File(...),
+    token: str = Depends(oauth2_scheme),
+    courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
+    professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
+):
+    """
+    Update course image. If an image already exists, it will be replaced.
+    """
+    # Verify user token
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    professor = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
+    if not professor:
+        raise NotFoundException(message="Only professors have the permission to update course image.")
+    # Get the course
+    course = await courses_controller.courses_repository.first(where_=[Courses.id == course_id])
+    if not course:
+        raise NotFoundException(message=f"Course with ID {course_id} not found.")
+    
+    # Check if user is the professor of this course
+    if course.professor_id != professor.id:
+        raise ForbiddenException(message="You don't have permission to update this course.")
+    
+    # Check file type
+    allowed_extensions = ['.jpg', '.jpeg', '.png', '.gif']
+    file_extension = os.path.splitext(file.filename)[1].lower()
+    if file_extension not in allowed_extensions:
+        raise BadRequestException(message="Invalid file type. Only JPG, JPEG, PNG, and GIF files are allowed.")
+    
+    # Read file content
+    file_content = await file.read()
+    
+    # Extract the existing image key from the course (if it exists)
+    existing_image_key = course.image_url
+    
+    # Handle the S3 operations
+    s3_key, presigned_url = await update_course_image_s3(
+        existing_image_key, 
+        file_content,
+        f"course_{course_id}{file_extension}"
+    )
+    
+    # Update the course with the new image URL
+    await courses_controller.courses_repository.update(
+        where_=[Courses.id == course_id],
+        attributes={"image_url": s3_key},
+        commit = True
+    )
+    
+    return Ok(
+        message="Course image updated successfully.", 
+        data={"image_url": presigned_url}
+    )
 @router.get("/student", response_model=Ok[GetCoursesPaginatedResponse])
 async def get_student_courses(
     token: str = Depends(oauth2_scheme),
@@ -299,7 +358,9 @@ async def get_course_for_student(
             assignments_done=0,
         )
         return Ok(data=course_response, message="You are not enrolled in this course.")
-
+    image_url = ""
+    if get_course.image:
+        image_url = generate_presigned_url(get_course.image, expiration=604800)
     course_response = GetCourseDetailResponse(
         course_id=str(courseId),
         course_name=get_course.name,
@@ -307,7 +368,7 @@ async def get_course_for_student(
         course_end_date=str(get_course.end_date) if get_course.end_date else "",
         course_learning_outcomes=get_course.learning_outcomes or [],
         course_status=get_course.status,
-        course_image=str(get_course.image) if get_course.image else "",
+        course_image=image_url if get_course.image else "",
         course_percentage_complete="",
         course_last_accessed=str(get_course.last_accessed) if get_course.last_accessed else "",
         completed_lessons=get_course.completed_lessons or 0,
