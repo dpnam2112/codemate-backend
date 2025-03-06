@@ -1,6 +1,6 @@
 from typing import Optional
 from pydantic import BaseModel
-from datetime import date
+from datetime import date, datetime
 from core.repository.enum import UserRole
 
 class UserRequest(BaseModel):
@@ -20,3 +20,7 @@ class UserUpdate(BaseModel):
     name: Optional[str] = None    
     date_of_birth: Optional[date] = None 
     role: UserRole 
+    
+class UserLoginCreate(BaseModel):
+    user_role: UserRole
+    login_timestamp: datetime

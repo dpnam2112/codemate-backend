@@ -1,6 +1,6 @@
 from core.controller import BaseController
-from machine.models import Student, Professor, Admin 
-from machine.repositories import StudentRepository, ProfessorRepository, AdminRepository
+from machine.models import Student, Professor, Admin, UserLogins
+from machine.repositories import StudentRepository, ProfessorRepository, AdminRepository, UserLoginsRepository
 
 
 class StudentController(BaseController[Student]):
@@ -19,4 +19,9 @@ class AdminController(BaseController[Admin]):
     def __init__(self, admin_repository: AdminRepository):
         super().__init__(model_class=Admin, repository=admin_repository)
         self.admin_repository = admin_repository
+        
+class UserLoginsController(BaseController[UserLogins]):
+    def __init__(self, user_logins_repository: UserLoginsRepository):
+        super().__init__(model_class=UserLogins, repository=user_logins_repository)
+        self.user_logins_repository = user_logins_repository
     

@@ -3,6 +3,7 @@ from sqlalchemy import and_
 from machine.models import *
 from core.response import Ok
 from machine.controllers import *
+from utils.data import availableCourses
 from machine.schemas.requests import *
 from fastapi import APIRouter, Depends, Query
 from machine.providers import InternalProvider
@@ -219,15 +220,38 @@ async def count_courses(
 
     return Ok(data=count, message="Successfully fetched the count of courses.")
 
+from datetime import date
+
+@router.get("/available", description="Get all available courses of HCMUT")
+async def get_available_courses(
+    token: str = Depends(oauth2_scheme),
+    admin_controller: AdminController = Depends(InternalProvider().get_admin_controller),
+):
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    
+    check_role = await admin_controller.admin_repository.exists(where_=[Admin.id == user_id])
+    if not check_role:
+        raise ForbiddenException(message="You are not allowed to access this feature.")
+    courses_list = availableCourses
+    return Ok(data=courses_list, message="Successfully fetched the available courses.")
+
 @router.get("/admin", description="Get all courses for admin", response_model=Ok[GetAdminCoursesPaginatedResponse])
 async def get_courses(
     token: str = Depends(oauth2_scheme),
-    search_query: Optional[str] = Query(None, description="Search query to filter courses"),
+    search_query: Optional[str] = Query(None, description="Search query to filter courses by name or courseID"),
     page: int = Query(1, description="Page number"),
     page_size: int = Query(10, description="Number of items per page"),
+    nCredit: Optional[int] = Query(None, description="Filter courses by number of credits"),
+    nSemester: Optional[int] = Query(None, description="Filter courses by semester number"),
+    start_date: Optional[date] = Query(None, description="Filter courses by start date (format: YYYY-MM-DD)"),
+    end_date: Optional[date] = Query(None, description="Filter courses by end date (format: YYYY-MM-DD)"),
     courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
     admin_controller: AdminController = Depends(InternalProvider().get_admin_controller),
 ):
+    # Token validation and user authorization
     payload = verify_token(token)
     user_id = payload.get("sub")
     if not user_id:
@@ -237,10 +261,30 @@ async def get_courses(
     if not check_role:
         raise ForbiddenException(message=f"You are not allowed to access this feature {check_role}")
 
+    # Build the WHERE conditions for filtering
+    where_conditions = []
+
+    # Search by name or courseID
     if search_query:
-        where_conditions = [Courses.name.ilike(f"%{search_query}%")]
-    else:
-        where_conditions = None
+        where_conditions.append(
+            (Courses.name.ilike(f"%{search_query}%")) | (Courses.courseID.ilike(f"%{search_query}%"))
+        )
+
+    # Filter by nCredit
+    if nCredit is not None:
+        where_conditions.append(Courses.nCredit == nCredit)
+
+    # Filter by nSemester
+    if nSemester is not None:
+        where_conditions.append(Courses.nSemester == nSemester)
+
+    # Filter by start_date
+    if start_date:
+        where_conditions.append(Courses.start_date >= start_date)
+
+    # Filter by end_date
+    if end_date:
+        where_conditions.append(Courses.end_date <= end_date)
 
     select_fields = [
         Courses.id.label("id"),
@@ -253,8 +297,10 @@ async def get_courses(
         Courses.nCredit.label("nCredit"),
         Courses.nSemester.label("nSemester"),
         Courses.courseID.label("courseID"),
+        Courses.class_name.label("class_name"),
     ]
 
+    # Fetch courses based on the filter conditions
     courses = await courses_controller.courses_repository._get_many(
         where_=where_conditions,
         fields=select_fields,
@@ -264,19 +310,20 @@ async def get_courses(
     )
 
     if not courses:
-        if not courses:
-            empty_response = {
-                "content": [],
-                "pageSize": page_size,
-                "currentPage": page,
-                "totalRows": 0,
-                "totalPages": 0,
-            }
-            return Ok(data=empty_response, message="No courses found.")
+        empty_response = {
+            "content": [],
+            "pageSize": page_size,
+            "currentPage": page,
+            "totalRows": 0,
+            "totalPages": 0,
+        }
+        return Ok(data=empty_response, message="No courses found.")
 
+    # Get total rows for pagination
     total_rows = await courses_controller.courses_repository.count(where_=where_conditions)
     total_pages = math.ceil(total_rows / page_size)
 
+    # Prepare the response
     courses_response = {
         "content": [
             GetAdminCoursesResponse(
@@ -288,6 +335,7 @@ async def get_courses(
                 nCredit=course.nCredit,
                 nSemester=course.nSemester,
                 courseID=course.courseID,
+                class_name=course.class_name,
             )
             for course in courses
         ],
@@ -298,6 +346,7 @@ async def get_courses(
     }
     
     return Ok(data=courses_response, message="Successfully fetched the courses.")
+
 
 @router.get("/{courseId}", response_model=Ok[GetCourseDetailResponse])
 async def get_course_for_student(
@@ -590,6 +639,7 @@ async def create_course(
             "courseID": request[0].courseID,
             "start_date": request[0].startDate,
             "end_date": request[0].endDate,
+            "class_name": request[0].class_name,
         }
 
         createCourse = await courses_controller.courses_repository.create(attributes=course_attributes, commit=True)
@@ -642,6 +692,7 @@ async def create_course(
             "learning_outcomes": createCourse.learning_outcomes if createCourse.learning_outcomes else "",
             "image_url": str(createCourse.image_url),
             "student_courses_list": student_courses_response,
+            "class_name": createCourse.class_name,
         }
         return Ok(data=course_response, message="Successfully created the course.")
     else:
@@ -671,6 +722,7 @@ async def create_course(
                 "courseID": course.courseID,
                 "start_date": course.startDate,
                 "end_date": course.endDate,
+                "class_name": course.class_name,
             }
             # if hasattr(course, 'start_date') and course.start_date:
             #     course_attr["start_date"] = course.start_date
@@ -735,6 +787,7 @@ async def create_course(
                 "learning_outcomes": created_course.learning_outcomes if created_course.learning_outcomes else "",
                 "image_url": str(created_course.image_url) if created_course.image_url else "",
                 "student_courses_list": student_courses_response,
+                "class_name": created_course.class_name,
             }
             courses_response.append(course_response)
 

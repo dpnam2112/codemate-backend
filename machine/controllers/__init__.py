@@ -1,4 +1,4 @@
-from .user import StudentController, ProfessorController, AdminController
+from .user import StudentController, ProfessorController, AdminController, UserLoginsController
 from .dashboard import StudentCoursesController, ActivitiesController
 from .courses import CoursesController, StudentExercisesController
 from .lessons import LessonsController, DocumentsController
@@ -28,4 +28,5 @@ __all__ = [
     "RecommendLessonsController",
     "LearningPathsController",
     "FeedbackController",
+    "UserLoginsController"
 ]
