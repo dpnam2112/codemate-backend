@@ -19,6 +19,11 @@ class GetCoursesResponse(BaseModel):
     name: str
     start_date: str
     end_date: str
+    image_url: str
+    nSemester: int
+    nCredit: int
+    courseID: str
+    class_name: str
     learning_outcomes: Optional[List[str]] 
     status: StatusType
     last_accessed: str
@@ -75,12 +80,16 @@ class GetCourseDetailResponse(BaseModel):
     course_learning_outcomes: List[str]
     course_status: str
     course_image: str
+    course_nCredit: int
+    course_nSemester: int
+    course_courseID: str
+    course_classname: str
     course_percentage_complete: str
     course_last_accessed: str
     completed_lessons: int
     time_spent:str 
     assignments_done: int
-    lessons: List[GetLessonsResponse]
+    # lessons: List[GetLessonsResponse]
     
 class BookmarkLessonResponse(BaseModel):
     lesson_id: UUID
@@ -124,7 +133,11 @@ class GetProfessorCoursesResponse(BaseModel):
     learning_outcomes: List[str]
     professor: ProfessorInformation
     status: StatusType
-    image: str
+    image_url: str
+    nSemester: int
+    nCredit: int
+    courseID: str
+    class_name: str
 class GetProfessorCoursesPaginatedResponse(BaseModel):
     content: List[GetProfessorCoursesResponse]
     currentPage: int
@@ -155,6 +168,7 @@ class GetCourseDetailProfessorResponse(BaseModel):
     course_nCredit: int
     course_nSemester: int
     course_courseID: str
+    course_class_name: str
     nStudents: int
     nLessons: int
     nExercises: int

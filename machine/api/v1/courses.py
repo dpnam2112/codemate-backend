@@ -16,7 +16,7 @@ from machine.schemas.responses.progress_tracking import GetCoursesListResponse
 from core.exceptions import BadRequestException, NotFoundException, ForbiddenException
 from machine.schemas.responses.learning_path import LearningPathDTO, RecommendedLessonDTO
 from fastapi import File, UploadFile
-from core.utils.file import update_course_image_s3, get_s3_image, generate_presigned_url
+from core.utils.file import update_course_image_s3, generate_presigned_url
 import os
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 router = APIRouter(prefix="/courses", tags=["courses"])
@@ -48,6 +48,7 @@ async def get_courses(
     if is_professor:
         courses = await courses_controller.courses_repository.get_many(
             where_=[Courses.professor_id == user_id],
+            order_={"desc": ["start_date"]},
         )
             
     if not courses:
@@ -59,6 +60,7 @@ async def get_courses(
         course_name = course.name,
         course_courseID = course.courseID,
         course_nSemester = course.nSemester,
+        course_class_name = course.class_name,
         course_start_date = course.start_date,
         course_end_date = course.end_date,
         ) for course in courses
@@ -155,6 +157,7 @@ async def get_student_courses(
         Courses.nCredit.label("nCredit"),
         Courses.nSemester.label("nSemester"),
         Courses.courseID.label("courseID"),
+        Courses.class_name.label("class_name"),
         StudentCourses.last_accessed.label("last_accessed"),
     ]
 
@@ -175,7 +178,6 @@ async def get_student_courses(
         return Ok(data=[], message="No courses found.")
 
     total_page = math.ceil(len(courses) / page_size)
-
     courses_response = {
         "content": [
             GetCoursesResponse(
@@ -185,11 +187,12 @@ async def get_student_courses(
                 end_date=str(course.end_date),
                 learning_outcomes=course.learning_outcomes or [],
                 status=course.status,
-                image=str(course.image),
+                image_url=generate_presigned_url(course.image, expiration=604800) if course.image else "",
                 last_accessed=str(course.last_accessed),
                 nCredit=course.nCredit,
                 nSemester=course.nSemester,
                 courseID=course.courseID,
+                class_name=course.class_name,
             )
             for course in courses
         ],
@@ -304,7 +307,7 @@ async def get_courses(
     courses = await courses_controller.courses_repository._get_many(
         where_=where_conditions,
         fields=select_fields,
-        order_={"asc": ["name"]},
+        order_={"desc": ["start_date"]},
         limit=page_size,
         skip=(page - 1) * page_size,
     )
@@ -375,6 +378,8 @@ async def get_course_for_student(
         Courses.nCredit.label("nCredit"),
         Courses.nSemester.label("nSemester"),
         Courses.courseID.label("courseID"),
+        Courses.class_name.label("class_name"),
+        Courses.courseID.label("courseID"),
         StudentCourses.last_accessed.label("last_accessed"),
         StudentCourses.completed_lessons.label("completed_lessons"),
         StudentCourses.time_spent.label("time_spent"),
@@ -400,6 +405,10 @@ async def get_course_for_student(
             course_learning_outcomes=[],
             course_status="",
             course_image="",
+            course_nCredit=0,
+            course_nSemester=0,
+            course_courseID="",
+            course_classname="",
             course_percentage_complete="",
             course_last_accessed="",
             completed_lessons=0,
@@ -418,6 +427,10 @@ async def get_course_for_student(
         course_learning_outcomes=get_course.learning_outcomes or [],
         course_status=get_course.status,
         course_image=image_url if get_course.image else "",
+        course_nCredit=get_course.nCredit,
+        course_nSemester=get_course.nSemester,
+        course_courseID=get_course.courseID,
+        course_classname=get_course.class_name,
         course_percentage_complete="",
         course_last_accessed=str(get_course.last_accessed) if get_course.last_accessed else "",
         completed_lessons=get_course.completed_lessons or 0,
