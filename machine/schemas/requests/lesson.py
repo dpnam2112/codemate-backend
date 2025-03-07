@@ -38,19 +38,3 @@ class PutLessonRequest(BaseModel):
 class DeleteLessonRequest(BaseModel):
     lesson_id: UUID
     
-class QuestionModel(BaseModel):
-    question: str
-    answer: list[str]
-    options: list[str]
-    type: QuestionType
-    score: int
-
-class ExerciseRequest(BaseModel):
-    name: str
-    description: Optional[str]
-    deadline: Optional[datetime]
-    time : Optional[int]
-    topic: Optional[str]
-    difficulty: DifficultyLevel
-    questions: list[QuestionModel]
-    lesson_id: UUID

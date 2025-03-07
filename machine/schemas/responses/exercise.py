@@ -3,11 +3,13 @@ from uuid import UUID
 from pydantic import BaseModel
 from datetime import datetime
 from core.repository.enum import DifficultyLevel, QuestionType, ExerciseType,GradingMethodType
-class QuestionModel(BaseModel):
+class QuizModal(BaseModel):
     question: str
     answer: List[str]
     options: List[str]
+    feedback: str
     type: QuestionType
+    difficulty: DifficultyLevel
     score: int
 class TestCaseModel(BaseModel):
     input: Union[str, int, float, dict, list, bool]
@@ -17,16 +19,25 @@ class CodeModel(BaseModel):
     testcases: list[TestCaseModel]
 class ExerciseQuizResponse(BaseModel):
     exercise_id: UUID
+    course_id: UUID
     name: str
     description: Optional[str]
-    deadline: Optional[datetime]
-    time : Optional[int]
     topic: Optional[str]
-    difficulty: DifficultyLevel
-    questions: List[QuestionModel]
+    questions: List[QuizModal]
     max_score: Optional[int]
     type: ExerciseType
-    course_id: UUID
+    time_open: Optional[datetime]
+    time_close: Optional[datetime]
+    time_limit: Optional[int]
+    attempts_allowed: Optional[int]
+    grading_method: GradingMethodType
+    shuffle_questions: Optional[bool]
+    shuffle_answers: Optional[bool]
+    review_after_completion: Optional[bool]
+    show_correct_answers: Optional[bool]
+    penalty_per_attempt: Optional[float]
+    pass_mark: Optional[float]
+    
 class PutExerciseQuizResponse(BaseModel):
     exercise_id: UUID
     name: str
@@ -35,7 +46,7 @@ class PutExerciseQuizResponse(BaseModel):
     time : Optional[int]
     topic: Optional[str]
     difficulty: DifficultyLevel
-    questions: List[QuestionModel]
+    questions: List[QuizModal]  
     max_score: Optional[int]
     type: ExerciseType
 class ExerciseCodeResponse(BaseModel):
