@@ -45,20 +45,3 @@ class DeleteLessonResponse(BaseModel):
     description: Optional[str]
     order: int
     learning_outcomes: Optional[list[str]]
-class QuestionModel(BaseModel):
-    question: str
-    answer: List[str]
-    options: List[str]
-    type: QuestionType
-    score: int
-
-class ExerciseQuizResponse(BaseModel):
-    exercise_id: UUID
-    name: str
-    description: Optional[str]
-    deadline: Optional[datetime]
-    time : Optional[int]
-    topic: Optional[str]
-    difficulty: DifficultyLevel
-    questions: List[QuestionModel]
-    lesson_id: UUID

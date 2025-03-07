@@ -2,8 +2,8 @@ from pydantic import BaseModel
 from typing import Optional, Union, List
 from uuid import UUID
 from datetime import datetime
-from core.repository.enum import DifficultyLevel, QuestionType, ExerciseType
-class QuestionModel(BaseModel):
+from core.repository.enum import DifficultyLevel, QuestionType, ExerciseType, GradingMethodType
+class QuizModal(BaseModel):
     question: str
     answer: list[str]
     options: list[str]
@@ -16,16 +16,24 @@ class CodeModel(BaseModel):
     question: str
     testcases: List[TestCaseModel]
 class ExerciseRequest(BaseModel):
+    course_id: UUID
     name: str
     description: Optional[str]
-    deadline: Optional[datetime]
-    time : Optional[int]
     topic: Optional[str]
-    difficulty: DifficultyLevel
-    questions: list[QuestionModel]
+    questions: List[QuizModal]
     max_score: Optional[int]
     type: ExerciseType
-    course_id: UUID
+    time_open: Optional[datetime]
+    time_close: Optional[datetime]
+    time_limit: Optional[int]
+    attempts_allowed: Optional[int]
+    grading_method: GradingMethodType
+    shuffle_questions: Optional[bool]
+    shuffle_answers: Optional[bool]
+    review_after_completion: Optional[bool]
+    show_correct_answers: Optional[bool]
+    penalty_per_attempt: Optional[float]
+    pass_mark: Optional[float]
 class ExerciseCodeRequest(BaseModel):
     name: str
     description: Optional[str]
