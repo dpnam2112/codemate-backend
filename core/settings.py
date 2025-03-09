@@ -28,7 +28,7 @@ class Neo4jSettings(BaseSettings):
     NEO4J_PASSWORD: str = "password"
 
 class GoogleGenAISettings(BaseSettings):
-    GOOGLE_GENAI_API_KEY: str
+    GOOGLE_GENAI_API_KEY: str = ""
 
 class OpenAISettings(BaseSettings):
     OPENAI_API_KEY: str = ""

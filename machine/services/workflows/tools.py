@@ -111,11 +111,6 @@ def get_learner_profile_and_related_lessons(
         "lessons": lessons,
     }
 
-@Neo4jDBSessionProvider().inject_neo4j_session(argname="neo4j_session")
-@AIToolProvider().inject_embeddings_model(
-    argname="embeddings_model",
-    modelname=EmbeddingsModelName.GOOGLE_TEXT_EMBEDDING
-)
 def add_learning_resource(
     id_: Annotated[UUID, InjectedToolArg],
     llm_input: AddLearningResource,

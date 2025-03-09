@@ -23,7 +23,7 @@ def workflow_router(state: MessagesState):
 
         toolname = tool_calls[-1]["function"]["name"]
         if toolname == "LPPlanningWorkflowResponse":
-            return END
+            return "respond"
 
         return "tools"
 
@@ -79,7 +79,14 @@ def lp_planning_agent(state: MessagesState):
     lesson's content description (If there is any that doesn't have). From these information. You
     have to design modules for each lesson. For each module, you have to determine:
     - Objectives: objectives of the module.
-    - Title: Title of the module. Description: description of the module, what the module will teach the learner. Time: estimated time that the user need to complete the module, based on their current mastery of the concepts. 6. After completing all 4 steps, you must invoke the tool: `LPPlanningWorkflowResponse` to return the output to the caller so that it can use your output in the next steps (e.g: return the output to the user).
+    - Title: Title of the module.
+    - Description: description of the module, what the module will teach the learner.
+    - Time: estimated time that the user need to complete the module, based on their current mastery
+      of the concepts.
+
+    6. After completing all 4 steps, you must invoke the tool: `LPPlanningWorkflowResponse` to
+    return the output to the caller so that it can use your output in the next steps (e.g: return
+    the output to the user).
 
     Rules:
     - Only use tools `get_learner_profile` and `get_related_lessons` only once to save resources. Do
