@@ -1,0 +1,60 @@
+services:
+  frontend:
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile
+    container_name: codemate-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ../../frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8080
+    depends_on:
+      - app
+
+  app:
+    image: rockship/fastapi-seed
+    container_name: fastapi-seed-backend
+    restart: always
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    environment:
+      - ENV=production
+      - SQLALCHEMY_DATABASE_URI=postgresql+asyncpg://postgres:chinchin@postgres:15432/fastapi_seed
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "8080:8080"
+
+  postgres:
+    image: postgres
+    container_name: fastapi-seed-postgres
+    restart: always
+    ports:
+      - "15432:5432"
+    environment:
+      POSTGRES_PASSWORD: chinchin
+      POSTGRES_DB: fastapi_seed
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:6.2.7
+    container_name: fastapi-seed-redis
+    restart: always
+    ports:
+      - "16379:6379"
+    volumes:
+      - redis:/var/lib/redis/data
+
+volumes:
+  pgdata:
+    external: true
+    name: pgdata
+  redis:
+    external: true
+    name: redisdata
