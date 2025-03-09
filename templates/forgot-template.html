@@ -1,0 +1,13 @@
+{% extends "email-template.html" %}
+
+{% block title %}Khôi phục mật khẩu CodeMate{% endblock %}
+
+{% block header %}
+    Khôi phục mật khẩu CodeMate
+{% endblock %}
+
+{% block body %}
+    <p>Cảm ơn bạn đã sử dụng dịch vụ trên CodeMate! Bạn đã yêu cầu khôi phục mật khẩu. Đây là mã xác thực của bạn:</p>
+    <div class="verification-code">{{ code }}</div>
+    <p>Vui lòng nhập mã này để khôi phục mật khẩu của bạn. Mã xác thực sẽ hết hạn trong vòng 10 phút.</p>
+{% endblock %}

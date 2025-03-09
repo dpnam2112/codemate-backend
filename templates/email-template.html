@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Xác thực tài khoản CodeMate{% endblock %}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+            margin: 0;
+        }
+        .email-container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .email-header {
+            text-align: center;
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .email-body {
+            font-size: 16px;
+            color: #555;
+        }
+        .verification-code {
+            display: inline-block;
+            padding: 12px;
+            font-size: 24px;
+            font-weight: bold;
+            background-color: #03DAC6;
+            color: white;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            font-size: 14px;
+            color: #888;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="email-header">
+            {% block header %}Xác thực tài khoản CodeMate{% endblock %}
+        </div>
+        <div class="email-body">
+            <p>Chào {{ username }},</p>
+            {% block body %}
+            <p>Cảm ơn bạn sử dụng dịch vụ trên CodeMate! Đây là mã xác thực của bạn:</p>
+            <div class="verification-code">{{ code }}</div>
+            <p>Vui lòng nhập mã này để xác thực tài khoản của bạn. Mã xác thực sẽ hết hạn trong vòng 10 phút.</p>
+            {% endblock %}
+        </div>
+        <div class="footer">
+            <p>Đây là email tự động, vui lòng không trả lời.</p>
+        </div>
+    </div>
+</body>
+</html>
