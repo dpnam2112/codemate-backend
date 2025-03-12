@@ -2,6 +2,7 @@ from typing import Optional
 from pydantic import BaseModel
 from datetime import date, datetime
 from core.repository.enum import UserRole
+from fastapi import Form, File, UploadFile
 
 class UserRequest(BaseModel):
     id: Optional[int]
@@ -16,10 +17,11 @@ class UserCreate(BaseModel):
     role: UserRole
     
 class UserUpdate(BaseModel):
-    fullname: Optional[str] = None 
-    name: Optional[str] = None    
-    date_of_birth: Optional[date] = None 
-    role: UserRole 
+    file: Optional[UploadFile] = File(...)
+    fullname: Optional[str] = Form(...) 
+    name: Optional[str] = Form(...)   
+    date_of_birth: Optional[date] = Form(...)
+    role: UserRole = Form(...)
     
 class UserLoginCreate(BaseModel):
     user_role: UserRole

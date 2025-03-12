@@ -338,7 +338,7 @@ async def get_courses(
                 nCredit=course.nCredit,
                 nSemester=course.nSemester,
                 courseID=course.courseID,
-                class_name=course.class_name,
+                class_name=course.class_name if course.class_name else "",
             )
             for course in courses
         ],

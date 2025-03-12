@@ -27,6 +27,7 @@ class GetCoursesResponse(BaseModel):
     learning_outcomes: Optional[List[str]] 
     status: StatusType
     last_accessed: str
+
  
 class GetCoursesPaginatedResponse(BaseModel):
     content: List[GetCoursesResponse]
@@ -44,6 +45,7 @@ class GetAdminCoursesResponse(BaseModel):
     nCredit: int
     nSemester: int
     courseID: str
+    class_name: str
     
 class GetAdminCoursesPaginatedResponse(BaseModel):
     content: List[GetAdminCoursesResponse]

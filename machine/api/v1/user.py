@@ -1,3 +1,4 @@
+import logging
 from typing import List, Union
 from sqlalchemy import or_, and_, select
 from fastapi import APIRouter, Depends, Query
@@ -9,6 +10,7 @@ from machine.providers import InternalProvider
 from machine.schemas.requests.user import *
 from core.utils.auth_utils import verify_token
 from fastapi.security import OAuth2PasswordBearer
+from core.utils.file import *
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -82,9 +84,13 @@ async def _create_individual_user(
     else:
         raise BadRequestException(message="Invalid role provided for user")
     
-@router.patch("/", description="Update user information") #haven't test
+@router.patch("/", description="Update user information") 
 async def update_user_information(
-    user: UserUpdate,
+    name: str = Form(None),
+    fullname: str = Form(None),
+    date_of_birth: date = Form(None),
+    role: UserRole = Form(...),
+    file: UploadFile = File(None),
     token: str = Depends(oauth2_scheme),
     student_controller: StudentController = Depends(InternalProvider().get_student_controller),
     professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
@@ -108,6 +114,7 @@ async def update_user_information(
     # Determine the role of the user by checking their presence in the tables
     check_user = None
     user_role = None
+    
 
     # Check for student first
     check_user = await student_controller.student_repository.first(where_=[Student.id == user_id_from_token])
@@ -132,82 +139,82 @@ async def update_user_information(
 
     # Now that we know the role, check if the role matches the request
     if user_role == "student":
-        if user.role != UserRole.student:
-            raise BadRequestException(message=f"You cannot change the role of a student {user_role} {user.role}")
+        if role != UserRole.student:
+            raise BadRequestException(message=f"You cannot change the role of a student {user_role} {role}")
+        user_attributes = {}
         
-        user_attributes = {
-            "fullname": user.fullname,
-            "name": user.name,
-            "date_of_birth": user.date_of_birth,
-        }
-        await student_controller.student_repository.update(
-            where=[Student.id == user_id_from_token], attributes=user_attributes, commit=True
-        )
+        if fullname:
+            user_attributes["fullname"] = fullname
+        if name:
+            user_attributes["name"] = name
+        if date_of_birth:
+            user_attributes["date_of_birth"] = date_of_birth
+        if file:
+            file_content = await file.read()
+            s3_key = await upload_to_s3(file_content, file.filename)
+            user_attributes["avatar_url"] = s3_key
         
-        fetchInfo = await student_controller.student_repository.first(where_=[Student.id == user_id_from_token])
-        
-        fetchInfo_response = {
-            "id": fetchInfo.id,
-            "name": fetchInfo.name,
-            "date_of_birth": fetchInfo.date_of_birth,
-            "fullname": fetchInfo.fullname,
-            "role": "student"
-        }
-        
-        return Ok(data=fetchInfo_response, message="Student information updated successfully")
+        try:
+            await student_controller.student_repository.update(
+                where_=[Student.id == user_id_from_token], attributes=user_attributes, commit=True
+            )
+        except Exception as e:
+            raise SystemException(f"Error updating student information: {str(e)}")
+            
+        return Ok(data=True, message="Student information updated successfully")
 
     elif user_role == "professor":
-        if user.role != UserRole.professor:
+        if role != UserRole.professor:
             raise BadRequestException(message="You cannot change the role of a professor")
 
-        user_attributes = {
-            "fullname": user.fullname,
-            "name": user.name,
-            "date_of_birth": user.date_of_birth,
-        }
+        user_attributes = {}
         
-        updateProfessor = await professor_controller.professor_repository.update(
+        if fullname:
+            user_attributes["fullname"] = fullname
+        if name:
+            user_attributes["name"] = name
+        if date_of_birth:
+            user_attributes["date_of_birth"] = date_of_birth
+        if file:
+            file_content = await file.read()
+            s3_key = await upload_to_s3(file_content, file.filename)
+            user_attributes["avatar_url"] = s3_key
+        
+        try: 
+            await professor_controller.professor_repository.update(
             where_=[Professor.id == user_id_from_token], attributes=user_attributes, commit=True
         )
-        
-        if updateProfessor:
-            fetchInfo = await professor_controller.professor_repository.first(where_=[Professor.id == user_id_from_token])
+        except Exception as e:
+            raise SystemException(f"Error updating professor information: {str(e)}")
             
-            updateProfessor_response = {
-                "id": fetchInfo.id,
-                "name": fetchInfo.name,
-                "date_of_birth": fetchInfo.date_of_birth,
-                "fullname": fetchInfo.fullname,
-                "role": "professor"
-            }
-            
-            return Ok(data=updateProfessor_response, message="Professor information updated successfully")
+        return Ok(data=True, message="Professor information updated successfully")
 
     elif user_role == "admin":
-        if user.role != UserRole.admin:
+        if role != UserRole.admin:
             raise BadRequestException(message="You cannot change the role of an admin")
 
-        user_attributes = {
-            "fullname": user.fullname,
-            "name": user.name,
-            "date_of_birth": user.date_of_birth,
-        }
+        user_attributes = {}
         
-        await admin_controller.admin_repository.update(
+        if fullname:
+            user_attributes["fullname"] = fullname
+        if name:
+            user_attributes["name"] = name
+        if date_of_birth:
+            user_attributes["date_of_birth"] = date_of_birth
+        if file:
+            file_content = await file.read()
+            s3_key = await upload_to_s3(file_content, file.filename)
+            user_attributes["avatar_url"] = s3_key
+        
+        try: 
+            await admin_controller.admin_repository.update(
             where_=[Admin.id == user_id_from_token], attributes=user_attributes, commit=True
         )
         
-        fetchInfo = await admin_controller.admin_repository.first(where_=[Admin.id == user_id_from_token])
+        except Exception as e:
+            raise SystemException(f"Error updating admin information: {str(e)}")
         
-        updateAdmin_response = {
-            "id": fetchInfo.id,
-            "name": fetchInfo.name,
-            "date_of_birth": fetchInfo.date_of_birth,
-            "fullname": fetchInfo.fullname,
-            "role": "admin"
-        }
-        
-        return Ok(data=updateAdmin_response, message="Admin information updated successfully")
+        return Ok(data=True, message="Admin information updated successfully")
 
     else:
         raise BadRequestException(message="Invalid role provided for user")
@@ -240,7 +247,7 @@ async def get_profile(
         "id": check_user.id,
         "name": check_user.name,
         "fullname": check_user.fullname,
-        "avatar": check_user.avatar_url,
+        "avatar": generate_presigned_url(check_user.avatar_url) if check_user.avatar_url else "",
         "email": check_user.email,
         "ms": check_user.mssv if hasattr(check_user, "mssv") else check_user.mscb,
         "date_of_birth": check_user.date_of_birth,
