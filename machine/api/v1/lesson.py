@@ -1,7 +1,7 @@
 from typing import List
 from fastapi import APIRouter, Depends
 from core.response import Ok
-from machine.schemas.requests.lesson import PutLessonRequest, DeleteLessonRequest
+
 from machine.schemas.responses.lesson import (
     CreateNewLessonResponse,
     DocumentResponse,
@@ -117,23 +117,32 @@ async def create_new_lesson(
 
 @router.put("/", response_model=Ok[PutLessonResponse])
 async def update_lesson(
-    put_lesson: PutLessonRequest,
+    lesson_id: UUID = Form(...),
+    title: str = Form(...),
+    description: str = Form(...),
+    order: int = Form(...),
+    learning_outcomes: List[str] = Form(...),
+    # files: List[UploadFile] = File(None),
+    # description_file: List[str] = Form(None),
     token: str = Depends(oauth2_scheme),
     lesson_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
+    # document_controller: DocumentsController = Depends(InternalProvider().get_documents_controller),
     professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
 ):
     """
-    Updates an existing lesson.
+    Updates an existing lesson with optional documents and descriptions.
     """
     payload = verify_token(token)
     user_id = payload.get("sub")
     if not user_id:
         raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    
     user = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
     if not user:
         raise NotFoundException(message="Only professors have the permission to update this lesson.")
+    
     lesson = await lesson_controller.lessons_repository.first(
-        where_=[Lessons.id == put_lesson.lesson_id],
+        where_=[Lessons.id == lesson_id],
         relations=[Lessons.course],
     )
     if not lesson:
@@ -144,23 +153,50 @@ async def update_lesson(
 
     if user.id != lesson.course.professor_id:
         raise BadRequestException(message="You are not allowed to update lesson in this course.")
+    
     # Update the lesson
-    lesson.learning_outcomes = put_lesson.learning_outcomes
-    lesson.title = put_lesson.title
-    lesson.description = put_lesson.description
-    lesson.order = put_lesson.order
-
-    # Save the updated lesson
     updated_lesson = await lesson_controller.lessons_repository.update(
-        where_=[Lessons.id == put_lesson.lesson_id],
+        where_=[Lessons.id == lesson_id],
         attributes={
-            "learning_outcomes": lesson.learning_outcomes,
-            "title": lesson.title,
-            "description": lesson.description,
-            "order": lesson.order,
+            "learning_outcomes": learning_outcomes,
+            "title": title,
+            "description": description,
+            "order": order,
         },
         commit=True,
     )
+
+    # documents = []
+    # if files:
+    #     if description_file and len(files) != len(description_file):
+    #         raise BadRequestException(message="Number of descriptions must match number of files.")
+
+    #     for file, desc in zip(files, description_file or []):
+    #         if file.filename:
+    #             content = await file.read()
+
+    #             s3_key = await upload_to_s3(
+    #                 file_content=content,
+    #                 file_name=file.filename,
+    #             )
+                
+    #             document_data = {
+    #                 "name": file.filename,
+    #                 "type": file.content_type,
+    #                 "document_url": s3_key,
+    #                 "description": desc,
+    #                 "lesson_id": lesson_id,
+    #             }
+    #             created_document = await document_controller.documents_repository.create(
+    #                 document_data,
+    #                 commit=True,
+    #             )
+    #             documents.append(created_document)
+
+    # Fetch the updated documents to include in response
+    # all_documents = await document_controller.documents_repository.all(
+    #     where_=[Documents.lesson_id == lesson_id]
+    # )
 
     return Ok(
         data=PutLessonResponse(
@@ -169,14 +205,15 @@ async def update_lesson(
             description=updated_lesson.description,
             order=updated_lesson.order,
             learning_outcomes=updated_lesson.learning_outcomes,
+            # documents=[DocumentResponse(**doc.__dict__) for doc in documents if doc],
         ),
         message="Successfully updated the lesson.",
     )
 
 
-@router.delete("/", response_model=Ok[DeleteLessonResponse])
+@router.delete("/{lesson_id}", response_model=Ok[DeleteLessonResponse])
 async def delete_lesson(
-    delete_lesson_request: DeleteLessonRequest,
+    lesson_id: UUID,
     token: str = Depends(oauth2_scheme),
     lesson_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
     recommend_lesson_controller: RecommendLessonsController = Depends(
@@ -195,57 +232,59 @@ async def delete_lesson(
     user = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
     if not user:
         raise NotFoundException(message="Only professors have the permission to delete this lesson.")
-    # Fetch the lesson by ID with related entities
     lesson = await lesson_controller.lessons_repository.first(
-        where_=[Lessons.id == delete_lesson_request.lesson_id],
+        where_=[Lessons.id == lesson_id],
         relations=[
             Lessons.documents,
             Lessons.recommend_lesson,
             Lessons.course,
         ],
     )
-
     if not lesson:
         raise NotFoundException(message="Lesson not found for the given ID.")
     if not lesson.course:
         raise NotFoundException(message="Lesson not associated with any course.")
     if not lesson.course.professor_id == user.id:
         raise BadRequestException(message="You are not allowed to delete lesson in this course.")
-
-    # Delete related RecommendLessons
-    if lesson.recommend_lesson:
-        await recommend_lesson_controller.recommend_lessons_repository.delete(
-            where_=[RecommendLessons.lesson_id == delete_lesson_request.lesson_id],
+    
+    try:
+        # Delete related RecommendLessons
+        if lesson.recommend_lesson:
+            await recommend_lesson_controller.recommend_lessons_repository.delete(
+                where_=[RecommendLessons.lesson_id == lesson_id],
+                synchronize_session=SynchronizeSessionEnum.FETCH,
+            )
+        # Delete related Documents
+        if lesson.documents:
+            await document_controller.documents_repository.delete(
+                where_=[Documents.lesson_id == lesson_id],
+                synchronize_session=SynchronizeSessionEnum.FETCH,
+            )
+        # Delete the lesson itself
+        deleted_lesson = await lesson_controller.lessons_repository.delete(
+            where_=[Lessons.id == lesson_id],
             synchronize_session=SynchronizeSessionEnum.FETCH,
         )
-
-    # Delete related Documents
-    if lesson.documents:
-        await document_controller.documents_repository.delete(
-            where_=[Documents.lesson_id == delete_lesson_request.lesson_id],
-            synchronize_session=SynchronizeSessionEnum.FETCH,
+        
+        # Explicitly commit the transaction
+        await lesson_controller.lessons_repository.session.commit()
+        
+        if not deleted_lesson:
+            raise Exception("Failed to delete the lesson.")
+            
+        return Ok(
+            data=DeleteLessonResponse(
+                lesson_id=lesson.id,
+                title=lesson.title,
+                description=lesson.description,
+                order=lesson.order,
+                learning_outcomes=lesson.learning_outcomes,
+            ),
+            message="Successfully deleted the lesson.",
         )
-
-    # Delete the lesson itself
-    deleted_lesson = await lesson_controller.lessons_repository.delete(
-        where_=[Lessons.id == delete_lesson_request.lesson_id],
-        synchronize_session=SynchronizeSessionEnum.FETCH,
-    )
-    # print(deleted_lesson)
-    if not deleted_lesson:
-        raise Exception("Failed to delete the lesson.")
-
-    return Ok(
-        data=DeleteLessonResponse(
-            lesson_id=lesson.id,
-            title=lesson.title,
-            description=lesson.description,
-            order=lesson.order,
-            learning_outcomes=lesson.learning_outcomes,
-        ),
-        message="Successfully deleted the lesson.",
-    )
-
+    except Exception as e:
+        await lesson_controller.lessons_repository.session.rollback()
+        raise Exception(f"Error deleting lesson: {str(e)}")
 
 @router.post("/documents", response_model=Ok[List[DocumentResponse]])
 async def add_documents(
@@ -316,7 +355,58 @@ async def add_documents(
         message="Successfully added the documents.",
     )
 
-
+@router.get("/{lessonId}", response_model=Ok[PutLessonResponse])
+async def get_lesson(
+    lessonId: UUID,
+    token: str = Depends(oauth2_scheme),
+    lesson_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
+):
+    """
+    Retrieves a specific lesson by its ID along with associated documents.
+    """
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    
+    lesson = await lesson_controller.lessons_repository.first(
+        where_=[Lessons.id == lessonId],
+        relations=[Lessons.course],
+    )
+    
+    if not lesson:
+        raise NotFoundException(message="Lesson not found for the given ID.")
+    
+    # # Fetch documents associated with this lesson
+    # documents = await document_controller.documents_repository.get_many(
+    #     where_=[Documents.lesson_id == lessonId]
+    # )
+    
+    # documents_response = [
+    #     DocumentResponse(
+    #         id=doc.id,
+    #         name=doc.name,
+    #         type=doc.type,
+    #         document_url=generate_presigned_url(doc.document_url),
+    #         description=doc.description,
+    #         lesson_id=lessonId
+    #     )
+    #     for doc in documents
+    # ]
+    
+    return Ok(
+        data=PutLessonResponse(
+            lesson_id=lesson.id,
+            title=lesson.title,
+            description=lesson.description,
+            course_id=lesson.course_id,
+            order=lesson.order,
+            learning_outcomes=lesson.learning_outcomes,
+            # documents=documents_response,
+            # lesson_id=lessonId
+        ),
+        message="Successfully retrieved the lesson.",
+    )
 @router.get("/{lessonId}/documents", response_model=Ok[List[GetDocumentResponse]])
 async def get_documents(
     lessonId: UUID,

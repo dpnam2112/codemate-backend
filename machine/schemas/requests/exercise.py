@@ -36,13 +36,20 @@ class ExerciseRequest(BaseModel):
     pass_mark: Optional[float]
 class ExerciseCodeRequest(BaseModel):
     name: str
-    description: Optional[str]
-    deadline: Optional[datetime]
-    time : Optional[int]
-    topic: Optional[str]
-    difficulty: DifficultyLevel
-    questions: list[CodeModel]
-    code: str
-    max_score: Optional[int]
-    type: ExerciseType
+    description: Optional[str] = None
+    topic: Optional[str] = None
+    type: ExerciseType = ExerciseType.code
     course_id: UUID
+    questions: list[CodeModel]
+    max_score: Optional[int] = None
+    time_open: Optional[datetime] = None
+    time_close: Optional[datetime] = None
+    time_limit: Optional[int] = None
+    attempts_allowed: Optional[int] = None
+    grading_method: Optional[GradingMethodType] = GradingMethodType.highest
+    shuffle_questions: Optional[bool] = False
+    shuffle_answers: Optional[bool] = False
+    review_after_completion: Optional[bool] = True
+    show_correct_answers: Optional[bool] = False
+    penalty_per_attempt: Optional[float] = 0.0
+    pass_mark: Optional[float] = 0.0
