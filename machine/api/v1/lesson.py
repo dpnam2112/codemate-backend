@@ -23,6 +23,7 @@ import uuid
 from fastapi.security import OAuth2PasswordBearer
 from core.utils.auth_utils import verify_token
 from core.utils.file import generate_presigned_url
+from utils.file_processor import process_document
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 router = APIRouter(prefix="/lessons", tags=["lesson"])
 
@@ -247,7 +248,7 @@ async def delete_lesson(
     )
 
 
-@router.post("/documents", response_model=Ok[List[DocumentResponse]])
+@router.post("/documents")
 async def add_documents(
     lesson_id: UUID = Form(...),
     files: List[UploadFile] = File(...),
@@ -256,10 +257,12 @@ async def add_documents(
     document_controller: DocumentsController = Depends(InternalProvider().get_documents_controller),
     professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
     lesson_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
+    extracted_text_controller: ExtractedTextController = Depends(InternalProvider().get_extracted_text_controller),
 ):
     """
     Adds multiple documents to a specific lesson.
     """
+    # Xác thực người dùng
     payload = verify_token(token)
     user_id = payload.get("sub")
     if not user_id:
@@ -267,54 +270,49 @@ async def add_documents(
 
     user = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
     if not user:
-        raise NotFoundException(message="Only professors have the permission to upload document.")
+        raise NotFoundException(message="Only professors have the permission to upload documents.")
 
+    # Kiểm tra bài học
     lesson = await lesson_controller.lessons_repository.first(
         where_=[Lessons.id == lesson_id],
-        relations=[
-            Lessons.course,
-        ],
+        relations=[Lessons.course],
     )
     if not lesson:
         raise NotFoundException(message="Lesson not found for the given ID.")
     if not lesson.course:
         raise NotFoundException(message="Lesson not associated with any course.")
-    if not lesson.course.professor_id == user.id:
-        raise BadRequestException(message="You are not allowed to add documents to this lesson.")
-    
-    
-    # Validate that files are provided
+    # if lesson.course.professor_id != user.id:
+    #     raise BadRequestException(message="You are not allowed to add documents to this lesson.")
+
+    # Kiểm tra dữ liệu đầu vào
     if not files or all(file.filename == "" for file in files):
         raise ValueError("No files provided for upload.")
     if len(files) != len(descriptions):
-        raise BadRequestException(message="Number of descriptions must match number of files")
-    documents = []
+        raise BadRequestException(message=f"Number of descriptions must match number of files, {len(files)} va {len(descriptions)} ")
 
-    for file,description in zip(files, descriptions):
+    success_documents = []
+    failed_documents = []
+
+    # Xử lý từng file
+    for file, description in zip(files, descriptions):
         if file.filename:
-            content = await file.read()
+            result = await process_document(file, lesson_id, description, document_controller, extracted_text_controller)
 
-            s3_key = await upload_to_s3(
-                file_content=content,
-                file_name=file.filename,
-            )
-
-            document_data = {
-                "name": file.filename,
-                "type": file.content_type,
-                "document_url": s3_key,
-                "description": description,
-                "lesson_id": lesson_id,
-            }
-
-            created_document = await document_controller.documents_repository.create(document_data, commit=True)
-
-            documents.append(created_document)
+            if "error" in result:
+                failed_documents.append({"filename": file.filename, "error": result["error"]})
+            else:
+                success_documents.append(DocumentResponse(
+                    name=result["filename"],
+                    type=file.content_type,
+                    document_url=result["s3_url"],
+                    description=description,
+                    lesson_id=lesson_id
+                ))
 
     return Ok(
-        data=[DocumentResponse(**doc.__dict__) for doc in documents],
-        message="Successfully added the documents.",
-    )
+    data={"success_documents": success_documents, "failed_documents": failed_documents},
+    message="Documents processed successfully."
+)
 
 
 @router.get("/{lessonId}/documents", response_model=Ok[List[GetDocumentResponse]])

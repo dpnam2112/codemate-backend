@@ -1,6 +1,6 @@
 from core.controller import BaseController
-from machine.models import Lessons, Documents
-from machine.repositories import LessonsRepository, DocumentsRepository
+from machine.models import Lessons, Documents, ExtractedText
+from machine.repositories import LessonsRepository, DocumentsRepository, ExtractedTextRepository
 
 
 class LessonsController(BaseController[Lessons]):
@@ -12,3 +12,9 @@ class DocumentsController(BaseController[Documents]):
     def __init__(self, documents_repository: DocumentsRepository):
         super().__init__(model_class=Documents, repository=documents_repository)
         self.documents_repository = documents_repository
+        
+        
+class ExtractedTextController(BaseController[ExtractedText]):
+    def __init__(self, extracted_text_repository: ExtractedTextRepository):
+        super().__init__(model_class=ExtractedText, repository=extracted_text_repository)
+        self.extracted_text_repository = extracted_text_repository
