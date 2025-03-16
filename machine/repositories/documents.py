@@ -1,4 +1,6 @@
 from core.repository import BaseRepository
-from machine.models import Documents
+from machine.models import Documents, ExtractedText
 
 class DocumentsRepository(BaseRepository[Documents]):...
+
+class ExtractedTextRepository(BaseRepository[ExtractedText]):...

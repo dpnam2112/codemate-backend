@@ -5,7 +5,7 @@ from .courses import CoursesRepository
 from .lessons import LessonsRepository
 from .exercises import ExercisesRepository
 from .student_exercises import StudentExercisesRepository
-from .documents import DocumentsRepository
+from .documents import DocumentsRepository, ExtractedTextRepository
 from .modules import ModulesRepository
 from .recommend_quizzes import RecommendQuizzesRepository
 from .recommend_documents import RecommendDocumentsRepository
@@ -31,5 +31,6 @@ __all__ = [
     "RecommendLessonsRepository",
     "RecommendQuizzesRepository",
     "FeedbackRepository",
-    "UserLoginsRepository"
+    "UserLoginsRepository",
+    "ExtractedTextRepository",
 ]

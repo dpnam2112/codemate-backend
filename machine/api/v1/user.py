@@ -165,7 +165,7 @@ async def update_user_information(
 
     elif user_role == "professor":
         if role != UserRole.professor:
-            raise BadRequestException(message="You cannot change the role of a professor")
+            raise BadRequestException(message=f"You cannot change the role of a professor {user_role} {role}")
 
         user_attributes = {}
         
@@ -191,7 +191,7 @@ async def update_user_information(
 
     elif user_role == "admin":
         if role != UserRole.admin:
-            raise BadRequestException(message="You cannot change the role of an admin")
+            raise BadRequestException(message=f"You cannot change the role of an admin {user_role} {role}")
 
         user_attributes = {}
         

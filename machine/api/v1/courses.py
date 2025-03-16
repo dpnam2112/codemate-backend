@@ -192,7 +192,7 @@ async def get_student_courses(
                 nCredit=course.nCredit,
                 nSemester=course.nSemester,
                 courseID=course.courseID,
-                class_name=course.class_name,
+                class_name=str(course.class_name),
             )
             for course in courses
         ],
