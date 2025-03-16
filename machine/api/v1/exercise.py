@@ -450,7 +450,7 @@ async def add_code_exercise(
             raise BadRequestException(message="Each question must have both question text and test cases")
         
         for testcase in question.testcases:
-            if not all([testcase.input is not None, testcase.output is not None]):
+            if not all([testcase.inputs is not None, testcase.output is not None]):
                 raise BadRequestException(message="Each test case must have both input and output fields")
         
         # Add question data with all required fields
@@ -504,7 +504,7 @@ async def add_code_exercise(
                 question=q["question"],
                 testcases=[
                     TestCaseModel(
-                        input=t["input"],
+                        inputs=t["inputs"],
                         output=t["output"],
                         is_hidden=t.get("is_hidden", False),
                         description=t.get("description", "")
@@ -571,8 +571,7 @@ async def get_code_exercise(
     )
     if not exercise:
         raise NotFoundException(message="Exercise not found for the given ID.")
-    
-    if exercise.type != ExerciseType.CODE.value:
+    if exercise.type != ExerciseType.code:
         raise BadRequestException(message="This is not a code exercise.")
     
     # Prepare code modal objects from the stored questions data
@@ -583,7 +582,7 @@ async def get_code_exercise(
                 question=q["question"],
                 testcases=[
                     TestCaseModel(
-                        input=t["input"],
+                        inputs=t["inputs"],
                         output=t["output"],
                         is_hidden=t.get("is_hidden", False),
                         description=t.get("description", "")
@@ -653,7 +652,7 @@ async def update_code_exercise(
     if not exercise:
         raise NotFoundException(message="Exercise not found for the given ID.")
     
-    if exercise.type != ExerciseType.CODE.value:
+    if exercise.type != ExerciseType.code:
         raise BadRequestException(message="This is not a code exercise.")
 
     # Validate course existence
@@ -673,7 +672,7 @@ async def update_code_exercise(
             raise BadRequestException(message="Each question must have both question text and test cases")
         
         for testcase in question.testcases:
-            if not all([testcase.input is not None, testcase.output is not None]):
+            if not all([testcase.inputs is not None, testcase.output is not None]):
                 raise BadRequestException(message="Each test case must have both input and output fields")
         
         # Add question data with all required fields
@@ -729,7 +728,7 @@ async def update_code_exercise(
                 question=q["question"],
                 testcases=[
                     TestCaseModel(
-                        input=t["input"],
+                        inputs=t["inputs"],
                         output=t["output"],
                         is_hidden=t.get("is_hidden", False),
                         description=t.get("description", "")
@@ -801,7 +800,7 @@ async def delete_code_exercise(
     if not exercise:
         raise NotFoundException(message="Exercise not found for the given ID.")
     
-    if exercise.type != ExerciseType.CODE.value:
+    if exercise.type != ExerciseType.code:
         raise BadRequestException(message="This is not a code exercise.")
         
     if not exercise.course:
@@ -832,7 +831,7 @@ async def delete_code_exercise(
                 question=q["question"],
                 testcases=[
                     TestCaseModel(
-                        input=t["input"],
+                        inputs=t["inputs"],
                         output=t["output"],
                         is_hidden=t.get("is_hidden", False),
                         description=t.get("description", "")
