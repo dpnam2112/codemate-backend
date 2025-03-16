@@ -18,6 +18,8 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 
+from datetime import datetime
+
 @router.get("/student-recent-course", response_model=Ok[WelcomeMessageResponse])
 async def get_recent_course(
     token: str = Depends(oauth2_scheme),
@@ -48,10 +50,24 @@ async def get_recent_course(
     if not recent_course:
         raise NotFoundException(message="No course found for the given student ID.")
 
+    # Handle last_accessed field
+    last_accessed = recent_course.last_accessed
+    if last_accessed is None:
+        last_accessed = datetime.now()  # or set to another default value if needed
+    elif isinstance(last_accessed, str):
+        # If it's a string, attempt to convert it to a datetime object
+        try:
+            last_accessed = datetime.fromisoformat(last_accessed)
+        except ValueError:
+            last_accessed = datetime.now()  # fallback to a default value if conversion fails
+
     data = WelcomeMessageResponse(
-        course=recent_course.course.name, course_id=recent_course.course.id, last_accessed=recent_course.last_accessed
+        course=recent_course.course.name, 
+        course_id=recent_course.course.id, 
+        last_accessed=last_accessed.isoformat()  # Ensure it's a valid ISO string or datetime
     )
     return Ok(data=data, message="Successfully fetched the recent course.")
+
 
 
 @router.get("/student-activities", response_model=Ok[List[GetRecentActivitiesResponse]])

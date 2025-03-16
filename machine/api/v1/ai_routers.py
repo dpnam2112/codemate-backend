@@ -1,408 +1,28 @@
 import json
-from typing import Dict, List, Any
-from sqlalchemy.orm import Session
-from openai import OpenAI
 import os
-import requests
-from typing import Dict
+from typing import Dict, List, Any, Optional
+from fastapi import APIRouter, Depends
 from core.response import Ok
-from fastapi import APIRouter
-from core.settings import settings
-from machine.services.workflows.ai_tool_provider import AIToolProvider, LLMModelName
 from core.exceptions import *
-from dotenv import load_dotenv
-from fastapi_mail import FastMail
 from machine.models import *
 from machine.controllers import *
 from machine.providers.internal import InternalProvider
 from datetime import datetime, timedelta
-from passlib.context import CryptContext
-from machine.schemas.requests.auth import *
 from fastapi.security import OAuth2PasswordBearer
-from fastapi import Depends
 from uuid import UUID
 from core.utils.auth_utils import verify_token
 from ...schemas.requests.ai import GenerateLearningPathRequest
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+from dotenv import load_dotenv
+from utils.chunk_manager import ChunkingManager
 load_dotenv()
-from openai import OpenAI
-
-import json
-from typing import Dict, List, Any, Optional
-from langchain_google_genai import ChatGoogleGenerativeAI
-from openai import OpenAI
-
-class LargeInputProcessor:
-    def __init__(self, 
-                 provider="gemini", 
-                 openai_model_name="gpt-4-turbo-preview", 
-                 gemini_model_name="gemini-1.5-pro",
-                 max_tokens_per_chunk=25000, 
-                 openai_api_key=None,
-                 gemini_api_key=None):
-        
-        self.provider = provider.lower()
-        self.max_tokens_per_chunk = max_tokens_per_chunk
-        
-        # Initialize OpenAI client if required
-        if self.provider == "openai" or self.provider == "both":
-            self.openai_model_name = openai_model_name
-            self.openai_client = OpenAI(api_key=openai_api_key)
-        
-        # Initialize Gemini client if required
-        if self.provider == "gemini" or self.provider == "both":
-            self.gemini_model_name = gemini_model_name
-            self.gemini_client = ChatGoogleGenerativeAI(
-                model=gemini_model_name,
-                temperature=0.7,
-                max_tokens=4000,
-                timeout=None,
-                max_retries=2,
-                api_key=gemini_api_key
-            )
-        
-    def estimate_token_count(self, text):
-        """Rough estimation of token count (4 chars ≈ 1 token)"""
-        return len(text) // 4
-        
-    def chunk_lessons(self, lessons: List[Dict], max_tokens: int) -> List[List[Dict]]:
-        """Split lessons into chunks that fit within token limits"""
-        chunks = []
-        current_chunk = []
-        current_tokens = 0
-        
-        for lesson in lessons:
-            # Estimate tokens for this lesson
-            lesson_json = json.dumps(lesson)
-            lesson_tokens = self.estimate_token_count(lesson_json)
-            
-            # If adding this lesson would exceed the limit, start a new chunk
-            if current_tokens + lesson_tokens > max_tokens and current_chunk:
-                chunks.append(current_chunk)
-                current_chunk = []
-                current_tokens = 0
-            
-            # Add lesson to current chunk
-            current_chunk.append(lesson)
-            current_tokens += lesson_tokens
-        
-        # Add the last chunk if it's not empty
-        if current_chunk:
-            chunks.append(current_chunk)
-            
-        return chunks
-        
-    def generate_learning_path_in_chunks(
-        self,
-        student_name: str,
-        course_name: str,
-        professor_name: str,
-        course_info: Dict,
-        lessons: List[Dict],
-        student_goal: str
-    ) -> Dict:
-        """Process large input by breaking lessons into manageable chunks"""
-        
-        # 1. Split lessons into chunks
-        lesson_chunks = self.chunk_lessons(lessons, self.max_tokens_per_chunk // 2)  # Leave room for other parts of prompt
-        
-        # 2. Process each chunk and collect recommended lessons
-        all_recommended_lessons = []
-        
-        for i, lesson_chunk in enumerate(lesson_chunks):
-            chunk_info = f"Processing chunk {i+1} of {len(lesson_chunks)}"
-            print(chunk_info)
-            
-            # Create prompt for this chunk only
-            chunk_prompt = self.generate_chunk_prompt(
-                student_name, 
-                course_name, 
-                professor_name, 
-                course_info,
-                lesson_chunk,
-                student_goal,
-                chunk_index=i,
-                total_chunks=len(lesson_chunks)
-            )
-            
-            # Get response for this chunk
-            try:
-                # First try with primary provider
-                chunk_response = self.call_llm_api(chunk_prompt)
-                
-                # Extract recommended lessons from this chunk
-                if "learning_path" in chunk_response and "recommend_lessons" in chunk_response["learning_path"]:
-                    chunk_lessons = chunk_response["learning_path"]["recommend_lessons"]
-                    all_recommended_lessons.extend(chunk_lessons)
-                
-            except Exception as e:
-                print(f"Error processing chunk with primary provider: {str(e)}")
-                
-                # If we have both providers configured, try the alternative
-                if self.provider == "both":
-                    try:
-                        # Toggle provider temporarily
-                        temp_provider = "gemini" if self.provider == "openai" else "openai"
-                        print(f"Retrying with {temp_provider}...")
-                        
-                        chunk_response = self.call_llm_api(chunk_prompt, override_provider=temp_provider)
-                        
-                        if "learning_path" in chunk_response and "recommend_lessons" in chunk_response["learning_path"]:
-                            chunk_lessons = chunk_response["learning_path"]["recommend_lessons"]
-                            all_recommended_lessons.extend(chunk_lessons)
-                    
-                    except Exception as backup_error:
-                        print(f"Backup provider also failed: {str(backup_error)}")
-                        # Continue with next chunk
-            
-        # 3. Final integration - create a comprehensive learning path
-        if all_recommended_lessons:
-            # Sort lessons by any relevant criteria (if needed)
-            # This example sorts by title, but you might have a better criterion
-            all_recommended_lessons.sort(key=lambda x: x.get("title", ""))
-            
-            # Create the final integrated response
-            final_response = {
-                "learning_path": {
-                    "title": f"Personalized Learning Path for {student_goal}",
-                    "description": f"Custom learning path for {student_name} to achieve: {student_goal}",
-                    "recommend_lessons": all_recommended_lessons
-                }
-            }
-            
-            return final_response
-        else:
-            raise Exception("Failed to generate recommendations from any chunk")
-    
-    def generate_chunk_prompt(
-        self,
-        student_name: str,
-        course_name: str,
-        professor_name: str,
-        course_info: Dict,
-        lessons_chunk: List[Dict],
-        student_goal: str,
-        chunk_index: int,
-        total_chunks: int
-    ) -> str:
-        """Generate a prompt for a specific chunk of lessons"""
-        
-        # Add context about chunking to help the model understand
-        chunk_context = f"""
-        # Learning Path Generation Task - Chunk {chunk_index + 1} of {total_chunks}
-        
-        ## Chunking Context
-        You are analyzing a subset of lessons ({len(lessons_chunk)} out of total lessons) for a course.
-        This is chunk {chunk_index + 1} of {total_chunks} being processed separately due to size limitations.
-        Focus only on the lessons provided in this chunk when making recommendations.
-        """
-        
-        prompt = f"""
-        {chunk_context}
-
-        ## Student Information
-        - Student Name: {student_name}
-        - Course: {course_name} (ID: {course_info.get('courseID', 'N/A')})
-        - Professor: {professor_name}
-        - Student's Learning Goal: "{student_goal}"
-
-        ## Course Information
-        - Start Date: {course_info.get('start_date')}
-        - End Date: {course_info.get('end_date')}
-        - Learning Outcomes: {json.dumps(course_info.get('learning_outcomes', []))}
-
-        ## Available Lessons in This Chunk
-        This chunk contains {len(lessons_chunk)} lessons. Here is detailed information about each lesson:
-
-        {json.dumps(lessons_chunk, indent=2)}
-
-        ## Task Requirements
-        
-        Please analyze ONLY these lessons and recommend any that will help the student achieve their stated goal.
-        For each recommended lesson, provide:
-        1. Recommended content that explains what to focus on
-        2. An explanation of why this content is important for the student's goal
-        3. 2-3 modules per lesson that break down the key concepts to master
-        
-        ## Output Format
-        Provide your response in the following JSON format:
-        """
-
-        json_format = """
-        {
-          "learning_path": {
-            "recommend_lessons": [
-              {
-                "title": "Lesson Title",
-                "recommended_content": "Detailed explanation of what to focus on in this lesson...",
-                "explain": "Explanation of why this content is important for the student's goal...",
-                "modules": [
-                  {
-                    "title": "Module Title",
-                    "objectives": ["Learning objective 1", "Learning objective 2", "Learning objective 3"]
-                  },
-                  {
-                    "title": "Second Module Title",
-                    "objectives": ["Another learning objective 1", "Another learning objective 2"]
-                  }
-                ]
-              }
-            ]
-          }
-        }
-        """
-
-        prompt += json_format
-
-        return prompt
-    
-    def call_llm_api(self, prompt: str, override_provider: Optional[str] = None) -> Dict:
-        """
-        Call LLM API (OpenAI or Gemini) with a single chunk
-        
-        Args:
-            prompt: Formatted prompt for the LLM API
-            override_provider: Optionally override the configured provider
-            
-        Returns:
-            Dictionary containing the parsed JSON response
-        """
-        # Determine which provider to use
-        provider = override_provider if override_provider else self.provider
-        
-        if provider == "openai" or (provider == "both" and override_provider != "gemini"):
-            return self._call_openai_api(prompt)
-        elif provider == "gemini" or (provider == "both" and override_provider == "gemini"):
-            return self._call_gemini_api(prompt)
-        else:
-            raise ValueError(f"Unsupported provider: {provider}")
-    
-    def _call_openai_api(self, prompt: str) -> Dict:
-        """
-        Call OpenAI API with a single chunk, with improved error handling
-        
-        Args:
-            prompt: Formatted prompt for the OpenAI API
-            
-        Returns:
-            Dictionary containing the parsed JSON response
-        """
-        try:
-            response = self.openai_client.chat.completions.create(
-                model=self.openai_model_name,
-                messages=[
-                    {"role": "system", "content": "You are an expert educational AI assistant that creates personalized learning paths for computer science students."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.7,
-                max_tokens=4000
-            )
-            
-            # Verify we have a response and it has content
-            if not response or not response.choices or len(response.choices) == 0:
-                raise ValueError("Empty response received from OpenAI API")
-                
-            response_text = response.choices[0].message.content
-            
-            # Verify the content is not empty
-            if not response_text or not response_text.strip():
-                raise ValueError("Empty content received from OpenAI API")
-                
-            # Log the raw response text for debugging (optional)
-            print(f"OpenAI response text length: {len(response_text)}")
-            print(f"OpenAI response text preview: {response_text[:100]}...")
-            
-            # Try to parse JSON with better error handling
-            try:
-                return json.loads(response_text)
-            except json.JSONDecodeError as json_err:
-                # Check if response contains valid JSON embedded within other text
-                # This handles cases where the model returns Markdown code blocks or explanatory text
-                import re
-                json_match = re.search(r'```json\s*([\s\S]*?)\s*```|(\{[\s\S]*\})', response_text)
-                if json_match:
-                    json_str = json_match.group(1) or json_match.group(2)
-                    return json.loads(json_str)
-                else:
-                    print(f"Failed to parse JSON response from OpenAI: {str(json_err)}")
-                    print(f"Response text: {response_text}")
-                    raise ValueError(f"Invalid JSON response from OpenAI: {str(json_err)}")
-            
-        except Exception as e:
-            print(f"Error calling OpenAI API: {str(e)}")
-            
-            # For token limit errors, provide more specific information
-            if "tokens" in str(e).lower() and "exceed" in str(e).lower():
-                print("Token limit exceeded. Consider reducing chunk size or prompt length.")
-            
-            raise e  # Re-raise to allow fallback to other provider if available
-    
-    def _call_gemini_api(self, prompt: str) -> Dict:
-        """
-        Call Google Gemini API via LangChain, with error handling
-        
-        Args:
-            prompt: Formatted prompt for the Gemini API
-            
-        Returns:
-            Dictionary containing the parsed JSON response
-        """
-        try:
-            # Format messages for LangChain's ChatGoogleGenerativeAI
-            messages = [
-                {"role": "system", "content": "You are an expert educational AI assistant that creates personalized learning paths for computer science students."},
-                {"role": "user", "content": prompt}
-            ]
-            
-            # Convert to LangChain message format
-            from langchain_core.messages import SystemMessage, HumanMessage
-            lc_messages = [
-                SystemMessage(content=messages[0]["content"]),
-                HumanMessage(content=messages[1]["content"])
-            ]
-            
-            # Invoke the Gemini model
-            response = self.gemini_client.invoke(lc_messages)
-            
-            # Extract content from LangChain response
-            response_text = response.content
-            
-            # Verify the content is not empty
-            if not response_text or not response_text.strip():
-                raise ValueError("Empty content received from Gemini API")
-                
-            # Log the raw response text for debugging
-            print(f"Gemini response text length: {len(response_text)}")
-            print(f"Gemini response text preview: {response_text[:100]}...")
-            
-            # Try to parse JSON with better error handling
-            try:
-                return json.loads(response_text)
-            except json.JSONDecodeError as json_err:
-                # Check if response contains valid JSON embedded within other text
-                import re
-                json_match = re.search(r'```json\s*([\s\S]*?)\s*```|(\{[\s\S]*\})', response_text)
-                if json_match:
-                    json_str = json_match.group(1) or json_match.group(2)
-                    return json.loads(json_str)
-                else:
-                    print(f"Failed to parse JSON response from Gemini: {str(json_err)}")
-                    print(f"Response text: {response_text}")
-                    raise ValueError(f"Invalid JSON response from Gemini: {str(json_err)}")
-            
-        except Exception as e:
-            print(f"Error calling Gemini API: {str(e)}")
-            raise e
-
-
-
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 router = APIRouter(prefix="/ai", tags=["ai"])
+
 @router.post("/generate-learning-path")
 async def generate_learning_path(
     request: GenerateLearningPathRequest,
     token: str = Depends(oauth2_scheme),
     courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
-    student_courses_controller: StudentCoursesController = Depends(InternalProvider().get_studentcourses_controller),
     professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
     student_controller: StudentController = Depends(InternalProvider().get_student_controller),
     learning_path_controller: LearningPathsController = Depends(InternalProvider().get_learningpaths_controller),
@@ -488,40 +108,461 @@ async def generate_learning_path(
     start_date = datetime.now()
     end_date = course.end_date if course.end_date else (start_date + timedelta(days=90))
     
-    # Get API keys from environment variables
-    #openai_api_key = os.getenv("OPENAI_API_KEY")
+    # Get API key from environment variables
     gemini_api_key = os.getenv("GOOGLE_GENAI_API_KEY")
     
-    # Initialize the processor with both providers for fallback capability
-    processor = LargeInputProcessor(
-        provider="gemini",  # Use both providers with fallback capability
-        openai_model_name="gpt-4-turbo-preview",
+    # Define the function to generate prompts for chunks
+    def generate_chunk_prompt(lessons_chunk, chunk_index, total_chunks):
+        # Add context about chunking to help the model understand
+        chunk_context = f""" 
+        # Learning Path Generation Task - Chunk {chunk_index + 1} of {total_chunks}
+        
+        ## Chunking Context
+        You are analyzing a subset of lessons ({len(lessons_chunk)} out of total lessons) for a course. 
+        This is chunk {chunk_index + 1} of {total_chunks} being processed separately due to size limitations.
+        Focus only on the lessons provided in this chunk when making recommendations.
+        """
+        
+        # Precompute values to simplify nested expressions
+        start_date_str = course.start_date.isoformat() if course.start_date else start_date.isoformat()
+        end_date_str = course.end_date.isoformat() if course.end_date else end_date.isoformat()
+        learning_outcomes_str = json.dumps(course.learning_outcomes if course.learning_outcomes else [])
+        lessons_chunk_str = json.dumps(lessons_chunk, indent=2)
+        
+        # Precompute deeply nested values
+        student_name = student.name
+        course_name = course.name
+        course_id = course.courseID
+        professor_name = professor.fullname
+        student_goal = request.goal
+        lessons_chunk_count = len(lessons_chunk)
+        lessons_chunk_details = json.dumps(lessons_chunk, indent=2)
+        
+        prompt = f"""
+        {chunk_context}
+        
+        ## Student Information
+        - Student Name: {student_name}
+        - Course: {course_name} (ID: {course_id})
+        - Professor: {professor_name}
+        - Student's Learning Goal: "{student_goal}"
+        
+        ## Course Information
+        - Start Date: {start_date_str}
+        - End Date: {end_date_str}
+        - Learning Outcomes: {learning_outcomes_str}
+        
+        ## Available Lessons in This Chunk
+        This chunk contains {lessons_chunk_count} lessons. Here is detailed information about each lesson:
+        {lessons_chunk_details}
+        
+        ## Task Requirements
+        Please analyze ONLY these lessons and recommend any that will help the student achieve their stated goal. 
+        For each recommended lesson, provide:
+        1. Recommended content that explains what to focus on
+        2. An explanation of why this content is important for the student's goal
+        3. 2-3 modules per lesson that break down the key concepts to master
+        
+        ## Timeline Estimation Task (REQUIRED)
+        You MUST estimate and include a realistic start date, end date, and duration notes for this learning path.
+        
+        Base your estimation on:
+        1. The complexity of the recommended lessons
+        2. The student's learning goal
+        3. The overall course timeline ({start_date_str} to {end_date_str})
+        4. The number and complexity of recommended lessons
+        
+        The timeline should:
+        - Allow reasonable time for learning and practice
+        - Consider the complexity of the material
+        - Fit within the course's overall timeline
+        - Be realistic for a student to achieve their goal
+        - Consider the estimated hours needed for each lesson
+        
+        ## Output Format
+        Your response MUST be in the following JSON format and MUST include all fields shown below:
+        {{
+        "learning_path": {{
+            "start_date": "YYYY-MM-DD", // REQUIRED: Estimated start date in ISO format
+            "end_date": "YYYY-MM-DD",   // REQUIRED: Estimated end date in ISO format
+            "duration_notes": "Brief explanation of how this timeline was determined based on lesson complexity and student goals", // REQUIRED
+            "recommend_lessons": [
+            {{
+                "lesson_id": "Lesson ID",
+                "title": "Lesson Title",
+                "recommended_content": "Detailed explanation of what to focus on in this lesson...",
+                "explain": "Explanation of why this content is important for the student's goal...",
+                "modules": [
+                {{
+                    "title": "Module Title",
+                    "objectives": ["Learning objective 1", "Learning objective 2", "Learning objective 3"]
+                }},
+                {{
+                    "title": "Second Module Title",
+                    "objectives": ["Another learning objective 1", "Another learning objective 2"]
+                }}
+                ]
+            }}
+            ],
+        }}
+        }}
+        
+        IMPORTANT: The JSON MUST include "start_date", "end_date", and "duration_notes" fields. Failure to include these will result in invalid output.
+        """
+        
+        return prompt
+    # Define function to extract results from response
+    def extract_results(response):
+        """
+        Extract learning path data from the AI response.
+        
+        Args:
+            response: The AI model response (dictionary or string)
+            
+        Returns:
+            A dictionary with recommended lessons and timeline information
+        """
+        # If string, try to parse as JSON
+        if isinstance(response, str):
+            try:
+                response_json = json.loads(response)
+            except json.JSONDecodeError:
+                print("Failed to parse JSON")
+                return []  # Return empty list to be extended into all_lessons
+        else:
+            response_json = response
+        
+        # Get learning path data
+        if isinstance(response_json, dict) and "learning_path" in response_json:
+            learning_path = response_json["learning_path"]
+            
+            # Extract recommended lessons directly
+            lessons = learning_path.get("recommend_lessons", [])
+            if not isinstance(lessons, list):
+                lessons = []
+            
+            # Add timeline data to each lesson for easier processing later
+            for lesson in lessons:
+                lesson["_timeline"] = {
+                    "start_date": learning_path.get("start_date"),
+                    "end_date": learning_path.get("end_date"),
+                    "duration_notes": learning_path.get("duration_notes", "")
+                }
+            
+            return lessons  # Return just the lessons with embedded timeline
+        
+        return []  # Return empty list if no valid data
+    # Then modify how you process the results after chunking
+    chunking_manager = ChunkingManager(
+    provider="gemini",
+    gemini_model_name="gemini-2.0-flash-lite",
+    max_tokens_per_chunk=25000,
+    temperature=0.7,
+    max_output_tokens=4000
+)
+        # Process data in chunks
+    chunked_results = chunking_manager.process_in_chunks(
+            data=lessons_data,
+            prompt_generator=generate_chunk_prompt,
+            result_extractor=extract_results,
+            token_estimation_field="documents",  # Use this field for token estimation
+            system_message="You are an expert educational AI assistant that creates personalized learning paths for students."
+        )
+
+    if chunked_results:
+            # If chunked_results is a string, try to parse it as JSON
+        if isinstance(chunked_results, str):
+            try:
+                chunked_results = json.loads(chunked_results)
+            except json.JSONDecodeError:
+                raise ApplicationException(message="Failed to parse chunked_results as JSON.")
+
+        learning_path_attributes = {
+                "start_date": datetime.strptime(chunked_results[0]["_timeline"]["start_date"], '%Y-%m-%d').date(),
+                "end_date": datetime.strptime(chunked_results[-1]["_timeline"]["end_date"], '%Y-%m-%d').date(),
+                "objective": request.goal,
+                "student_id": student.id,
+                "course_id": course.id,
+                "llm_response": chunked_results
+            }
+
+            # Create learning path
+        add_learning_path = await learning_path_controller.learning_paths_repository.create(attributes=learning_path_attributes, commit=True)
+
+        if add_learning_path:
+            recommend_lesson_attributes_list = []
+            module_attributes_list = []
+
+            for recommend_lesson in chunked_results:
+                # If recommend_lesson is a string, try to parse it as JSON
+                if isinstance(recommend_lesson, str):
+                    try:
+                        recommend_lesson = json.loads(recommend_lesson)
+                    except json.JSONDecodeError:
+                        raise ApplicationException(message=f"Failed to parse recommend_lesson {recommend_lesson['lesson_id']} as JSON.")
+                
+                # Check if the recommend_lesson has corresponding modules
+                if not recommend_lesson.get("modules"):
+                    raise ApplicationException(message=f"Recommend lesson with ID {recommend_lesson['lesson_id']} does not have corresponding modules.")
+
+                recommend_lesson_attributes = {
+                    "learning_path_id": add_learning_path.id,
+                    "lesson_id": recommend_lesson["lesson_id"],
+                    "recommended_content": recommend_lesson["recommended_content"],
+                    "explain": recommend_lesson["explain"],
+                    "start_date": recommend_lesson["_timeline"]["start_date"],
+                    "end_date": recommend_lesson["_timeline"]["end_date"],
+                    "duration_notes": recommend_lesson["_timeline"]["duration_notes"]
+                }
+                recommend_lesson_attributes_list.append(recommend_lesson_attributes)
+
+                # Collecting module attributes to create them later
+                for module in recommend_lesson["modules"]:
+                    module_attributes = {
+                        "recommend_lesson_id": None,  # We will update this after we create recommend lessons
+                        "title": module["title"],
+                        "objectives": module["objectives"]
+                    }
+                    module_attributes_list.append(module_attributes)
+
+            # Create all recommend lessons in bulk
+            created_recommend_lessons = await recommend_lessons_controller.recommend_lessons_repository.create_many(
+                attributes_list=recommend_lesson_attributes_list, commit=True
+            )
+
+            # Ensure that we successfully created the recommend lessons
+            if not created_recommend_lessons:
+                raise ApplicationException(message="Failed to create recommend lessons.")
+
+            # Update module attributes with the correct recommend_lesson_id after creation
+            module_attributes_list = []
+            total_modules = 0
+
+            # First, create the recommend_lessons and track their modules
+            for i, recommend_lesson in enumerate(chunked_results):
+                if isinstance(recommend_lesson, str):
+                    try:
+                        recommend_lesson = json.loads(recommend_lesson)
+                    except json.JSONDecodeError:
+                        raise ApplicationException(message=f"Failed to parse recommend_lesson {recommend_lesson['lesson_id']} as JSON.")
+                
+                # Check if the recommend_lesson has corresponding modules
+                if not recommend_lesson.get("modules"):
+                    raise ApplicationException(message=f"Recommend lesson with ID {recommend_lesson['lesson_id']} does not have corresponding modules.")
+
+                recommend_lesson_attributes = {
+                    "learning_path_id": add_learning_path.id,
+                    "lesson_id": recommend_lesson["lesson_id"],
+                    "recommended_content": recommend_lesson["recommended_content"],
+                    "explain": recommend_lesson["explain"],
+                    "start_date": recommend_lesson["_timeline"]["start_date"],
+                    "end_date": recommend_lesson["_timeline"]["end_date"],
+                    "duration_notes": recommend_lesson["_timeline"]["duration_notes"]
+                }
+                recommend_lesson_attributes_list.append(recommend_lesson_attributes)
+                
+                # Keep track of how many modules this recommend_lesson has
+                total_modules += len(recommend_lesson["modules"])
+
+            # Create all recommend lessons in bulk
+            created_recommend_lessons = await recommend_lessons_controller.recommend_lessons_repository.create_many(
+                attributes_list=recommend_lesson_attributes_list, commit=True
+            )
+
+            # Now that we have the recommend_lesson IDs, prepare the module attributes
+            module_attributes_list = []
+            for i, recommend_lesson in enumerate(chunked_results):
+                recommend_lesson_id = created_recommend_lessons[i].id
+                for module in recommend_lesson["modules"]:
+                    module_attributes = {
+                        "recommend_lesson_id": recommend_lesson_id,
+                        "title": module["title"],
+                        "objectives": module["objectives"]
+                    }
+                    module_attributes_list.append(module_attributes)
+
+            # Verify we have the correct number of modules
+            if len(module_attributes_list) != total_modules:
+                raise ApplicationException(message=f"Module count mismatch: expected {total_modules}, got {len(module_attributes_list)}")
+
+            # Create all modules in bulk
+            created_modules = await modules_controller.modules_repository.create_many(attributes_list=module_attributes_list, commit=True)
+            if created_modules:
+                
+                created_recommend_lessons_response = [
+                    {
+                        "lesson_id": str(recommend_lesson.lesson_id),
+                        "recommended_content": recommend_lesson.recommended_content,
+                        "explain": recommend_lesson.explain,
+                        "status": recommend_lesson.status,
+                        "progress": recommend_lesson.progress,
+                        "bookmark": recommend_lesson.bookmark,
+                        "start_date": recommend_lesson.start_date,
+                        "end_date": recommend_lesson.end_date,
+                        "duration_notes": recommend_lesson.duration_notes,
+                        
+                    }
+                    for recommend_lesson in created_recommend_lessons
+                ]
+                
+                created_modules_response = [
+                    {
+                        "recommend_lesson_id": str(module.recommend_lesson_id),
+                        "title": module.title,
+                        "objectives": module.objectives,
+                        "last_accessed": module.last_accessed
+                    }
+                    for module in created_modules
+                ]
+                
+                create_response = {
+                    "learning_path_id": str(add_learning_path.id),
+                    "learning_path_start_date": add_learning_path.start_date,
+                    "learning_path_end_date": add_learning_path.end_date,
+                    "learning_path_objective": add_learning_path.objective,
+                    "learning_path_progress": add_learning_path.progress,
+                    "student_id": str(add_learning_path.student_id),
+                    "course_id": str(add_learning_path.course_id),
+                    "recommend_lessons": created_recommend_lessons_response,
+                    "modules": created_modules_response
+                }
+                return Ok(create_response, message="Learning path generated successfully")
+            return Ok(chunked_results)
+    else:
+        raise ApplicationException(message="Failed to generate recommendations")
+@router.get("/generate-student-goals/{course_id}")
+async def generate_student_goals(
+    course_id: UUID,
+    token: str = Depends(oauth2_scheme),
+    courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
+    professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
+    student_controller: StudentController = Depends(InternalProvider().get_student_controller),
+    lessons_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
+    documents_controller: DocumentsController = Depends(InternalProvider().get_documents_controller),
+    extracted_text_controller: ExtractedTextController = Depends(InternalProvider().get_extracted_text_controller),
+):
+    """
+    Generate potential learning goals for a student based on course content.
+    
+    Args:
+        request: Contains course_id
+        Other parameters: Controllers for different database models
+        
+    Returns:
+        Dict containing suggested learning goals
+    """
+    # Verify token
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    
+    student = await student_controller.student_repository.first(where_=[Student.id == user_id])
+    if not student:
+        raise NotFoundException(message="Your account is not allowed to access this feature.")
+    
+    if not course_id:
+        raise BadRequestException(message="Please provide course_id.")
+    
+    # Fetch course details
+    course = await courses_controller.courses_repository.first(where_=[Courses.id == course_id])
+    if not course:
+        raise NotFoundException(message="Course not found.")
+    
+    # Fetch professor information
+    professor = await professor_controller.professor_repository.first(where_=[Professor.id == course.professor_id])
+    if not professor:
+        raise NotFoundException(message="Professor information not found.")
+    
+    # Fetch all lessons for the course (just a sample to understand the course scope)
+    lessons = await lessons_controller.lessons_repository.get_many(where_=[Lessons.course_id == course_id])
+    if not lessons:
+        raise NotFoundException(message="No lessons found for this course.")
+    
+    # Prepare data structure for course overview
+    course_data = {
+        "id": str(course.id),
+        "name": course.name,
+        "courseID": course.courseID,
+        "learning_outcomes": course.learning_outcomes if course.learning_outcomes else [],
+        "lessons": []
+    }
+    
+    # Add just lesson titles and descriptions (not full content)
+    for lesson in lessons:
+        course_data["lessons"].append({
+            "title": lesson.title,
+            "description": lesson.description,
+            "learning_outcomes": lesson.learning_outcomes if lesson.learning_outcomes else []
+        })
+    
+    # Get API key from environment variables
+    gemini_api_key = os.getenv("GOOGLE_GENAI_API_KEY")
+    
+    # Initialize the ChunkingManager (for consistency, though we may not need chunking here)
+    chunking_manager = ChunkingManager(
+        provider="gemini",
         gemini_model_name="gemini-1.5-pro",
-        max_tokens_per_chunk=25000,
-        #openai_api_key=openai_api_key,
-        gemini_api_key=gemini_api_key
+        gemini_api_key=gemini_api_key,
+        temperature=0.7,
+        max_output_tokens=4000
     )
     
+    # Create a prompt for goal generation
+    
+    prompt = f"""
+    # Student Goal Generation Task
+
+    ## Student Information
+    - Student Name: {student.name}
+    - Course: {course.name} (ID: {course.courseID})
+    - Professor: {professor.fullname}
+    # Student Proficiency Level: # Options: Struggling, Average, Advanced (You need to generate goals for all three levels)
+
+    ## Course Information
+    - Learning Outcomes: {json.dumps(course.learning_outcomes if course.learning_outcomes else [])}
+
+    ## Course Lessons Overview
+    {json.dumps(course_data["lessons"], indent=2)}
+
+    ## Task Requirements
+    Based on the course information, lessons overview, and the student's proficiency level (Struggling, Average, Advanced):
+
+    1. Generate 5 personalized learning goals that would be valuable for the student in this course.
+    2. Each goal should be specific, measurable, achievable, relevant, and time-bound (SMART).
+    3. Consider the student's proficiency level when generating goals:
+    - **Struggling Students:** Goals should focus on building foundational knowledge, improving basic skills, and increasing confidence.
+    - **Average Students:** Goals should aim to deepen understanding, enhance critical thinking, and refine existing skills.
+    - **Advanced Students:** Goals should focus on advanced applications, pushing boundaries, and mastering complex concepts.
+    4. Include a brief explanation of how achieving this goal would benefit the student.
+    5. Consider both practical applications and academic growth when suggesting goals.
+
+    ## Output Format
+    Provide your response in the following JSON format:
+
+    {{
+    "suggested_goals": [
+        {{
+        "goal": "Specific learning goal statement",
+        "explanation": "Brief explanation of why this goal is valuable",
+        "key_lessons": ["Lesson 1 title", "Lesson 2 title"]
+        }}
+    ]
+    }}
+    """
+
+    system_message = "You are an expert educational AI assistant that helps students define effective learning goals."
+    
     try:
-        # Call the processor to generate learning path
-        parsed_response = processor.generate_learning_path_in_chunks(
-            student_name=student.name,
-            course_name=course.name,
-            professor_name=f"{professor.fullname}",
-            course_info={
-                "id": str(course.id),
-                "name": course.name,
-                "learning_outcomes": course.learning_outcomes if course.learning_outcomes else [],
-                "start_date": course.start_date.isoformat() if course.start_date else start_date.isoformat(),
-                "end_date": course.end_date.isoformat() if course.end_date else end_date.isoformat(),
-                "courseID": course.courseID
-            },
-            lessons=lessons_data,
-            student_goal=request.goal
-        )
+        # Call the LLM API (no chunking needed for this simpler request)
+        response = chunking_manager.call_llm_api(prompt, system_message, override_provider="gemini")
         
-        return Ok(parsed_response)
-        
+        # Extract and validate the response
+        if isinstance(response, dict) and "suggested_goals" in response:
+            return Ok(response)
+        else:
+            raise ApplicationException(message="Failed to generate valid student goals")
+            
     except Exception as e:
-        print(f"Error generating learning path: {str(e)}")
-        raise ApplicationException(message=f"Failed to generate learning path: {str(e)}")
+        print(f"Error generating student goals: {str(e)}")
+        raise ApplicationException(message=f"Failed to generate student goals: {str(e)}")
