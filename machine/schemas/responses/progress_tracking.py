@@ -40,6 +40,7 @@ class ExeriseStudentProgressInCourse(BaseModel):
 class StudentProgressInCourse(BaseModel):
     student_id: UUID
     student_name: str
+    student_email:str
     student_mssv: str
     exercises: List[ExeriseStudentProgressInCourse]
     learning_path: Optional[LearningPathProgressInCourse]
@@ -54,6 +55,7 @@ class AnswerQuizExercise(BaseModel):
 class StudentProgressInExercise(BaseModel):
     student_id: UUID
     student_name: str
+    student_email:str
     student_mssv: str
     score: float
     date: Optional[date]

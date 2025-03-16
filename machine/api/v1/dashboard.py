@@ -207,13 +207,14 @@ async def get_professor_dashboard(
         )
         upcoming_exercises_list.extend(upcoming_exercises)
 
-    upcoming_exercises_list = sorted(upcoming_exercises_list, key=lambda ex: ex.time_close)[:5]
+    upcoming_exercises_list = sorted(upcoming_exercises_list, key=lambda ex: ex.time_close)[:4]
     upcoming_events = [
         Events(
             exercise_id=exercise.id,
             exercise_name=exercise.name,
             exercise_time_open=exercise.time_open.strftime("%H:%M %d/%m/%Y"),
             exercise_time_close=exercise.time_close.strftime("%H:%M %d/%m/%Y"),
+            exercise_type=exercise.type,
             course_name = course.name,
             course_id = course.id,
             course_courseID = course.courseID,

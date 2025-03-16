@@ -1,8 +1,8 @@
 from uuid import UUID
 from datetime import datetime
 from pydantic import BaseModel
-from core.repository.enum import ActivityType
-from typing import List, Optional
+from core.repository.enum import ActivityType,ExerciseType
+from typing import List, Optional, Union
 class WelcomeMessageResponse(BaseModel):
     course: str
     course_id: UUID
@@ -17,8 +17,9 @@ class GetRecentActivitiesResponse(BaseModel):
 class Events(BaseModel):
     exercise_id: UUID
     exercise_name: str
-    exercise_time_open: str
-    exercise_time_close: str
+    exercise_time_open: Union[str, datetime]
+    exercise_time_close: Union[str, datetime]
+    exercise_type: ExerciseType
     course_name: str
     course_id: UUID
     course_courseID: str

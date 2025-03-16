@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, Union, List
+from typing import Optional, Union, List, Any
 from uuid import UUID
 from datetime import datetime
 from core.repository.enum import DifficultyLevel, QuestionType, ExerciseType, GradingMethodType
@@ -10,8 +10,10 @@ class QuizModal(BaseModel):
     type: QuestionType
     score: int
 class TestCaseModel(BaseModel):
-    input: Union[str, int, float, dict, list, bool]
-    output: Union[str, int, float, dict, list, bool]
+    inputs: List[Any]
+    output: Any
+    is_hidden: Optional[bool] = False
+    description: Optional[str] = ""
 class CodeModel(BaseModel):
     question: str
     testcases: List[TestCaseModel]
@@ -36,13 +38,20 @@ class ExerciseRequest(BaseModel):
     pass_mark: Optional[float]
 class ExerciseCodeRequest(BaseModel):
     name: str
-    description: Optional[str]
-    deadline: Optional[datetime]
-    time : Optional[int]
-    topic: Optional[str]
-    difficulty: DifficultyLevel
-    questions: list[CodeModel]
-    code: str
-    max_score: Optional[int]
-    type: ExerciseType
+    description: Optional[str] = None
+    topic: Optional[str] = None
+    type: ExerciseType = ExerciseType.code
     course_id: UUID
+    questions: list[CodeModel]
+    max_score: Optional[int] = None
+    time_open: Optional[datetime] = None
+    time_close: Optional[datetime] = None
+    time_limit: Optional[int] = None
+    attempts_allowed: Optional[int] = None
+    grading_method: Optional[GradingMethodType] = GradingMethodType.highest
+    shuffle_questions: Optional[bool] = False
+    shuffle_answers: Optional[bool] = False
+    review_after_completion: Optional[bool] = True
+    show_correct_answers: Optional[bool] = False
+    penalty_per_attempt: Optional[float] = 0.0
+    pass_mark: Optional[float] = 0.0

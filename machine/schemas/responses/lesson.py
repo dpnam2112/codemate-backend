@@ -39,6 +39,7 @@ class PutLessonResponse(BaseModel):
     description: Optional[str]
     order: int
     learning_outcomes: Optional[list[str]]
+    # documents: List[DocumentResponse] = []
 class DeleteLessonResponse(BaseModel):
     lesson_id: UUID
     title: str
