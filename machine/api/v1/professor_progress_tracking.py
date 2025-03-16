@@ -61,6 +61,7 @@ async def get_grades(
         )
         student_id = student.id
         student_name = student.name
+        student_email = student.email
         student_mssv = student.mssv
         learning_path_progress = await learning_paths_controller.learning_paths_repository.first(
             where_=[LearningPaths.course_id == course_id, LearningPaths.student_id == student_id]
@@ -115,6 +116,7 @@ async def get_grades(
         students_list.append(StudentProgressInCourse(
             student_id=student_id,
             student_name=student_name,
+            student_email=student_email,
             student_mssv=student_mssv,
             exercises=exercise_student,
             learning_path=learning_path,
@@ -170,6 +172,7 @@ async def get_exercise_grades(
         )
         student_id = student.id
         student_name = student.name
+        student_email = student.email
         student_mssv = student.mssv
         exercise = await exercises_controller.exercises_repository.first(
             where_=[Exercises.id == exercise_id],
@@ -194,6 +197,7 @@ async def get_exercise_grades(
         students_list.append(StudentProgressInExercise(
             student_id=student_id,
             student_name=student_name,
+            student_email=student_email,
             student_mssv=student_mssv,
             score=score,
             date=completion_date,

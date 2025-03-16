@@ -336,13 +336,14 @@ async def update_exercise(
         ),
         message="Successfully updated the exercise.",
     )
-@router.delete("/quizzes/{exercise_id}", response_model=Ok[ExerciseQuizResponse])
+@router.delete("/{exercise_id}/quizzes", response_model=Ok[ExerciseQuizResponse])
 async def delete_exercise(
     exercise_id: UUID,
     token: str = Depends(oauth2_scheme),
     exercises_controller: ExercisesController = Depends(InternalProvider().get_exercises_controller),
     course_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
     professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
+    student_exercise_controller: StudentExercisesController = Depends(InternalProvider().get_studentexercises_controller),
 ):
     """
     Deletes an existing exercise by ID.
@@ -357,7 +358,8 @@ async def delete_exercise(
     # Validate exercise existence
     exercise = await exercises_controller.exercises_repository.first(
         where_=[Exercises.id == exercise_id],
-        relations=[Exercises.course],
+        relations=[Exercises.course,
+                   Exercises.student_exercises],
     )
     if not exercise:
         raise NotFoundException(message="Exercise not found for the given ID.")
@@ -370,25 +372,42 @@ async def delete_exercise(
     await exercises_controller.exercises_repository.delete(
         where_=[Exercises.id == exercise_id],
     )
+    if exercise.student_exercises:
+        for student_exercise in exercise.student_exercises:
+            await student_exercise_controller.student_exercises_repository.delete(
+                where_=[StudentExercises.id == student_exercise.id]
+            )
+            
+    await exercises_controller.exercises_repository.session.commit()
     # Return success response
     return Ok(
         data=ExerciseQuizResponse(
             exercise_id=exercise.id,
+            course_id=exercise.course_id,
             name=exercise.name,
             description=exercise.description,
-            deadline=exercise.deadline,
-            time=exercise.time,
             topic=exercise.topic,
-            difficulty=exercise.difficulty,
+            max_score=exercise.max_score,   
             type=exercise.type,
-            max_score=exercise.max_score,
-            course_id=exercise.course_id,
+            time_open=exercise.time_open,
+            time_close=exercise.time_close,
+            time_limit=exercise.time_limit,
+            attempts_allowed=exercise.attempts_allowed,
+            grading_method=exercise.grading_method,
+            shuffle_questions=exercise.shuffle_questions,
+            shuffle_answers=exercise.shuffle_answers,
+            review_after_completion=exercise.review_after_completion,
+            show_correct_answers=exercise.show_correct_answers,
+            penalty_per_attempt=exercise.penalty_per_attempt,
+            pass_mark=exercise.pass_mark,
             questions=[
                 QuizModal(
                     question=q["question"],
                     answer=q["answer"],
                     options=q["options"],
                     type=q["type"],
+                    difficulty=q["difficulty"],
+                    feedback=q["feedback"],
                     score=q["score"],
                 ).model_dump()  # Convert to dictionary
                 for q in exercise.questions
@@ -396,7 +415,7 @@ async def delete_exercise(
         ),
         message="Exercise successfully deleted.")
 @router.post("/code", response_model=Ok[ExerciseCodeResponse])
-async def add_exercises(
+async def add_code_exercise(
     body: ExerciseCodeRequest,
     token : str = Depends(oauth2_scheme),
     exercises_controller: ExercisesController = Depends(InternalProvider().get_exercises_controller),
@@ -404,7 +423,7 @@ async def add_exercises(
     professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
 ):
     """
-    Adds a new exercise with questions to a lesson.
+    Adds a new code exercise to a course.
     """
     payload = verify_token(token)
     user_id = payload.get("sub")
@@ -413,7 +432,7 @@ async def add_exercises(
     user = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
     if not user:
         raise NotFoundException(message="Only professors have the permission to create exercise for this course.")
-    user = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
+    
     # Validate course existence
     course = await course_controller.courses_repository.first(
         where_=[Courses.id == body.course_id],
@@ -425,26 +444,51 @@ async def add_exercises(
     
     # Validate and process questions
     questions_data = []
+    total_score = 0
     for question in body.questions:
         if not all([question.question, question.testcases]):
-            for testcase in question.testcases:
-                if not all([testcase.input, testcase.output]):
-                    raise BadRequestException(message="Each test case must have both input and output fields")
-            raise BadRequestException(message="Each question must have test cases")
-        questions_data.append(question.model_dump())
+            raise BadRequestException(message="Each question must have both question text and test cases")
+        
+        for testcase in question.testcases:
+            if not all([testcase.inputs is not None, testcase.output is not None]):
+                raise BadRequestException(message="Each test case must have both input and output fields")
+        
+        # Add question data with all required fields
+        question_data = {
+            "question": question.question,
+            "testcases": [t.model_dump() for t in question.testcases],
+            "starter_code": getattr(question, 'starter_code', ''),
+            "solution_code": getattr(question, 'solution_code', ''),
+            "hints": getattr(question, 'hints', []),
+            "score": getattr(question, 'score', 10),
+            "difficulty": getattr(question, 'difficulty', DifficultyLevel.medium).value,
+            "allowed_languages": getattr(question, 'allowed_languages', []),
+            "time_limit_seconds": getattr(question, 'time_limit_seconds', 5),
+            "memory_limit_mb": getattr(question, 'memory_limit_mb', 256),
+        }
+        questions_data.append(question_data)
+        total_score += question_data["score"]
 
     # Prepare exercise data
     exercise_data = {
         "name": body.name,
         "description": body.description,
-        "deadline": body.deadline,
-        "time": body.time,
         "topic": body.topic,
-        "difficulty": body.difficulty,
-        "max_score": body.max_score,
-        "type": body.type,
+        "type": body.type.value,
         "course_id": body.course_id,
         "questions": questions_data,
+        "max_score": body.max_score or total_score,
+        "time_open": getattr(body, 'time_open', None),
+        "time_close": getattr(body, 'time_close', None),
+        "time_limit": getattr(body, 'time_limit', None),
+        "attempts_allowed": getattr(body, 'attempts_allowed', None),
+        "grading_method": getattr(body, 'grading_method', GradingMethodType.highest).value,
+        "shuffle_questions": getattr(body, 'shuffle_questions', False),
+        "shuffle_answers": getattr(body, 'shuffle_answers', False),
+        "review_after_completion": getattr(body, 'review_after_completion', True),
+        "show_correct_answers": getattr(body, 'show_correct_answers', False),
+        "penalty_per_attempt": getattr(body, 'penalty_per_attempt', 0.0),
+        "pass_mark": getattr(body, 'pass_mark', 0.0),
     }
 
     # Create the exercise
@@ -452,46 +496,146 @@ async def add_exercises(
         exercise_data, commit=True
     )
 
+    # Prepare code question modal objects
+    code_questions = []
+    for q in questions_data:
+        code_questions.append(
+            CodeModel(
+                question=q["question"],
+                testcases=[
+                    TestCaseModel(
+                        inputs=t["inputs"],
+                        output=t["output"],
+                        is_hidden=t.get("is_hidden", False),
+                        description=t.get("description", "")
+                    ) for t in q["testcases"]
+                ],
+                starter_code=q.get("starter_code", ""),
+                solution_code=q.get("solution_code", ""),
+                hints=q.get("hints", []),
+                score=q.get("score", 10),
+                difficulty=DifficultyLevel(q.get("difficulty", "medium")),
+                allowed_languages=q.get("allowed_languages", []),
+                time_limit_seconds=q.get("time_limit_seconds", 5),
+                memory_limit_mb=q.get("memory_limit_mb", 256),
+            )
+        )
+
     # Return the response
     return Ok(
         data=ExerciseCodeResponse(
             exercise_id=created_exercise.id,
+            course_id=created_exercise.course_id,
             name=created_exercise.name,
             description=created_exercise.description,
-            deadline=created_exercise.deadline,
-            time=created_exercise.time,
             topic=created_exercise.topic,
-            difficulty=created_exercise.difficulty,
-            type=created_exercise.type,
+            questions=code_questions,
             max_score=created_exercise.max_score,
-            course_id=created_exercise.course_id,
-            questions=[
-                CodeModel(
-                    question=q["question"],
-                    testcases= [
-                        TestCaseModel(
-                            input=t["input"],
-                            output=t["output"],
-                        ).model_dump()
-                    for t in q["testcases"]
-                ]
-                ).model_dump()  # Convert to dictionary
-                for q in exercise_data["questions"]
-            ],
+            type=ExerciseType(created_exercise.type),
+            time_open=created_exercise.time_open,
+            time_close=created_exercise.time_close,
+            time_limit=created_exercise.time_limit,
+            attempts_allowed=created_exercise.attempts_allowed,
+            grading_method=GradingMethodType(created_exercise.grading_method),
+            shuffle_questions=created_exercise.shuffle_questions,
+            shuffle_answers=created_exercise.shuffle_answers,
+            review_after_completion=created_exercise.review_after_completion,
+            show_correct_answers=created_exercise.show_correct_answers,
+            penalty_per_attempt=created_exercise.penalty_per_attempt,
+            pass_mark=created_exercise.pass_mark,
         ),
-        message="Successfully created the exercise.",
+        message="Successfully created the code exercise.",
     )
-@router.put("/code/{exercise_id}", response_model=Ok[ExerciseCodeResponse])
+
+@router.get("/{exercise_id}/code", response_model=Ok[ExerciseCodeResponse])
+async def get_code_exercise(
+    exercise_id: UUID,
+    token: str = Depends(oauth2_scheme),
+    exercises_controller: ExercisesController = Depends(InternalProvider().get_exercises_controller),
+    professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
+):
+    """
+    Retrieves an existing code exercise by ID.
+    """
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    professor = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
+    if not professor:
+        raise NotFoundException(message="Your account is not allowed to get detail of code exercise.")
+    
+    # Fetch the exercise
+    exercise = await exercises_controller.exercises_repository.first(
+        where_=[Exercises.id == exercise_id]
+    )
+    if not exercise:
+        raise NotFoundException(message="Exercise not found for the given ID.")
+    if exercise.type != ExerciseType.code:
+        raise BadRequestException(message="This is not a code exercise.")
+    
+    # Prepare code modal objects from the stored questions data
+    code_questions = []
+    for q in exercise.questions:
+        code_questions.append(
+            CodeModel(
+                question=q["question"],
+                testcases=[
+                    TestCaseModel(
+                        inputs=t["inputs"],
+                        output=t["output"],
+                        is_hidden=t.get("is_hidden", False),
+                        description=t.get("description", "")
+                    ) for t in q.get("testcases", [])
+                ],
+                starter_code=q.get("starter_code", ""),
+                solution_code=q.get("solution_code", ""),
+                hints=q.get("hints", []),
+                score=q.get("score", 10),
+                difficulty=DifficultyLevel(q.get("difficulty", "medium")),
+                allowed_languages=q.get("allowed_languages", []),
+                time_limit_seconds=q.get("time_limit_seconds", 5),
+                memory_limit_mb=q.get("memory_limit_mb", 256),
+            )
+        )
+
+    # Return the response
+    return Ok(
+        data=ExerciseCodeResponse(
+            exercise_id=exercise.id,
+            course_id=exercise.course_id,
+            name=exercise.name,
+            description=exercise.description,
+            topic=exercise.topic,
+            questions=code_questions,
+            max_score=exercise.max_score,
+            type=ExerciseType(exercise.type),
+            time_open=exercise.time_open,
+            time_close=exercise.time_close,
+            time_limit=exercise.time_limit,
+            attempts_allowed=exercise.attempts_allowed,
+            grading_method=GradingMethodType(exercise.grading_method) if exercise.grading_method else GradingMethodType.highest,
+            shuffle_questions=exercise.shuffle_questions,
+            shuffle_answers=exercise.shuffle_answers,
+            review_after_completion=exercise.review_after_completion,
+            show_correct_answers=exercise.show_correct_answers,
+            penalty_per_attempt=exercise.penalty_per_attempt,
+            pass_mark=exercise.pass_mark,
+        ),
+        message="Successfully retrieved the code exercise.",
+    )
+
+@router.put("/{exercise_id}/code", response_model=Ok[ExerciseCodeResponse])
 async def update_code_exercise(
     exercise_id: UUID,
     body: ExerciseCodeRequest,
-    token : str = Depends(oauth2_scheme),
+    token: str = Depends(oauth2_scheme),
     exercises_controller: ExercisesController = Depends(InternalProvider().get_exercises_controller),
     course_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
     professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
 ):
     """
-    Adds a new exercise with questions to a lesson.
+    Updates an existing code exercise with new details and questions.
     """
     payload = verify_token(token)
     user_id = payload.get("sub")
@@ -499,14 +643,18 @@ async def update_code_exercise(
         raise BadRequestException(message="Your account is not authorized. Please log in again.")
     user = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
     if not user:
-        raise NotFoundException(message="Only professors have the permission to create exercise for this course.")
-    user = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
+        raise NotFoundException(message="Only professors have the permission to update this exercise.")
+    
     # Validate exercise existence
     exercise = await exercises_controller.exercises_repository.first(
         where_=[Exercises.id == exercise_id]
     )
     if not exercise:
         raise NotFoundException(message="Exercise not found for the given ID.")
+    
+    if exercise.type != ExerciseType.code:
+        raise BadRequestException(message="This is not a code exercise.")
+
     # Validate course existence
     course = await course_controller.courses_repository.first(
         where_=[Courses.id == body.course_id],
@@ -514,83 +662,126 @@ async def update_code_exercise(
     if not course:
         raise NotFoundException(message="Course not found for the given ID.")
     if not course.professor_id == user.id:
-        raise BadRequestException(message="You are not allowed to create exercise for this course.")
+        raise BadRequestException(message="You are not allowed to update exercise for this course.")
     
     # Validate and process questions
     questions_data = []
+    total_score = 0
     for question in body.questions:
         if not all([question.question, question.testcases]):
-            for testcase in question.testcases:
-                if not all([testcase.input, testcase.output]):
-                    raise BadRequestException(message="Each test case must have both input and output fields")
-            raise BadRequestException(message="Each question must have test cases")
-        questions_data.append(question.model_dump())
+            raise BadRequestException(message="Each question must have both question text and test cases")
+        
+        for testcase in question.testcases:
+            if not all([testcase.inputs is not None, testcase.output is not None]):
+                raise BadRequestException(message="Each test case must have both input and output fields")
+        
+        # Add question data with all required fields
+        question_data = {
+            "question": question.question,
+            "testcases": [t.model_dump() for t in question.testcases],
+            "starter_code": getattr(question, 'starter_code', ''),
+            "solution_code": getattr(question, 'solution_code', ''),
+            "hints": getattr(question, 'hints', []),
+            "score": getattr(question, 'score', 10),
+            "difficulty": getattr(question, 'difficulty', DifficultyLevel.medium).value,
+            "allowed_languages": getattr(question, 'allowed_languages', []),
+            "time_limit_seconds": getattr(question, 'time_limit_seconds', 5),
+            "memory_limit_mb": getattr(question, 'memory_limit_mb', 256),
+        }
+        questions_data.append(question_data)
+        total_score += question_data["score"]
 
-    # Prepare exercise data
-    exercise.name = body.name
-    exercise.description = body.description
-    exercise.deadline = body.deadline
-    exercise.time = body.time
-    exercise.topic = body.topic
-    exercise.difficulty = body.difficulty
-    exercise.type = body.type
-    exercise.max_score = body.max_score
-    exercise.questions = questions_data
+    # Prepare updated exercise data
+    update_data = {
+        "name": body.name,
+        "description": body.description,
+        "topic": body.topic,
+        "type": body.type.value,
+        "course_id": body.course_id,
+        "questions": questions_data,
+        "max_score": body.max_score or total_score,
+        "time_open": getattr(body, 'time_open', None),
+        "time_close": getattr(body, 'time_close', None),
+        "time_limit": getattr(body, 'time_limit', None),
+        "attempts_allowed": getattr(body, 'attempts_allowed', None),
+        "grading_method": getattr(body, 'grading_method', GradingMethodType.highest).value,
+        "shuffle_questions": getattr(body, 'shuffle_questions', False),
+        "shuffle_answers": getattr(body, 'shuffle_answers', False),
+        "review_after_completion": getattr(body, 'review_after_completion', True),
+        "show_correct_answers": getattr(body, 'show_correct_answers', False),
+        "penalty_per_attempt": getattr(body, 'penalty_per_attempt', 0.0),
+        "pass_mark": getattr(body, 'pass_mark', 0.0),
+    }
 
     # Update the exercise
     updated_exercise = await exercises_controller.exercises_repository.update(
         where_=[Exercises.id == exercise_id],
-        attributes={
-            "name": exercise.name,
-            "description": exercise.description,
-            "deadline": exercise.deadline,
-            "time": exercise.time,
-            "topic": exercise.topic,
-            "difficulty": exercise.difficulty,
-            "type": exercise.type,
-            "max_score": exercise.max_score,
-            "questions": exercise.questions,
-        },
+        attributes=update_data,
         commit=True,
     )
 
+    # Prepare code modal objects
+    code_questions = []
+    for q in questions_data:
+        code_questions.append(
+            CodeModel(
+                question=q["question"],
+                testcases=[
+                    TestCaseModel(
+                        inputs=t["inputs"],
+                        output=t["output"],
+                        is_hidden=t.get("is_hidden", False),
+                        description=t.get("description", "")
+                    ) for t in q["testcases"]
+                ],
+                starter_code=q.get("starter_code", ""),
+                solution_code=q.get("solution_code", ""),
+                hints=q.get("hints", []),
+                score=q.get("score", 10),
+                difficulty=DifficultyLevel(q.get("difficulty", "medium")),
+                allowed_languages=q.get("allowed_languages", []),
+                time_limit_seconds=q.get("time_limit_seconds", 5),
+                memory_limit_mb=q.get("memory_limit_mb", 256),
+            )
+        )
+
     # Return the response
     return Ok(
-        data=PutExerciseCodeResponse(
+        data=ExerciseCodeResponse(
             exercise_id=updated_exercise.id,
+            course_id=updated_exercise.course_id,
             name=updated_exercise.name,
             description=updated_exercise.description,
-            deadline=updated_exercise.deadline,
-            time=updated_exercise.time,
             topic=updated_exercise.topic,
-            difficulty=updated_exercise.difficulty,
-            type=updated_exercise.type,
+            questions=code_questions,
             max_score=updated_exercise.max_score,
-            questions=[
-                CodeModel(
-                    question=q["question"],
-                    testcases= [
-                        TestCaseModel(
-                            input=t["input"],
-                            output=t["output"],
-                        ).model_dump()
-                    for t in q["testcases"]
-                ]
-                ).model_dump()  # Convert to dictionary
-                for q in updated_exercise.questions
-            ],
+            type=ExerciseType(updated_exercise.type),
+            time_open=updated_exercise.time_open,
+            time_close=updated_exercise.time_close,
+            time_limit=updated_exercise.time_limit,
+            attempts_allowed=updated_exercise.attempts_allowed,
+            grading_method=GradingMethodType(updated_exercise.grading_method),
+            shuffle_questions=updated_exercise.shuffle_questions,
+            shuffle_answers=updated_exercise.shuffle_answers,
+            review_after_completion=updated_exercise.review_after_completion,
+            show_correct_answers=updated_exercise.show_correct_answers,
+            penalty_per_attempt=updated_exercise.penalty_per_attempt,
+            pass_mark=updated_exercise.pass_mark,
         ),
-        message="Successfully created the exercise.",
+        message="Successfully updated the code exercise.",
     )
-@router.delete("/code/{exercise_id}", response_model=Ok[ExerciseCodeResponse])
-async def delete_exercise(
+
+@router.delete("/{exercise_id}/code", response_model=Ok[ExerciseCodeResponse])
+async def delete_code_exercise(
     exercise_id: UUID,
     token: str = Depends(oauth2_scheme),
     exercises_controller: ExercisesController = Depends(InternalProvider().get_exercises_controller),
+    course_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
     professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
+    student_exercise_controller: StudentExercisesController = Depends(InternalProvider().get_studentexercises_controller),
 ):
     """
-    Deletes an existing exercise by ID.
+    Deletes an existing code exercise by ID.
     """
     payload = verify_token(token)
     user_id = payload.get("sub")
@@ -599,47 +790,86 @@ async def delete_exercise(
     user = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
     if not user:
         raise NotFoundException(message="Only professors have the permission to delete this exercise.")
+    
     # Validate exercise existence
     exercise = await exercises_controller.exercises_repository.first(
         where_=[Exercises.id == exercise_id],
-        relations=[Exercises.course],
+        relations=[Exercises.course,
+                   Exercises.student_exercises],
     )
     if not exercise:
         raise NotFoundException(message="Exercise not found for the given ID.")
+    
+    if exercise.type != ExerciseType.code:
+        raise BadRequestException(message="This is not a code exercise.")
+        
     if not exercise.course:
         raise NotFoundException(message="Exercise not associated with any course.")
     
     if not exercise.course.professor_id == user.id:
-        raise BadRequestException(message="You are not allowed to delete exercise for this lesson.")
+        raise BadRequestException(message="You are not allowed to delete exercise for this course.")
+    
+    # Delete student exercises first
+    if exercise.student_exercises:
+        for student_exercise in exercise.student_exercises:
+            await student_exercise_controller.student_exercises_repository.delete(
+                where_=[StudentExercises.id == student_exercise.id]
+            )
+    
     # Delete the exercise
     await exercises_controller.exercises_repository.delete(
         where_=[Exercises.id == exercise_id],
     )
+    
+    await exercises_controller.exercises_repository.session.commit()
+    
+    # Prepare response data
+    code_questions = []
+    for q in exercise.questions:
+        code_questions.append(
+            CodeModel(
+                question=q["question"],
+                testcases=[
+                    TestCaseModel(
+                        inputs=t["inputs"],
+                        output=t["output"],
+                        is_hidden=t.get("is_hidden", False),
+                        description=t.get("description", "")
+                    ) for t in q.get("testcases", [])
+                ],
+                starter_code=q.get("starter_code", ""),
+                solution_code=q.get("solution_code", ""),
+                hints=q.get("hints", []),
+                score=q.get("score", 10),
+                difficulty=DifficultyLevel(q.get("difficulty", "medium")),
+                allowed_languages=q.get("allowed_languages", []),
+                time_limit_seconds=q.get("time_limit_seconds", 5),
+                memory_limit_mb=q.get("memory_limit_mb", 256),
+            )
+        )
+    
     # Return success response
     return Ok(
         data=ExerciseCodeResponse(
             exercise_id=exercise.id,
+            course_id=exercise.course_id,
             name=exercise.name,
             description=exercise.description,
-            deadline=exercise.deadline,
-            time=exercise.time,
             topic=exercise.topic,
-            difficulty=exercise.difficulty,
-            type=exercise.type,
-            max_score=exercise.max_score,
-            course_id=exercise.course_id,
-            questions=[
-                CodeModel(
-                    question=q["question"],
-                    testcases= [
-                        TestCaseModel(
-                            input=t["input"],
-                            output=t["output"],
-                        ).model_dump()
-                    for t in q["testcases"]
-                ]
-                ).model_dump()  # Convert to dictionary
-                for q in exercise.questions
-            ],
+            questions=code_questions,
+            max_score=exercise.max_score,   
+            type=ExerciseType(exercise.type),
+            time_open=exercise.time_open,
+            time_close=exercise.time_close,
+            time_limit=exercise.time_limit,
+            attempts_allowed=exercise.attempts_allowed,
+            grading_method=GradingMethodType(exercise.grading_method) if exercise.grading_method else GradingMethodType.highest,
+            shuffle_questions=exercise.shuffle_questions,
+            shuffle_answers=exercise.shuffle_answers,
+            review_after_completion=exercise.review_after_completion,
+            show_correct_answers=exercise.show_correct_answers,
+            penalty_per_attempt=exercise.penalty_per_attempt,
+            pass_mark=exercise.pass_mark,
         ),
-        message="Exercise successfully deleted.")
+        message="Code exercise successfully deleted."
+    )
