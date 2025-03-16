@@ -12,7 +12,7 @@ class QuizModal(BaseModel):
     difficulty: DifficultyLevel
     score: int
 class TestCaseModel(BaseModel):
-    input: Any
+    inputs: List[Any]
     output: Any
     is_hidden: Optional[bool] = False
     description: Optional[str] = ""

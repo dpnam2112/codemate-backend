@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, Union, List
+from typing import Optional, Union, List, Any
 from uuid import UUID
 from datetime import datetime
 from core.repository.enum import DifficultyLevel, QuestionType, ExerciseType, GradingMethodType
@@ -10,8 +10,10 @@ class QuizModal(BaseModel):
     type: QuestionType
     score: int
 class TestCaseModel(BaseModel):
-    input: Union[str, int, float, dict, list, bool]
-    output: Union[str, int, float, dict, list, bool]
+    inputs: List[Any]
+    output: Any
+    is_hidden: Optional[bool] = False
+    description: Optional[str] = ""
 class CodeModel(BaseModel):
     question: str
     testcases: List[TestCaseModel]
