@@ -1,7 +1,7 @@
 import logging
 from typing import List, Union
 from sqlalchemy import or_, and_, select
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, File, Form, UploadFile
 from core.response import Ok
 from core.exceptions import *
 from machine.controllers import *
@@ -241,13 +241,17 @@ async def get_profile(
             role = "admin"
             if not check_user:
                 raise NotFoundException(message="User not found")
-            
-    
+    avatar_url = ""
+    if check_user.avatar_url:
+        if check_user.avatar_url.startswith("documents/"):
+            avatar_url = generate_presigned_url(check_user.avatar_url)
+        else:
+            avatar_url = check_user.avatar_url
     user_response = {
         "id": check_user.id,
         "name": check_user.name,
         "fullname": check_user.fullname,
-        "avatar": generate_presigned_url(check_user.avatar_url) if check_user.avatar_url else "",
+        "avatar": avatar_url,
         "email": check_user.email,
         "ms": check_user.mssv if hasattr(check_user, "mssv") else check_user.mscb,
         "date_of_birth": check_user.date_of_birth,
