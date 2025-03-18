@@ -44,6 +44,10 @@ async def recommend_lesson(
     lesson = recommend_lesson.lesson
     if not lesson:
         raise NotFoundException(message="Associated Lesson not found for the given Recommend Lesson.")
+    
+    get_modules = recommend_lesson.modules
+    if not get_modules:
+        raise NotFoundException(message="Modules not found for the given Recommend Lesson.")
 
     response_data = RecommendLessonResponse(
         lesson_id=recommend_lesson.id,
@@ -59,7 +63,7 @@ async def recommend_lesson(
                 module_id=module.id,
                 title=module.title,
             )
-            for module in recommend_lesson.modules
+            for module in get_modules
         ],
     )
 

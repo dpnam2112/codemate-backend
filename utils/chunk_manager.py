@@ -139,75 +139,93 @@ class ChunkingManager:
         return chunks
     
     def process_in_chunks(self, 
-                         data: List[Dict],
-                         prompt_generator: Callable[[List[Dict], int, int], str],
-                         result_extractor: Callable[[Dict], List[Any]],
-                         token_estimation_field: Optional[str] = None,
-                         system_message: str = "You are a helpful AI assistant") -> List[Any]:
+                     data: List[Dict],
+                     prompt_generator: Callable[[List[Dict], int, int], str],
+                     result_extractor: Callable[[Dict], Dict],  # Updated to expect Dict return
+                     token_estimation_field: Optional[str] = None,
+                     system_message: str = "You are a helpful AI assistant") -> Dict:  # Return Dict, not List
         """
         Process large input by breaking into manageable chunks, calling an AI model,
-        and combining results.
-        
+        and combining results into a single dictionary.
+
         Args:
             data: List of dictionaries to process in chunks
             prompt_generator: Function that takes (chunk_data, chunk_index, total_chunks) and returns a prompt string
-            result_extractor: Function that extracts relevant results from the model response
+            result_extractor: Function that extracts relevant results from the model response as a dictionary
             token_estimation_field: Optional field name to use for token estimation
             system_message: System message to use for the AI calls
             
         Returns:
-            Combined results from all chunks
+            Combined dictionary of results from all chunks
         """
         # 1. Split data into chunks
-        effective_max_tokens = self.max_tokens_per_chunk // 2  # Leave room for other parts of prompt
+        effective_max_tokens = self.max_tokens_per_chunk // 2
         data_chunks = self.chunk_data(data, effective_max_tokens, token_estimation_field)
         
-        # 2. Process each chunk and collect results
-        all_results = []
+        # 2. Initialize combined result dictionary
+        combined_result = {
+            "recommend_lessons": [],
+            "modules": []
+        }
         
+        # 3. Process each chunk and merge results
         for i, data_chunk in enumerate(data_chunks):
             chunk_info = f"Processing chunk {i+1} of {len(data_chunks)}"
             print(chunk_info)
             
-            # Generate prompt for this chunk
             chunk_prompt = prompt_generator(data_chunk, i, len(data_chunks))
             
-            # Get response for this chunk
             try:
-                # First try with primary provider
                 chunk_response = self.call_llm_api(chunk_prompt, system_message)
-                
-                # Extract results from this chunk
                 chunk_results = result_extractor(chunk_response)
-                if chunk_results:
-                    all_results.extend(chunk_results)
-                else:
-                    print(f"Warning: No valid results extracted from chunk {i+1}")
                 
+                if not chunk_results:
+                    print(f"Warning: No valid results extracted from chunk {i+1}")
+                    continue
+                
+                # Merge scalar fields (only from first valid chunk)
+                if i == 0:
+                    for key in ["learning_path_start_date", "learning_path_end_date", 
+                            "learning_path_objective", "learning_path_progress", 
+                            "student_id", "course_id"]:
+                        if key in chunk_results:
+                            combined_result[key] = chunk_results[key]
+                
+                # Append list fields
+                if "recommend_lessons" in chunk_results:
+                    combined_result["recommend_lessons"].extend(chunk_results["recommend_lessons"])
+                if "modules" in chunk_results:
+                    combined_result["modules"].extend(chunk_results["modules"])
+                    
             except Exception as e:
                 print(f"Error processing chunk with primary provider: {str(e)}")
-                
-                # If we have both providers configured, try the alternative
                 if self.provider == "both":
                     try:
-                        # Toggle provider temporarily
                         temp_provider = "gemini" if self.provider == "openai" else "openai"
                         print(f"Retrying with {temp_provider}...")
-                        
                         chunk_response = self.call_llm_api(chunk_prompt, system_message, override_provider=temp_provider)
-                        
                         chunk_results = result_extractor(chunk_response)
-                        if chunk_results:
-                            all_results.extend(chunk_results)
-                        else:
-                            print(f"Warning: No valid results extracted from chunk {i+1} with backup provider")
-                    
+                        
+                        if not chunk_results:
+                            print(f"Warning: No valid results from backup provider for chunk {i+1}")
+                            continue
+                        
+                        if i == 0:
+                            for key in ["learning_path_start_date", "learning_path_end_date", 
+                                    "learning_path_objective", "learning_path_progress", 
+                                    "student_id", "course_id"]:
+                                if key in chunk_results:
+                                    combined_result[key] = chunk_results[key]
+                        
+                        if "recommend_lessons" in chunk_results:
+                            combined_result["recommend_lessons"].extend(chunk_results["recommend_lessons"])
+                        if "modules" in chunk_results:
+                            combined_result["modules"].extend(chunk_results["modules"])
+                        
                     except Exception as backup_error:
                         print(f"Backup provider also failed: {str(backup_error)}")
-                        # Continue with next chunk
         
-        return all_results
-    
+        return combined_result
     def call_llm_api(self, prompt: str, system_message: str, override_provider: Optional[str] = 'gemini') -> Dict:
         """
         Call LLM API (OpenAI or Gemini) with a single chunk
