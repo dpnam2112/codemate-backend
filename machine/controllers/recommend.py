@@ -2,7 +2,7 @@ from typing import Optional
 from uuid import UUID
 from core.controller import BaseController
 from core.exceptions.base import NotFoundException
-from machine.models import Modules, RecommendDocuments, RecommendLessons, LearningPaths, RecommendQuizzes
+from machine.models import Modules, RecommendDocuments, RecommendLessons, LearningPaths, RecommendQuizzes, Lessons
 from machine.repositories import ModulesRepository, RecommendDocumentsRepository,RecommendLessonsRepository,LearningPathsRepository, RecommendQuizzesRepository
 from machine.schemas.responses.learning_path import ModuleDTO, RecommendedLessonDTO
 from core.db import Transactional
@@ -26,16 +26,18 @@ class LearningPathsController(BaseController[LearningPaths]):
         return lp
 
     async def get_recommended_lessons(self, user_id: UUID, course_id: UUID, expand: Optional[str] = None) -> list[RecommendedLessonDTO]:
-
-
         # Prepare options for relationship loading
         options_ = [
             selectinload(LearningPaths.recommend_lessons)
+            .selectinload(RecommendLessons.lesson)  # Load the lesson relationship
         ]
 
         if expand == "modules":
-            options_.append(selectinload(LearningPaths.recommend_lessons).selectinload(RecommendLessons.modules))
-
+            options_.append(
+                selectinload(LearningPaths.recommend_lessons)
+                .selectinload(RecommendLessons.modules)
+            )
+        
         # Fetch the learning path with the specified options
         learning_path = await self.repository.first(
             where_=[LearningPaths.course_id == course_id, LearningPaths.student_id == user_id],
@@ -49,10 +51,11 @@ class LearningPathsController(BaseController[LearningPaths]):
         lessons = [
             RecommendedLessonDTO.model_validate({
                 **lesson.__dict__,
+                "lesson_title": lesson.lesson.title if lesson.lesson else None,  # Add lesson title
                 "modules": [
                     ModuleDTO.model_validate(module)
                     for module in lesson.modules
-                ] if expand == "modules" else None
+                ] if expand == "modules" else None,
             })
             for lesson in learning_path.recommend_lessons
         ]

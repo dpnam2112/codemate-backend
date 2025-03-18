@@ -496,14 +496,10 @@ async def generate_student_goals(
             "learning_outcomes": lesson.learning_outcomes if lesson.learning_outcomes else []
         })
     
-    # Get API key from environment variables
-    gemini_api_key = os.getenv("GOOGLE_GENAI_API_KEY")
-    
     # Initialize the ChunkingManager (for consistency, though we may not need chunking here)
     chunking_manager = ChunkingManager(
         provider="gemini",
         gemini_model_name="gemini-1.5-pro",
-        gemini_api_key=gemini_api_key,
         temperature=0.7,
         max_output_tokens=4000
     )
@@ -517,7 +513,6 @@ async def generate_student_goals(
     - Student Name: {student.name}
     - Course: {course.name} (ID: {course.courseID})
     - Professor: {professor.fullname}
-    # Student Proficiency Level: # Options: Struggling, Average, Advanced (You need to generate goals for all three levels)
 
     ## Course Information
     - Learning Outcomes: {json.dumps(course.learning_outcomes if course.learning_outcomes else [])}
@@ -528,7 +523,7 @@ async def generate_student_goals(
     ## Task Requirements
     Based on the course information, lessons overview, and the student's proficiency level (Struggling, Average, Advanced):
 
-    1. Generate 5 personalized learning goals that would be valuable for the student in this course.
+    1. Generate 5 personalized learning goals for EACH proficiency level (Struggling, Average, Advanced).
     2. Each goal should be specific, measurable, achievable, relevant, and time-bound (SMART).
     3. Consider the student's proficiency level when generating goals:
     - **Struggling Students:** Goals should focus on building foundational knowledge, improving basic skills, and increasing confidence.
@@ -536,21 +531,35 @@ async def generate_student_goals(
     - **Advanced Students:** Goals should focus on advanced applications, pushing boundaries, and mastering complex concepts.
     4. Include a brief explanation of how achieving this goal would benefit the student.
     5. Consider both practical applications and academic growth when suggesting goals.
+    6. For each goal, list the key lesson titles that relate to that goal.
 
     ## Output Format
-    Provide your response in the following JSON format:
+    Provide your response in the following JSON format (REQUIRED!! YOU MUST FOLLOW THIS FORMAT):
 
     {{
     "suggested_goals": [
         {{
+        "proficiency_level": "Struggling",
+        "goal": "Specific learning goal statement",
+        "explanation": "Brief explanation of why this goal is valuable",
+        "key_lessons": ["Lesson 1 title", "Lesson 2 title"]
+        }},
+        {{
+        "proficiency_level": "Average",
+        "goal": "Specific learning goal statement",
+        "explanation": "Brief explanation of why this goal is valuable",
+        "key_lessons": ["Lesson 1 title", "Lesson 2 title"]
+        }},
+        {{
+        "proficiency_level": "Advanced",
         "goal": "Specific learning goal statement",
         "explanation": "Brief explanation of why this goal is valuable",
         "key_lessons": ["Lesson 1 title", "Lesson 2 title"]
         }}
+        // at least 2 goals for each proficiency level - at least 6 goals total
     ]
     }}
     """
-
     system_message = "You are an expert educational AI assistant that helps students define effective learning goals."
     
     try:

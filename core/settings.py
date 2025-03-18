@@ -29,6 +29,7 @@ class Neo4jSettings(BaseSettings):
 
 class GoogleGenAISettings(BaseSettings):
     GOOGLE_GENAI_API_KEY: str
+    GEMINI_API_KEY: str
 
 class OpenAISettings(BaseSettings):
     OPENAI_API_KEY: str = ""
