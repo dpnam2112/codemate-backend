@@ -1,5 +1,4 @@
 from dotenv import load_dotenv
-load_dotenv()
 import os
 from typing import Literal
 from pydantic_settings import BaseSettings
@@ -16,8 +15,8 @@ class TestSettings(BaseSettings):
     PYTEST_UNIT: bool = False
 
 class DatabaseSettings(BaseSettings):
-    SQLALCHEMY_POSTGRES_URI: str = os.getenv("SQLALCHEMY_POSTGRES_URI","")
-    SQLALCHEMY_ECHO: bool = os.getenv("SQLALCHEMY_ECHO", False)
+    SQLALCHEMY_POSTGRES_URI: str = "postgresql+asyncpg://nam:thangcho@localhost:5432/codemate"
+    SQLALCHEMY_ECHO: bool = False
 
 class RedisSettings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379"
