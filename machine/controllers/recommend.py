@@ -2,8 +2,8 @@ from typing import Optional
 from uuid import UUID
 from core.controller import BaseController
 from core.exceptions.base import NotFoundException
-from machine.models import Modules, RecommendDocuments, RecommendLessons, LearningPaths, RecommendQuizzes, Lessons
-from machine.repositories import ModulesRepository, RecommendDocumentsRepository,RecommendLessonsRepository,LearningPathsRepository, RecommendQuizzesRepository
+from machine.models import Modules, RecommendDocuments, RecommendLessons, LearningPaths, RecommendQuizzes, Lessons, RecommendQuizQuestion
+from machine.repositories import ModulesRepository, RecommendDocumentsRepository,RecommendLessonsRepository,LearningPathsRepository, RecommendQuizzesRepository, RecommendQuizQuestionRepository
 from machine.schemas.responses.learning_path import ModuleDTO, RecommendedLessonDTO
 from core.db import Transactional
 from sqlalchemy.orm import selectinload
@@ -37,13 +37,19 @@ class LearningPathsController(BaseController[LearningPaths]):
                 selectinload(LearningPaths.recommend_lessons)
                 .selectinload(RecommendLessons.modules)
             )
-        
-        # Fetch the learning path with the specified options
-        learning_path = await self.repository.first(
+        learning_path_list = await self.learning_paths_repository.get_many(
             where_=[LearningPaths.course_id == course_id, LearningPaths.student_id == user_id],
+            order_={"desc":["version"]},
+        )
+        if not learning_path_list:
+            raise NotFoundException(message="Learning path not found.")
+        # Fetch the learning path with the specified options
+        print("learning_path_list",learning_path_list)
+        print("learning_path_list[0].........................................",learning_path_list[0].version)
+        learning_path = await self.learning_paths_repository.first(
+            where_=[LearningPaths.course_id == course_id, LearningPaths.student_id == user_id, LearningPaths.version == learning_path_list[0].version],
             options_=options_
         )
-
         if learning_path is None:
             raise NotFoundException(message="Learning path not found.")
 
@@ -88,7 +94,10 @@ class RecommendQuizzesController(BaseController[RecommendQuizzes]):
     def __init__(self, recommend_quizzes_repository: RecommendQuizzesRepository):
         super().__init__(model_class=RecommendQuizzes, repository=recommend_quizzes_repository)
         self.recommend_quizzes_repository = recommend_quizzes_repository
-
+class RecommendQuizQuestionController(BaseController[RecommendQuizQuestion]):
+    def __init__(self, recommend_quiz_question_repository: RecommendQuizQuestionRepository):
+        super().__init__(model_class=RecommendQuizQuestion, repository=recommend_quiz_question_repository)
+        self.recommend_quiz_question_repository = recommend_quiz_question_repository
 # class QuizExercisesController(BaseController[QuizExercises]):
 #     def __init__(self, quiz_exercises_repository: QuizExercisesRepository):
 #         super().__init__(model_class=QuizExercises, repository=quiz_exercises_repository)
