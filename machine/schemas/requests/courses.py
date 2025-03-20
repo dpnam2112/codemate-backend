@@ -42,4 +42,4 @@ class CreateCourseResponse(BaseModel):
     student_courses_list: List[StudentCoursesListResponse]
     
 class PutLearningOutcomesCoursesRequest(BaseModel):
-    learning_outcomes: list[str]
+    learning_outcomes: List[str]

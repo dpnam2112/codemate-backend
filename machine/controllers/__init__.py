@@ -8,7 +8,8 @@ from .recommend import (
     RecommendDocumentsController,
     RecommendLessonsController,
     LearningPathsController,
-    RecommendQuizzesController
+    RecommendQuizzesController,
+    RecommendQuizQuestionController
 )
 from .feedback import FeedbackController
 __all__ = [
@@ -23,6 +24,7 @@ __all__ = [
     "StudentExercisesController",
     "ModulesController",
     "RecommendQuizzesController",
+    "RecommendQuizQuestionController",
     "DocumentsController",
     "RecommendDocumentsController",
     "RecommendLessonsController",

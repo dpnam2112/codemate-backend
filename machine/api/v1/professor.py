@@ -173,7 +173,7 @@ async def get_course_detail_for_professor(
         course_name=course.name,
         course_start_date=course.start_date.isoformat(),
         course_end_date=course.end_date.isoformat(),
-        course_learning_outcomes=course.learning_outcomes,
+        course_learning_outcomes=course.learning_outcomes or [],
         course_status=course.status,
         course_image_url=image_url,
         course_nCredit=course.nCredit,

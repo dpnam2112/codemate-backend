@@ -14,3 +14,19 @@ class CodeExplanation(BaseModel):
 class CodeAnalysisResponse(BaseModel):
     """Model dữ liệu cho kết quả phân tích code."""
     explanations: List[CodeExplanation]
+    
+class QuizQuestion(BaseModel):
+    question_text: str
+    question_type: str
+    options: List[str]
+    correct_answer: List[str]
+    difficulty: str
+    explanation: str
+    points: int
+
+class Quiz(BaseModel):
+    quiz_title: str
+    description: str
+    estimated_completion_time: str
+    max_score: int
+    questions: List[QuizQuestion]

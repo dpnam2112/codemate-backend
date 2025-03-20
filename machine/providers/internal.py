@@ -43,6 +43,8 @@ class InternalProvider:
     
     recommend_quizzes_repository = partial(repo.RecommendQuizzesRepository, model=modl.RecommendQuizzes)
     
+    recommend_quiz_question_repository = partial(repo.RecommendQuizQuestionRepository, model=modl.RecommendQuizQuestion)
+    
     recommend_documents_repository = partial(repo.RecommendDocumentsRepository, model=modl.RecommendDocuments)
     
     recommend_lessons_repository = partial(repo.RecommendLessonsRepository, model=modl.RecommendLessons)
@@ -108,6 +110,11 @@ class InternalProvider:
     def get_recommend_quizzes_controller(self, db_session=Depends(db_session_keeper.get_session)):
         return ctrl.RecommendQuizzesController(
             recommend_quizzes_repository=self.recommend_quizzes_repository(db_session=db_session)
+        )
+    
+    def get_recommend_quiz_question_controller(self, db_session=Depends(db_session_keeper.get_session)):
+        return ctrl.RecommendQuizQuestionController(
+            recommend_quiz_question_repository=self.recommend_quiz_question_repository(db_session=db_session)
         )
         
     def get_documents_controller(self, db_session=Depends(db_session_keeper.get_session)):

@@ -35,11 +35,8 @@ async def create_new_lesson(
     course_id: UUID = Form(...),
     order: int = Form(...),
     learning_outcomes: List[str] = Form(...),
-    files: List[UploadFile] = File(None),
-    description_file: List[str] = Form(None),
     token: str = Depends(oauth2_scheme),
     lesson_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
-    document_controller: DocumentsController = Depends(InternalProvider().get_documents_controller),
     course_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
     professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
 ):
@@ -75,32 +72,32 @@ async def create_new_lesson(
         commit=True,
     )
 
-    documents = []
-    if files:
-        if description_file and len(files) != len(description_file):
-            raise BadRequestException(message="Number of descriptions must match number of files.")
+    # documents = []
+    # if files:
+    #     if description_file and len(files) != len(description_file):
+    #         raise BadRequestException(message="Number of descriptions must match number of files.")
 
-        for file, desc in zip(files, description_file or []):
-            if file.filename:
-                content = await file.read()
+    #     for file, desc in zip(files, description_file or []):
+    #         if file.filename:
+    #             content = await file.read()
 
-                s3_key = await upload_to_s3(
-                    file_content=content,
-                    file_name=file.filename,
-                )
+    #             s3_key = await upload_to_s3(
+    #                 file_content=content,
+    #                 file_name=file.filename,
+    #             )
                 
-                document_data = {
-                    "name": file.filename,
-                    "type": file.content_type,
-                    "document_url": s3_key,
-                    "description": desc,
-                    "lesson_id": created_lesson.id,
-                }
-                created_document = await document_controller.documents_repository.create(
-                    document_data,
-                    commit=True,
-                )
-                documents.append(created_document)
+    #             document_data = {
+    #                 "name": file.filename,
+    #                 "type": file.content_type,
+    #                 "document_url": s3_key,
+    #                 "description": desc,
+    #                 "lesson_id": created_lesson.id,
+    #             }
+    #             created_document = await document_controller.documents_repository.create(
+    #                 document_data,
+    #                 commit=True,
+    #             )
+    #             documents.append(created_document)
 
     return Ok(
         data=CreateNewLessonResponse(
@@ -110,7 +107,7 @@ async def create_new_lesson(
             course_id=created_lesson.course_id,
             order=created_lesson.order,
             learning_outcomes=created_lesson.learning_outcomes,
-            documents=[DocumentResponse(**doc.__dict__) for doc in documents],
+            # documents=[DocumentResponse(**doc.__dict__) for doc in documents],
         ),
         message="Successfully created the lesson.",
     )
