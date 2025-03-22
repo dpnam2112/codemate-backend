@@ -3,10 +3,13 @@ from uuid import UUID
 from core.controller import BaseController
 from core.exceptions.base import NotFoundException
 from machine.models import Modules, RecommendDocuments, RecommendLessons, LearningPaths, RecommendQuizzes
+from machine.models.student import Student
 from machine.repositories import ModulesRepository, RecommendDocumentsRepository,RecommendLessonsRepository,LearningPathsRepository, RecommendQuizzesRepository
 from machine.schemas.responses.learning_path import ModuleDTO, RecommendedLessonDTO
 from core.db import Transactional
 from sqlalchemy.orm import selectinload
+from agents import ReadingMaterialAgent
+
 class LearningPathsController(BaseController[LearningPaths]):
     def __init__(
         self,
@@ -26,8 +29,6 @@ class LearningPathsController(BaseController[LearningPaths]):
         return lp
 
     async def get_recommended_lessons(self, user_id: UUID, course_id: UUID, expand: Optional[str] = None) -> list[RecommendedLessonDTO]:
-
-
         # Prepare options for relationship loading
         options_ = [
             selectinload(LearningPaths.recommend_lessons)
@@ -78,9 +79,41 @@ class RecommendLessonsController(BaseController[RecommendLessons]):
         self.recommend_lessons_repository = recommend_lessons_repository
 
 class ModulesController(BaseController[Modules]):
-    def __init__(self, modules_repository: ModulesRepository):
+    def __init__(
+        self,
+        reading_material_agent: ReadingMaterialAgent,
+        modules_repository: ModulesRepository
+    ):
         super().__init__(model_class=Modules, repository=modules_repository)
         self.modules_repository = modules_repository
+        self.reading_material_agent = reading_material_agent
+
+    async def get_reading_material(self, student: Student, module_id: UUID):
+        """
+        Generate reading material for the current module tailored for the student.
+        Return: reading material and questions concerning the reading material to evaluate the student.
+        """
+        module = await self.repository.first(
+            where_=[Modules.id == module_id]
+        )
+
+        if module is None: raise NotFoundException("Module is not found.")
+
+        module_description = f"""
+        ## Module description
+        Title: {module.title}
+        Learning Objectives: {module.objectives}
+        """
+
+        reading_material = await self.reading_material_agent.generate_reading_material(
+            module_description=module_description
+        )
+
+        return reading_material
+
+    async def get_quizzes(self, student: Student, module_id: UUID):
+        pass
+
 class RecommendQuizzesController(BaseController[RecommendQuizzes]):
     def __init__(self, recommend_quizzes_repository: RecommendQuizzesRepository):
         super().__init__(model_class=RecommendQuizzes, repository=recommend_quizzes_repository)
