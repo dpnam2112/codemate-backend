@@ -12,9 +12,10 @@ from .exercises import Exercises
 from .student_exercises import StudentExercises
 from .documents import Documents
 from .modules import Modules
-from .recommend_quizzes import RecommendQuizzes
+from .recommend_quizzes import RecommendQuizzes, RecommendQuizQuestion
 from .recommend_documents import RecommendDocuments
 from .recommend_lessons import RecommendLessons
 from .learning_paths import LearningPaths
 from .feedback import Feedback
 from .user_logins import UserLogins
+from .extracted_text import ExtractedText

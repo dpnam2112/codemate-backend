@@ -43,6 +43,8 @@ class InternalProvider:
     
     recommend_quizzes_repository = partial(repo.RecommendQuizzesRepository, model=modl.RecommendQuizzes)
     
+    recommend_quiz_question_repository = partial(repo.RecommendQuizQuestionRepository, model=modl.RecommendQuizQuestion)
+    
     recommend_documents_repository = partial(repo.RecommendDocumentsRepository, model=modl.RecommendDocuments)
     
     recommend_lessons_repository = partial(repo.RecommendLessonsRepository, model=modl.RecommendLessons)
@@ -52,6 +54,8 @@ class InternalProvider:
     feedback_repository = partial(repo.FeedbackRepository, model=modl.Feedback)
     
     user_logins_repository = partial(repo.UserLoginsRepository, model=modl.UserLogins)
+    
+    extracted_text_repository = partial(repo.ExtractedTextRepository, model=modl.ExtractedText)
     
     def get_student_controller(self, db_session=Depends(db_session_keeper.get_session)):
         return ctrl.StudentController(
@@ -107,6 +111,11 @@ class InternalProvider:
         return ctrl.RecommendQuizzesController(
             recommend_quizzes_repository=self.recommend_quizzes_repository(db_session=db_session)
         )
+    
+    def get_recommend_quiz_question_controller(self, db_session=Depends(db_session_keeper.get_session)):
+        return ctrl.RecommendQuizQuestionController(
+            recommend_quiz_question_repository=self.recommend_quiz_question_repository(db_session=db_session)
+        )
         
     def get_documents_controller(self, db_session=Depends(db_session_keeper.get_session)):
         return ctrl.DocumentsController(
@@ -147,4 +156,10 @@ class InternalProvider:
     def get_user_logins_controller(self, db_session=Depends(db_session_keeper.get_session)):
         return ctrl.UserLoginsController(
             user_logins_repository=self.user_logins_repository(db_session=db_session)
+        )
+
+
+    def get_extracted_text_controller(self, db_session=Depends(db_session_keeper.get_session)):
+        return ctrl.ExtractedTextController(
+            extracted_text_repository=self.extracted_text_repository(db_session=db_session)
         )

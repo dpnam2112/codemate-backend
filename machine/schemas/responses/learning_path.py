@@ -21,7 +21,12 @@ class RecommendedLessonDTO(BaseModel):
     progress: int = Field(..., description="Progress of the lesson, represented as a percentage.")
     explain: Optional[str] = Field(None, description="Explanation for why the lesson is recommended.")
     status: str = Field(..., description="Status of the recommended lesson.")
+    start_date: Optional[str] = Field(None, description="Start date of the recommended lesson.")
+    end_date: Optional[str] = Field(None, description="End date of the recommended lesson.")
+    duration_notes: Optional[str] = Field(None, description="Duration notes for the recommended lesson.")
+    bookmark: bool = Field(..., description="Whether the lesson is bookmarked.")
     modules: Optional[list[ModuleDTO]] = Field(None, description="Modules associated with the recommended lesson.")
+    lesson_title: Optional[str] = Field(None, description="Title of the associated lesson.")
 
     class Config:
         from_attributes = True

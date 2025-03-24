@@ -20,21 +20,4 @@ class DocumentRequest(BaseModel):
     type: str= Form(...)
     document_url: str= Form(...)
     file: Optional[UploadFile] = File(...)
-class CreateNewLessonRequest(BaseModel):
-    title: str = Form(...)
-    description: Optional[str] = Form(...)
-    order: int = Form(...)
-    learning_outcomes: Optional[list[str]] = Form(...)
-    documents: Optional[list[DocumentRequest]] = Form(...)
-    course_id: UUID = Form(...)
 
-class PutLessonRequest(BaseModel):
-    lesson_id: UUID
-    title: str
-    description: Optional[str]
-    order: int
-    learning_outcomes: Optional[list[str]]
-    
-class DeleteLessonRequest(BaseModel):
-    lesson_id: UUID
-    

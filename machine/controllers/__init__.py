@@ -1,14 +1,15 @@
 from .user import StudentController, ProfessorController, AdminController, UserLoginsController
 from .dashboard import StudentCoursesController, ActivitiesController
 from .courses import CoursesController, StudentExercisesController
-from .lessons import LessonsController, DocumentsController
+from .lessons import LessonsController, DocumentsController, ExtractedTextController
 from .exercises import ExercisesController
 from .recommend import (
     ModulesController,
     RecommendDocumentsController,
     RecommendLessonsController,
     LearningPathsController,
-    RecommendQuizzesController
+    RecommendQuizzesController,
+    RecommendQuizQuestionController
 )
 from .feedback import FeedbackController
 __all__ = [
@@ -23,10 +24,12 @@ __all__ = [
     "StudentExercisesController",
     "ModulesController",
     "RecommendQuizzesController",
+    "RecommendQuizQuestionController",
     "DocumentsController",
     "RecommendDocumentsController",
     "RecommendLessonsController",
     "LearningPathsController",
     "FeedbackController",
-    "UserLoginsController"
+    "UserLoginsController",
+    "ExtractedTextController"
 ]

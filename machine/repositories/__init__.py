@@ -5,9 +5,9 @@ from .courses import CoursesRepository
 from .lessons import LessonsRepository
 from .exercises import ExercisesRepository
 from .student_exercises import StudentExercisesRepository
-from .documents import DocumentsRepository
+from .documents import DocumentsRepository, ExtractedTextRepository
 from .modules import ModulesRepository
-from .recommend_quizzes import RecommendQuizzesRepository
+from .recommend_quizzes import RecommendQuizzesRepository,RecommendQuizQuestionRepository
 from .recommend_documents import RecommendDocumentsRepository
 from .learning_paths import LearningPathsRepository
 from .recommend_lessons import RecommendLessonsRepository
@@ -30,6 +30,8 @@ __all__ = [
     "LearningPathsRepository",
     "RecommendLessonsRepository",
     "RecommendQuizzesRepository",
+    "RecommendQuizQuestionRepository",
     "FeedbackRepository",
-    "UserLoginsRepository"
+    "UserLoginsRepository",
+    "ExtractedTextRepository",
 ]
