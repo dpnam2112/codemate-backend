@@ -12,7 +12,7 @@ from core.exceptions import NotFoundException, BadRequestException
 from fastapi.security import OAuth2PasswordBearer
 from core.utils.auth_utils import verify_token
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
-router = APIRouter(prefix="/modules", tags=["recomendation"])
+router = APIRouter(prefix="/modules", tags=["recommendation"])
 
 
 @router.get("/{moduleId}/quizzes", response_model=Ok[ModuleQuizResponse])
@@ -57,10 +57,12 @@ async def get_module_by_quiz(
             QuizListResponse(
                 id=quiz.id,
                 name=quiz.name,
+                description=quiz.description,
                 status=quiz.status,
-                difficulty=quiz.difficulty,
                 score=quiz.score,
-                
+                max_score=quiz.max_score,
+                time_limit=quiz.time_limit,
+                duration=quiz.duration,
             )
             for quiz in module.quizzes
         ],
@@ -75,6 +77,7 @@ async def get_quiz_exercise(
     modules_controller: ModulesController = Depends(InternalProvider().get_modules_controller),
     recommend_lessons_controller: RecommendLessonsController = Depends(InternalProvider().get_recommendlessons_controller),
     recommend_quizzes_controller: RecommendQuizzesController = Depends(InternalProvider().get_recommend_quizzes_controller),
+    recommend_quiz_question_controller: RecommendQuizQuestionController = Depends(InternalProvider().get_recommend_quiz_question_controller),
 ):
     payload = verify_token(token)
     user_id = payload.get("sub")
@@ -90,6 +93,10 @@ async def get_quiz_exercise(
     )
     if not quiz:
         raise NotFoundException(message="Quiz not found for the given ID in the specified module.")
+    
+    quiz_questions = await recommend_quiz_question_controller.recommend_quiz_question_repository.get_many(
+        where_=[RecommendQuizQuestion.quiz_id == quizId],
+    )
     module = await modules_controller.modules_repository.first(where_=[Modules.id == quiz.module_id])
     if not module:
         raise NotFoundException(message="Module not found for the given ID.")
@@ -101,31 +108,32 @@ async def get_quiz_exercise(
         raise NotFoundException(message="Recommend Lesson not found for the given ID.")
     if not recommend_lesson.learning_path.student_id == user.id:
         raise NotFoundException(message="You are not authorized to access this quiz.")
-    try:
-        questions = quiz.questions 
-        parsed_questions = [
-            QuizQuestionResponse(
-                id=UUID(question["id"]),
-                question=question["question"],
-                image=question.get("image"),
-                options=question["options"],
-                correct_answer=question["correct_answer"],
-                explanation=question["explanation"],
-                user_choice=question.get("user_choice"),
-            )
-            for question in questions
-        ]
-    except KeyError as e:
-        raise SystemError(message=f"Invalid data format in questions: {e}")
+    
+    # Use the quiz_questions from database instead of quiz.questions
+    questions_response = [
+        QuizQuestionResponse(
+            id=question.id,
+            question_text=question.question_text,
+            question_type=question.question_type,
+            options=question.options,
+            correct_answer=question.correct_answer,
+            difficulty=question.difficulty,
+            points=question.points,
+            explanation=question.explanation,
+            user_choice=question.user_choice,
+        ) for question in quiz_questions
+    ]
 
     response_data = QuizExerciseResponse(
         id=quiz.id,
         name=quiz.name,
+        description=quiz.description,
         status=quiz.status,
-        difficulty=quiz.difficulty,
         score=quiz.score,
         max_score=quiz.max_score,
-        questions=parsed_questions,
+        time_limit=quiz.time_limit,
+        duration=quiz.duration,
+        questions=questions_response,
     )
 
     return Ok(data=response_data, message="Successfully fetched quiz details.")
