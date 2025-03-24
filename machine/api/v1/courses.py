@@ -66,7 +66,7 @@ async def get_courses(
         ) for course in courses
     ]
     return Ok(data=course_list, message="Successfully fetched the course list.")
-@router.put("/{course_id}/image", response_model=Ok)
+@router.patch("/{course_id}/image", response_model=Ok)
 async def update_course_image(
     course_id: str,
     file: UploadFile = File(...),
