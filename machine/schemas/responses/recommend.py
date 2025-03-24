@@ -11,28 +11,36 @@ class DocumentResponse(BaseModel):
 
 class QuizQuestionResponse(BaseModel):
     id: UUID
-    question: str
+    question_text: str
+    question_type: str
     image: Optional[str] = None
     options: List[str] 
-    correct_answer: str 
+    correct_answer: List[str] 
+    difficulty: DifficultyLevel
+    points: float 
     explanation: str
     user_choice: Optional[int] = None
 
 class QuizExerciseResponse(BaseModel):
     id: UUID
     name: str
+    description: str
     status: StatusType
-    difficulty: DifficultyLevel
     score: Optional[float] = None  
     max_score: float
+    time_limit: Optional[int] = None
+    duration: Optional[int] = None
     questions: List[QuizQuestionResponse]
 
 class QuizListResponse(BaseModel):
     id: UUID
     name: str
+    description: str
     status: StatusType
-    difficulty: DifficultyLevel
-    score:  Optional[float] = None  
+    score:  Optional[float] = None
+    max_score: float
+    time_limit: Optional[int] = None
+    duration: Optional[int] = None  
    
 class ModuleResponse(BaseModel):
     module_id: UUID
