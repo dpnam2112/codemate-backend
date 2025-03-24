@@ -101,7 +101,7 @@ async def create_new_lesson(
 
     return Ok(
         data=CreateNewLessonResponse(
-            id=created_lesson.id,
+            lessonId=created_lesson.id,
             title=created_lesson.title,
             description=created_lesson.description,
             course_id=created_lesson.course_id,

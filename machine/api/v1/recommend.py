@@ -12,7 +12,7 @@ from fastapi.security import OAuth2PasswordBearer
 from core.exceptions import NotFoundException, BadRequestException
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
-router = APIRouter(prefix="/recommend_lessons", tags=["recomendation"])
+router = APIRouter(prefix="/recommend_lessons", tags=["recommendation"])
 
 
 @router.get("/{recommendLessonId}", response_model=Ok[RecommendLessonResponse])
