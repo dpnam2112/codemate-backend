@@ -258,7 +258,7 @@ async def login(
     "is_active": True,
     "is_email_verified": True,
     "role": role_response,
-    "avatar_url": user.avatar_url if user.avatar_url and "documents/" not in user.avatar_url else generate_presigned_url(user.avatar_url)
+    "avatar_url": user.avatar_url if user.avatar_url and "documents/" not in user.avatar_url else generate_presigned_url(user.avatar_url) if user.avatar_url else None
 }
 
     return Ok(
