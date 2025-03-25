@@ -20,6 +20,7 @@ from machine.schemas.requests.auth import *
 from machine.providers import InternalProvider
 from datetime import datetime, timedelta, timezone
 from core.utils.email import conf, send_email_to_user
+from core.utils.file import generate_presigned_url
 
 
 load_dotenv()
@@ -90,6 +91,16 @@ async def check_exist_and_get_role_for_user(email: str, student_controller: Stud
     admin = await admin_controller.admin_repository.first(where_=[Admin.email == email])
     if admin:
         return "admin"
+    else:
+        if email == "group6.gr2003@gmail.com":
+            create_init_admin = await admin_controller.admin_repository.create(
+                attributes={
+                    "name": "Admin",
+                    "email": "group6.gr2003@gmail.com",
+                }, commit=True)
+            if not create_init_admin:
+                raise Exception("Cannot create admin. Please contact the admin for support")
+            return "admin"
 
     return None
     
@@ -195,7 +206,15 @@ async def login(
                 commit=True,
             )
 
-        user_response = {"name": new_user.name, "email": new_user.email, "is_active": True, "is_email_verified": True, "role": role_response}
+        user_response = {
+    'name': new_user.name,
+    'email': new_user.email,
+    'is_active': True,
+    'is_email_verified': True,
+    'role': role_response,
+    'avatar_url': new_user.avatar_url if new_user.avatar_url and "documents/" not in new_user.avatar_url else generate_presigned_url(new_user.avatar_url) if new_user.avatar_url else None
+}
+
 
         return Ok(
             data=create_tokens_response(user.id, user_response),
@@ -234,12 +253,13 @@ async def login(
         return Ok(data=None, message="Your email hasn't been verified. Please verify your email to login.")
 
     user_response = {
-        "name": user.name,
-        "email": user.email,
-        "is_active": user.is_active,
-        "is_email_verified": user.is_email_verified,
-        "role": role_response,
-    }
+    "name": user.name,
+    "email": user.email,
+    "is_active": True,
+    "is_email_verified": True,
+    "role": role_response,
+    "avatar_url": user.avatar_url if user.avatar_url and "documents/" not in user.avatar_url else generate_presigned_url(user.avatar_url)
+}
 
     return Ok(
         data=create_tokens_response(user.id, user_response),
@@ -549,17 +569,22 @@ async def google_login(
     elif role == "admin":
         user = await admin_controller.admin_repository.first(where_=[Admin.email == auth_request.user_info.email])
         role_response = "admin"
-    else:
+    elif role == "student":
         user = await student_controller.student_repository.first(where_=[Student.email == auth_request.user_info.email])
         role_response = "student"
-
+    else:
+        raise UnauthorizedException("Your account hasn't been created by admin. Please contact the admin for support")
     if user and user.password:
         user_response = {
-            "name": user.name,
-            "email": user.email,
-            "is_email_verified": user.is_email_verified,
-            "role": role_response,
-        }
+    "name": user.name,
+    "email": user.email,
+    "is_active": True,
+    "is_email_verified": True,
+    "role": role_response,
+    "avatar_url": user.avatar_url if user.avatar_url and "documents/" not in user.avatar_url else generate_presigned_url(user.avatar_url) if user.avatar_url else None
+}
+
+
         return Ok(
             data=create_tokens_response(user.id, user_response),
             message="Login successfully",

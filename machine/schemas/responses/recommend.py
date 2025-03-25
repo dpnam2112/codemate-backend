@@ -65,4 +65,7 @@ class RecommendLessonResponse(BaseModel):
     recommend_content: str
     explain: str
     modules: List[ModuleResponse]
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    duration_notes: Optional[str] = None
     

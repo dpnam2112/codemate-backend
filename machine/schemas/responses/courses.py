@@ -90,7 +90,7 @@ class GetCourseDetailResponse(BaseModel):
     course_last_accessed: str
     completed_lessons: int
     time_spent:str 
-    assignments_done: int
+    percentage_done: int
     # lessons: List[GetLessonsResponse]
     
 class BookmarkLessonResponse(BaseModel):

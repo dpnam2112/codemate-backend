@@ -78,7 +78,7 @@ progress_tracking_test_student_course = [
         "last_accessed": "2025-01-15",
         "completed_lessons": 3,
         "time_spent": "10:15:45",
-        "assignments_done": 2,
+        "percentage_done": 2,
     },
     {
         "id": "2",
@@ -87,7 +87,7 @@ progress_tracking_test_student_course = [
         "last_accessed": "2025-01-15",
         "completed_lessons": 2,
         "time_spent": "08:30:22",
-        "assignments_done": 1,
+        "percentage_done": 1,
     },
     {
         "id": "3",
@@ -96,7 +96,7 @@ progress_tracking_test_student_course = [
         "last_accessed": "2025-01-15",
         "completed_lessons": 2,
         "time_spent": "08:30:22",
-        "assignments_done": 1,
+        "percentage_done": 1,
     },
     {
         "id": "4",
@@ -105,7 +105,7 @@ progress_tracking_test_student_course = [
         "last_accessed": "2025-01-15",
         "completed_lessons": 3,
         "time_spent": "10:15:45",
-        "assignments_done": 2,
+        "percentage_done": 2,
     },
 ]
 

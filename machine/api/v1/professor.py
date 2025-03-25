@@ -90,7 +90,7 @@ async def get_professor_courses(
                 professor_id=professor.id,
                 professor_name=professor.name,
                 professor_email=professor.email,
-                professor_avatar=professor.avatar_url,
+                professor_avatar=professor.avatar_url if professor.avatar_url else "",
             ),
             status=course.status,
             image_url=generate_presigned_url(course.image_url, expiration=604800) if course.image_url else "",
