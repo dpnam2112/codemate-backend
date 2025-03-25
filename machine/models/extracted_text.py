@@ -7,7 +7,7 @@ class ExtractedText(Base):
     __tablename__ = "extracted_texts"
     
     id = Column(UUID, primary_key=True, default=uuid4)
-    document_id = Column(UUID, ForeignKey("documents.id"), nullable=False)
+    document_id = Column(UUID, ForeignKey("documents.id", ondelete="CASCADE"), nullable=False)
     extracted_content = Column(Text, nullable=True)  # Lưu JSON text
     processing_status = Column(String, default="processing", nullable=False)  # "processing", "completed", "failed"
 
