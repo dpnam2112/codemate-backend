@@ -4,4 +4,4 @@ from uuid import UUID
 
 class QuizAnswerRequest(BaseModel):
     quizId: UUID
-    answers: Optional[List[int]] = None
+    answers: Optional[List[str]] = None
