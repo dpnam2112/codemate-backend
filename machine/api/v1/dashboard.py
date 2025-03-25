@@ -13,7 +13,7 @@ from fastapi.security import OAuth2PasswordBearer
 from fastapi import APIRouter, Depends, HTTPException
 from core.exceptions import NotFoundException, BadRequestException
 from core.utils.auth_utils import verify_token
-import datetime
+from datetime import datetime
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 

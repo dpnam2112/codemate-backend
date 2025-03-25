@@ -383,7 +383,7 @@ async def get_course_for_student(
         StudentCourses.last_accessed.label("last_accessed"),
         StudentCourses.completed_lessons.label("completed_lessons"),
         StudentCourses.time_spent.label("time_spent"),
-        StudentCourses.assignments_done.label("assignments_done"),
+        StudentCourses.percentage_done.label("percentage_done"),
     ]
 
     join_conditions = {
@@ -413,7 +413,7 @@ async def get_course_for_student(
             course_last_accessed="",
             completed_lessons=0,
             time_spent="",
-            assignments_done=0,
+            percentage_done=0,
         )
         return Ok(data=course_response, message="You are not enrolled in this course.")
     image_url = ""
@@ -435,7 +435,7 @@ async def get_course_for_student(
         course_last_accessed=str(get_course.last_accessed) if get_course.last_accessed else "",
         completed_lessons=get_course.completed_lessons or 0,
         time_spent=str(get_course.time_spent) if get_course.time_spent else "",
-        assignments_done=get_course.assignments_done or 0,
+        percentage_done=get_course.percentage_done or 0,
     )
 
     return Ok(data=course_response, message="Successfully fetched the course.")
@@ -687,7 +687,7 @@ async def create_course(
                 "last_accessed": str(create_student_course.last_accessed),
                 "completed_lessons": create_student_course.completed_lessons,
                 "time_spent": str(create_student_course.time_spent),
-                "assignments_done": create_student_course.assignments_done,
+                "percentage_done": create_student_course.percentage_done,
             }
             for create_student_course in create_student_courses
         ]
@@ -782,7 +782,7 @@ async def create_course(
                     "last_accessed": str(sc.last_accessed),
                     "completed_lessons": sc.completed_lessons,
                     "time_spent": str(sc.time_spent),
-                    "assignments_done": sc.assignments_done,
+                    "percentage_done": sc.percentage_done,
                 }
                 for sc in create_student_courses
             ]
