@@ -148,63 +148,96 @@ async def submit_quiz_answers(
     modules_controller: ModulesController = Depends(InternalProvider().get_modules_controller),
     recommend_lessons_controller: RecommendLessonsController = Depends(InternalProvider().get_recommendlessons_controller),
     recommend_quizzes_controller: RecommendQuizzesController = Depends(InternalProvider().get_recommend_quizzes_controller),
+    recommend_quiz_question_controller: RecommendQuizQuestionController = Depends(InternalProvider().get_recommend_quiz_question_controller),
 ):  
+    # Token verification
     payload = verify_token(token)
     user_id = payload.get("sub")
     if not user_id:
         raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    
+    # Verify student
     user = await student_controller.student_repository.first(where_=[Student.id == user_id])
     if not user:
-        raise NotFoundException(message="Only Student have the permission to submit this quiz.")
+        raise NotFoundException(message="Only Students have permission to submit this quiz.")
+    
+    # Fetch quiz
     quiz = await recommend_quizzes_controller.recommend_quizzes_repository.first(
         where_=[RecommendQuizzes.id == quizId],
+        relations=[RecommendQuizzes.questions]
     )
-
     if not quiz:
         raise NotFoundException(message="Quiz not found for the given ID.")
+    
+    # Fetch module and recommend lesson
     module = await modules_controller.modules_repository.first(where_=[Modules.id == quiz.module_id])
     if not module:
         raise NotFoundException(message="Module not found for the given ID.")
+    
     recommend_lesson = await recommend_lessons_controller.recommend_lessons_repository.first(
         where_=[RecommendLessons.id == module.recommend_lesson_id],
         relations=[RecommendLessons.learning_path],
     )
     if not recommend_lesson:
         raise NotFoundException(message="Recommend Lesson not found for the given ID.")
+    
+    # Check authorization
     if not recommend_lesson.learning_path.student_id == user.id:
         raise NotFoundException(message="You are not authorized to submit this quiz.")
     
-    if len(request.answers) != len(quiz.questions):
+    # Fetch quiz questions
+    quiz_questions = await recommend_quiz_question_controller.recommend_quiz_question_repository.get_many(
+        where_=[RecommendQuizQuestion.quiz_id == quizId],
+    )
+    
+    # Validate answers
+    if len(request.answers) != len(quiz_questions):
         raise BadRequestException(message="Number of answers does not match the number of questions.")
 
+    # Calculate quiz results
     correct_count = 0
     results = []
 
-    for question, user_choice in zip(quiz.questions, request.answers):
-        question['user_choice'] = user_choice
-        is_correct = question['options'][user_choice] == question['correct_answer']
+    for question, user_choice in zip(quiz_questions, request.answers):
+        # Check if the user's choice matches the correct answer
+        is_correct = user_choice in question.correct_answer
+
         if is_correct:
             correct_count += 1
 
+        # Update the user's choice for the question
+        await recommend_quiz_question_controller.recommend_quiz_question_repository.update(
+            where_=[RecommendQuizQuestion.id == question.id],
+            attributes={"user_choice": [user_choice]},
+            commit=True
+        )
+
         results.append(
             QuizQuestionResult(
-                question_id=question['id'],
+                question_id=question.id,
                 is_correct=is_correct,
             )
         )
-    quiz.score = (correct_count / len(quiz.questions)) * 100 
-    quiz.status = StatusType.completed
+
+    # Calculate score
+    score = (correct_count / len(quiz_questions)) * 100 
+
+    # Update quiz status and score
     await recommend_quizzes_controller.recommend_quizzes_repository.update(
-        where_=[recommend_quizzes.id == quizId],
-        attributes={"questions": quiz.questions, "score": quiz.score, "status": quiz.status},
+        where_=[RecommendQuizzes.id == quizId],
+        attributes={
+            "score": score, 
+            "status": StatusType.completed
+        },
         commit=True, 
     )
 
+    # Prepare response
     response = QuizScoreResponse(
         quiz_id=quizId,
-        total_questions=len(quiz.questions),
+        total_questions=len(quiz_questions),
         correct_answers=correct_count,
-        score=quiz.score,
+        score=score,
         results=results,
     )
 
