@@ -26,7 +26,7 @@ class StudentCoursesListResponse(BaseModel):
     last_accessed: str
     completed_lessons: int
     time_spent: str
-    assignments_done: int
+    percentage_done: int
 class CreateCourseResponse(BaseModel):
     course_id: UUID
     courseID: str

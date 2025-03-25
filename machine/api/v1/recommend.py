@@ -58,6 +58,9 @@ async def recommend_lesson(
         status=recommend_lesson.status,
         recommend_content=recommend_lesson.recommended_content,
         explain=recommend_lesson.explain,
+        start_date=recommend_lesson.start_date,
+        end_date=recommend_lesson.end_date,
+        duration_notes=recommend_lesson.duration_notes,
         modules=[
             ModuleResponse(
                 module_id=module.id,
