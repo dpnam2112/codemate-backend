@@ -88,9 +88,6 @@ async def generate_learning_path(
             )
             if extracted and extracted.extracted_content:
                 documents_data.append({
-                    "name": document.name,
-                    "type": document.type,
-                    "description": document.description,
                     "extracted_content": extracted.extracted_content
                 })
         
@@ -121,412 +118,195 @@ async def generate_learning_path(
     issues_summary = student_course.issues_summary if student_course and student_course.issues_summary else None
     
     # Define prompt generator based on whether we're regenerating or creating anew
-    if existing_learning_path and issues_summary:
-        old_response = existing_learning_path.llm_response
-        version = existing_learning_path.version + 1
-        
-        old_recommend_lessons = await learning_path_controller.get_recommended_lessons_by_learning_path_id(existing_learning_path.id)
-        
-        def generate_chunk_prompt(lessons_chunk, chunk_index, total_chunks):
-            """
-            Generate a prompt for regenerating the learning path based on old response and issues.
-            """
-            if isinstance(old_response, str):
-                old_response_json = json.loads(old_response)
-            else:
-                old_response_json = old_response
-                
-            if isinstance(issues_summary, str):
-                issues_summary_json = json.loads(issues_summary)
-            else:
-                issues_summary_json = issues_summary
-                
-            chunk_context = f"""
-            # Learning Path Regeneration Task - Chunk {chunk_index + 1} of {total_chunks} (Version {version})
-            
-            ## Chunking Context
-            You are regenerating a personalized learning path based on a previous version and identified issues.
-            This is chunk {chunk_index + 1} of {total_chunks}, containing {len(lessons_chunk)} lessons.
-            Focus only on the lessons provided in this chunk when making recommendations.
-            """
-            
-            old_path_context = f"""
-            ## Previous Learning Path (Version {version - 1})
-            Below is the previous learning path response:
-            {json.dumps(old_response_json, indent=2)}
-            
-            This learning path was used as the basis for the student's progress, but issues were identified that need to be addressed.
-            """
-            
-            issues_context = f"""
-            ## Issues Summary (Last Updated: {issues_summary_json.get('last_updated', 'Unknown')})
-            The student encountered the following issues in the previous learning path (Total Issues: {issues_summary_json.get('total_issues_count', 0)}):
-            ### Common Issues
-            {json.dumps(issues_summary_json.get('common_issues', []), indent=2)}
-            
-            ### Issue Trends
-            {json.dumps(issues_summary_json.get('issue_trends', {}), indent=2)}
-            
-            These issues indicate areas where the student struggled, such as concept misunderstandings or quiz failures.
-            """
-            
-            lessons_chunk_str = json.dumps(lessons_chunk, indent=2)
-            
-            prompt = f"""
-            {chunk_context}
-            
-            {old_path_context}
-            
-            {issues_context}
-            
-            ## Student Information
-            - Student Name: {student.name}
-            - Student ID: {student.mssv}
-            - Course: {course.name} (ID: {course.courseID})
-            - Professor: {professor.fullname}
-            - Student's Learning Goal: "{request.goal}"
-            
-            ## Course Information
-            - Start Date: {course.start_date.isoformat() if course.start_date else start_date.isoformat()}
-            - End Date: {course.end_date.isoformat() if course.end_date else end_date.isoformat()}
-            - Learning Outcomes: {json.dumps(course.learning_outcomes if course.learning_outcomes else [])}
-            
-            ## Available Lessons in This Chunk
-            This chunk contains {len(lessons_chunk)} lessons:
-            {lessons_chunk_str}
-            
-            Old information of recommending lessons and modules:
-            {old_recommend_lessons}
-            
-            ## Task Requirements
-            Regenerate the learning path for this chunk by:
-            1. Analyzing the previous learning path and the issues summary.
-            2. Recommending lessons from this chunk that address the identified issues (e.g., revisit lessons tied to "related_lessons" or "related_modules", they contains ids of old recommend lessons and old modules).
-            3. Adjusting the content focus to correct misunderstandings or reinforce weak areas (e.g., UML diagrams, agile methodologies).
-            4. Providing new or updated modules to target the most frequent or increasing issues.
 
-            For each recommended lesson, provide:
-            1. Recommended content (tailored to address specific issues)
-            2. An explanation of why this content helps resolve the issues and supports the student's goal
-            3. 2-3 modules per lesson with detailed breakdowns
-            
-            ## Timeline Estimation Task (REQUIRED)
-            You MUST estimate and include a realistic start date, end date, and duration notes for each recommended lesson.
-            Base your estimation on:
-            1. The complexity of the recommended lessons
-            2. The student's past struggles (e.g., frequency of issues)
-            3. The overall course timeline ({course.start_date.isoformat() if course.start_date else start_date.isoformat()} to {course.end_date.isoformat() if course.end_date else end_date.isoformat()})
-            4. The number and complexity of recommended lessons
-            
-            ## Reading Material Requirements
-            For the "reading_material" field in each module:
-            1. The theoryContent section must be comprehensive and detailed, with:
-            - At least 3 paragraphs in each description section
-            - At least 2 examples for each theory content section where applicable
-            - codeSnippet must contain actual illustrative code when relevant
-            2. All references must be:
-            - Valid and reliable sources
-            - Directly relevant to the specific module topic
-            - Include a mix of academic and practical resources where appropriate
-            - At least 3 references per module
-            3. The practical guide section should include:
-            - At least 4-5 detailed steps for each guide
-            - At least 3 common errors with explanations
-            
-            ## Output Format
-            Your response MUST be in the following JSON format and MUST include all fields shown below:
-            {{
-                "learning_path_start_date": "{start_date.isoformat()}",
-                "learning_path_end_date": "{end_date.isoformat()}",
-                "learning_path_objective": "Updated objective based on the student's goal of '{request.goal}' and resolution of identified issues",
-                "learning_path_progress": 0,
-                "student_id": "{student.mssv}",
-                "course_id": "{course.courseID}",
-                "recommend_lessons": [
-                    {{
-                        "lesson_id": "Lesson ID",
-                        "recommended_content": "Detailed explanation of what to focus on in this lesson to address specific issues...",
-                        "explain": "Explanation of why this content is important for resolving issues and achieving the student's goal...",
-                        "status": "new",
-                        "progress": 0,
-                        "bookmark": false,
-                        "start_date": "YYYY-MM-DD",
-                        "end_date": "YYYY-MM-DD",
-                        "duration_notes": "Brief explanation of how this timeline was determined based on lesson complexity and past issues",
-                        "number_of_modules": 2
-                    }}
-                ],
-                "modules": [
-                    {{
-                        "title": "Module Title",
-                        "objectives": ["Learning objective 1", "Learning objective 2", "Learning objective 3"],
-                        "reading_material": {{
-                            "id": "Unique ID for this reading material",
-                            "name": "Name of the reading material",
-                            "theoryContent": [
-                                {{
-                                    "title": "Section title",
-                                    "prerequisites": ["Prerequisite 1", "Prerequisite 2"],
-                                    "description": [
-                                        "Detailed description paragraph 1 - must be substantial",
-                                        "Detailed description paragraph 2 - must be substantial",
-                                        "Detailed description paragraph 3 - must be substantial"
-                                    ],
-                                    "examples": [
-                                        {{
-                                            "title": "Example 1 title",
-                                            "codeSnippet": "// Actual illustrative code example when appropriate\\nfunction example() {{\\n  return 'This is sample code';\\n}}",
-                                            "explanation": "Detailed explanation of how this code example illustrates the concept"
-                                        }},
-                                        {{
-                                            "title": "Example 2 title",
-                                            "codeSnippet": null,
-                                            "explanation": "Detailed explanation of this conceptual example"
-                                        }}
-                                    ]
-                                }}
-                            ],
-                            "practicalGuide": [
-                                {{
-                                    "title": "Guide title",
-                                    "steps": [
-                                        "Detailed step 1 with explanation",
-                                        "Detailed step 2 with explanation",
-                                        "Detailed step 3 with explanation",
-                                        "Detailed step 4 with explanation",
-                                        "Detailed step 5 with explanation"
-                                    ],
-                                    "commonErrors": [
-                                        "Common error 1 with prevention/solution advice",
-                                        "Common error 2 with prevention/solution advice",
-                                        "Common error 3 with prevention/solution advice"
-                                    ]
-                                }}
-                            ],
-                            "references": [
-                                {{
-                                    "title": "Academic reference title",
-                                    "link": "https://example.com/academic-reference",
-                                    "description": "Detailed description of this academic reference and its relevance"
-                                }},
-                                {{
-                                    "title": "Industry reference title",
-                                    "link": "https://example.com/industry-reference",
-                                    "description": "Detailed description of this industry reference and its relevance"
-                                }},
-                                {{
-                                    "title": "Practical reference title",
-                                    "link": "https://example.com/practical-reference",
-                                    "description": "Detailed description of this practical reference and its relevance"
-                                }}
-                            ],
-                            "summaryAndReview": {{
-                                "keyPoints": ["Key point 1", "Key point 2", "Key point 3", "Key point 4", "Key point 5"],
-                                "reviewQuestions": [
+    def generate_chunk_prompt(lessons_chunk, chunk_index, total_chunks, context):
+        """
+        Generate a prompt for a new learning path with context.
+        """
+        chunk_context = f"""
+        # Learning Path Generation Task - Chunk {chunk_index + 1} of {total_chunks}
+        
+        ## Chunking Context
+        You are analyzing a subset of lessons ({len(lessons_chunk)} out of total lessons) for a course.
+        This is chunk {chunk_index + 1} of {total_chunks} being processed separately due to size limitations.
+        Focus only on the lessons provided in this chunk when making recommendations, but ensure your recommendations align with the overall course timeline and the student's goal timeline.
+        """
+        
+        prompt = f"""
+        {chunk_context}
+        
+        ## Student Information
+        - Student Name: {student.name}
+        - Student ID: {student.mssv}
+        - Course: {course.name} (ID: {course.courseID})
+        - Professor: {professor.fullname}
+        - Student's Learning Goal: "{context['goal']}"
+        
+        ## Course Information
+        - Start Date: {context['course_start_date']}
+        - End Date: {context['course_end_date']}
+        - Learning Outcomes: {json.dumps(course.learning_outcomes if course.learning_outcomes else [])}
+        
+        ## Available Lessons in This Chunk
+        This chunk contains {len(lessons_chunk)} lessons:
+        {json.dumps(lessons_chunk, indent=2)}
+        
+        ## Task Requirements
+        Analyze ONLY the lessons in this chunk and recommend those that will help the student achieve their stated goal ("{context['goal']}"). The goal may be short-term (e.g., "Master queue and stack in 2 weeks") or long-term (e.g., "Master Python and score 7+ by course end"). Your recommendations must:
+
+        1. **Adapt to Goal Timeline:**
+            - Identify the timeline implied by the student's goal (short-term or long-term).
+            - If short-term, limit the number of recommended lessons to fit within the goal's timeline.
+            - If long-term, ensure recommendations cover the full scope of the goal within the course timeline ({context['course_start_date']} to {context['course_end_date']}).
+            - Only recommend lessons relevant to the goal's focus.
+
+        2. **Ensure Sequential Order:**
+            - Assign an "order" to each recommended lesson based on its importance and relevance to the goal.
+            - Ensure "start_date" and "end_date" of recommended lessons are sequential:
+                - The "end_date" of one lesson must be on or before the "start_date" of the next lesson in the sequence.
+                - The sequence must fit within the goal timeline (if short-term) or course timeline (if long-term).
+
+        3. **Provide Detailed Recommendations:**
+            - For each recommended lesson:
+                - "recommended_content": Explain what to focus on in this lesson to achieve the goal.
+                - "explain": Justify why this lesson is critical for the goal.
+                - Include 2-3 modules per lesson to break down key concepts.
+
+        ## Timeline Estimation Task (REQUIRED)
+        Estimate a realistic "start_date", "end_date", and "duration_notes" for each recommended lesson based on:
+        1. The complexity of the lesson content.
+        2. The student's goal timeline (short-term or long-term).
+        3. The overall course timeline ({context['course_start_date']} to {context['course_end_date']}).
+        4. The number and complexity of recommended lessons in this chunk.
+        5. Sequential dependency: Ensure each lesson’s timeline follows the previous one’s "end_date".
+
+        ## Reading Material Requirements
+        For the "reading_material" field in each module:
+        1. "theoryContent" must be comprehensive:
+            - At least 3 detailed paragraphs in "description".
+            - At least 2 examples with "codeSnippet" (if applicable) and explanations.
+        2. "references" must include:
+            - At least 3 valid, relevant sources (academic + practical mix).
+        3. "practicalGuide" must include:
+            - 4-5 detailed steps.
+            - At least 3 common errors with solutions.
+
+        ## Output Format
+        Your response MUST be in the following JSON format and MUST include all fields shown below:
+        {{
+            "learning_path_start_date": "{start_date.isoformat()}",
+            "learning_path_end_date": "{end_date.isoformat()}",
+            "learning_path_objective": "Description of the learning path objective based on '{request.goal}'",
+            "learning_path_progress": 0,
+            "student_id": "{student.mssv}",
+            "course_id": "{course.courseID}",
+            "recommend_lessons": [
+                {{
+                    "lesson_id": "Lesson ID",
+                    "recommended_content": "What to focus on in this lesson...",
+                    "explain": "Why this lesson supports the goal...",
+                    "status": "new",
+                    "progress": 0,
+                    "bookmark": false,
+                    "start_date": "YYYY-MM-DD",
+                    "end_date": "YYYY-MM-DD",
+                    "duration_notes": "How timeline was determined based on complexity and goal...",
+                    "number_of_modules": 2,
+                    "order": "Integer (1, 2, 3...) based on importance/relevance to goal"
+                }}
+            ],
+            "modules": [
+                {{
+                    "title": "Module Title",
+                    "objectives": ["Objective 1", "Objective 2", "Objective 3"],
+                    "reading_material": {{
+                        "id": "Unique ID",
+                        "name": "Reading material name",
+                        "theoryContent": [
+                            {{
+                                "title": "Section title",
+                                "prerequisites": ["Prerequisite 1", "Prerequisite 2"],
+                                "description": [
+                                    "Paragraph 1 - detailed",
+                                    "Paragraph 2 - detailed",
+                                    "Paragraph 3 - detailed"
+                                ],
+                                "examples": [
                                     {{
-                                        "id": "Question ID 1",
-                                        "question": "Challenging review question 1",
-                                        "answer": "Comprehensive answer to review question 1",
-                                        "maxscore": 10,
-                                        "score": null,
-                                        "inputUser": null
+                                        "title": "Example 1",
+                                        "codeSnippet": "// Code example\\nfunction example() {{ return 'sample'; }}",
+                                        "explanation": "How this illustrates the concept"
                                     }},
                                     {{
-                                        "id": "Question ID 2",
-                                        "question": "Challenging review question 2",
-                                        "answer": "Comprehensive answer to review question 2",
-                                        "maxscore": 10,
-                                        "score": null,
-                                        "inputUser": null
+                                        "title": "Example 2",
+                                        "codeSnippet": null,
+                                        "explanation": "Conceptual explanation"
                                     }}
-                                ],
-                                "quizLink": "https://example.com/quiz"
+                                ]
                             }}
-                        }}
-                    }}
-                ]
-            }}
-            """
-            return prompt
-    else:
-        def generate_chunk_prompt(lessons_chunk, chunk_index, total_chunks):
-            """
-            Generate a prompt for a new learning path.
-            """
-            chunk_context = f"""
-            # Learning Path Generation Task - Chunk {chunk_index + 1} of {total_chunks}
-            
-            ## Chunking Context
-            You are analyzing a subset of lessons ({len(lessons_chunk)} out of total lessons) for a course.
-            This is chunk {chunk_index + 1} of {total_chunks} being processed separately due to size limitations.
-            Focus only on the lessons provided in this chunk when making recommendations.
-            """
-            
-            prompt = f"""
-            {chunk_context}
-            
-            ## Student Information
-            - Student Name: {student.name}
-            - Student ID: {student.mssv}
-            - Course: {course.name} (ID: {course.courseID})
-            - Professor: {professor.fullname}
-            - Student's Learning Goal: "{request.goal}"
-            
-            ## Course Information
-            - Start Date: {course.start_date.isoformat() if course.start_date else start_date.isoformat()}
-            - End Date: {course.end_date.isoformat() if course.end_date else end_date.isoformat()}
-            - Learning Outcomes: {json.dumps(course.learning_outcomes if course.learning_outcomes else [])}
-            
-            ## Available Lessons in This Chunk
-            This chunk contains {len(lessons_chunk)} lessons:
-            {json.dumps(lessons_chunk, indent=2)}
-            
-            ## Task Requirements
-            Please analyze ONLY these lessons and recommend any that will help the student achieve their stated goal.
-            For each recommended lesson, provide:
-            1. Recommended content that explains what to focus on
-            2. An explanation of why this content is important for the student's goal
-            3. 2-3 modules per lesson that break down the key concepts to master
-            
-            ## Timeline Estimation Task (REQUIRED)
-            You MUST estimate and include a realistic start date, end date, and duration notes for each recommended lesson.
-            Base your estimation on:
-            1. The complexity of the recommended lessons
-            2. The student's learning goal
-            3. The overall course timeline ({course.start_date.isoformat() if course.start_date else start_date.isoformat()} to {course.end_date.isoformat() if course.end_date else end_date.isoformat()})
-            4. The number and complexity of recommended lessons
-            
-            ## Reading Material Requirements
-            For the "reading_material" field in each module:
-            1. The theoryContent section must be comprehensive and detailed, with:
-            - At least 3 paragraphs in each description section
-            - At least 2 examples for each theory content section where applicable
-            - codeSnippet must contain actual illustrative code when relevant
-            2. All references must be:
-            - Valid and reliable sources
-            - Directly relevant to the specific module topic
-            - Include a mix of academic and practical resources where appropriate
-            - At least 3 references per module
-            3. The practical guide section should include:
-            - At least 4-5 detailed steps for each guide
-            - At least 3 common errors with explanations
-            
-            ## Output Format
-            Your response MUST be in the following JSON format and MUST include all fields shown below:
-            {{
-                "learning_path_start_date": "{start_date.isoformat()}",
-                "learning_path_end_date": "{end_date.isoformat()}",
-                "learning_path_objective": "Brief description of the learning path objective based on the student's goal of '{request.goal}'",
-                "learning_path_progress": 0,
-                "student_id": "{student.mssv}",
-                "course_id": "{course.courseID}",
-                "recommend_lessons": [
-                    {{
-                        "lesson_id": "Lesson ID",
-                        "recommended_content": "Detailed explanation of what to focus on in this lesson...",
-                        "explain": "Explanation of why this content is important for the student's goal...",
-                        "status": "new",
-                        "progress": 0,
-                        "bookmark": false,
-                        "start_date": "YYYY-MM-DD",
-                        "end_date": "YYYY-MM-DD",
-                        "duration_notes": "Brief explanation of how this timeline was determined based on lesson complexity",
-                        "number_of_modules": 2
-                    }}
-                ],
-                "modules": [
-                    {{
-                        "title": "Module Title",
-                        "objectives": ["Learning objective 1", "Learning objective 2", "Learning objective 3"],
-                        "reading_material": {{
-                            "id": "Unique ID for this reading material",
-                            "name": "Name of the reading material",
-                            "theoryContent": [
+                        ],
+                        "practicalGuide": [
+                            {{
+                                "title": "Guide title",
+                                "steps": [
+                                    "Step 1 - detailed",
+                                    "Step 2 - detailed",
+                                    "Step 3 - detailed",
+                                    "Step 4 - detailed",
+                                    "Step 5 - detailed"
+                                ],
+                                "commonErrors": [
+                                    "Error 1 - solution",
+                                    "Error 2 - solution",
+                                    "Error 3 - solution"
+                                ]
+                            }}
+                        ],
+                        "references": [
+                            {{
+                                "title": "Academic reference",
+                                "link": "https://example.com/academic",
+                                "description": "Relevance to topic"
+                            }},
+                            {{
+                                "title": "Industry reference",
+                                "link": "https://example.com/industry",
+                                "description": "Practical relevance"
+                            }},
+                            {{
+                                "title": "Practical reference",
+                                "link": "https://example.com/practical",
+                                "description": "Hands-on relevance"
+                            }}
+                        ],
+                        "summaryAndReview": {{
+                            "keyPoints": ["Point 1", "Point 2", "Point 3", "Point 4", "Point 5"],
+                            "reviewQuestions": [
                                 {{
-                                    "title": "Section title",
-                                    "prerequisites": ["Prerequisite 1", "Prerequisite 2"],
-                                    "description": [
-                                        "Detailed description paragraph 1 - must be substantial",
-                                        "Detailed description paragraph 2 - must be substantial",
-                                        "Detailed description paragraph 3 - must be substantial"
-                                    ],
-                                    "examples": [
-                                        {{
-                                            "title": "Example 1 title",
-                                            "codeSnippet": "// Actual illustrative code example when appropriate\\nfunction example() {{\\n  return 'This is sample code';\\n}}",
-                                            "explanation": "Detailed explanation of how this code example illustrates the concept"
-                                        }},
-                                        {{
-                                            "title": "Example 2 title",
-                                            "codeSnippet": null,
-                                            "explanation": "Detailed explanation of this conceptual example"
-                                        }}
-                                    ]
-                                }}
-                            ],
-                            "practicalGuide": [
-                                {{
-                                    "title": "Guide title",
-                                    "steps": [
-                                        "Detailed step 1 with explanation",
-                                        "Detailed step 2 with explanation",
-                                        "Detailed step 3 with explanation",
-                                        "Detailed step 4 with explanation",
-                                        "Detailed step 5 with explanation"
-                                    ],
-                                    "commonErrors": [
-                                        "Common error 1 with prevention/solution advice",
-                                        "Common error 2 with prevention/solution advice",
-                                        "Common error 3 with prevention/solution advice"
-                                    ]
-                                }}
-                            ],
-                            "references": [
-                                {{
-                                    "title": "Academic reference title",
-                                    "link": "https://example.com/academic-reference",
-                                    "description": "Detailed description of this academic reference and its relevance"
+                                    "id": "Q1",
+                                    "question": "Review question 1",
+                                    "answer": "Answer 1",
+                                    "maxscore": 10,
+                                    "score": null,
+                                    "inputUser": null
                                 }},
                                 {{
-                                    "title": "Industry reference title",
-                                    "link": "https://example.com/industry-reference",
-                                    "description": "Detailed description of this industry reference and its relevance"
-                                }},
-                                {{
-                                    "title": "Practical reference title",
-                                    "link": "https://example.com/practical-reference",
-                                    "description": "Detailed description of this practical reference and its relevance"
+                                    "id": "Q2",
+                                    "question": "Review question 2",
+                                    "answer": "Answer 2",
+                                    "maxscore": 10,
+                                    "score": null,
+                                    "inputUser": null
                                 }}
-                            ],
-                            "summaryAndReview": {{
-                                "keyPoints": ["Key point 1", "Key point 2", "Key point 3", "Key point 4", "Key point 5"],
-                                "reviewQuestions": [
-                                    {{
-                                        "id": "Question ID 1",
-                                        "question": "Challenging review question 1",
-                                        "answer": "Comprehensive answer to review question 1",
-                                        "maxscore": 10,
-                                        "score": null,
-                                        "inputUser": null
-                                    }},
-                                    {{
-                                        "id": "Question ID 2",
-                                        "question": "Challenging review question 2",
-                                        "answer": "Comprehensive answer to review question 2",
-                                        "maxscore": 10,
-                                        "score": null,
-                                        "inputUser": null
-                                    }}
-                                ],
-                                "quizLink": "https://example.com/quiz"
-                            }}
+                            ]
                         }}
                     }}
-                ]
-            }}
-            """
-            return prompt
-    
+                }}
+            ]
+        }}
+"""
+        return prompt
+
     # Define function to extract results from response
     def extract_results(response):
         """
@@ -570,7 +350,6 @@ async def generate_learning_path(
             "modules": response_json["modules"]
         }
     
-    # Initialize chunking manager
     chunking_manager = ChunkingManager(
         provider="gemini",
         gemini_model_name="gemini-2.0-flash-lite",
@@ -578,14 +357,21 @@ async def generate_learning_path(
         temperature=0.7,
         max_output_tokens=8000
     )
-    
-    # Process data in chunks
+
+    context = {
+        "goal": request.goal,
+        "course_start_date": course.start_date.isoformat() if course.start_date else start_date.isoformat(),
+        "course_end_date": course.end_date.isoformat() if course.end_date else end_date.isoformat()
+    }
+
     chunked_results = chunking_manager.process_in_chunks(
         data=lessons_data,
-        prompt_generator=generate_chunk_prompt,
+        prompt_generator=lambda chunk, idx, total, ctx: generate_chunk_prompt(chunk, idx, total, ctx),
         result_extractor=extract_results,
+        result_combiner=combine_learning_path_results,
+        context=context,
         token_estimation_field="documents",
-        system_message="You are an expert educational AI assistant that creates personalized learning paths for students."
+        system_message="You are an expert educational AI assistant that creates personalized learning paths."
     )
     
     if chunked_results:
@@ -596,8 +382,6 @@ async def generate_learning_path(
             except json.JSONDecodeError:
                 raise ApplicationException(message="Failed to parse chunked_results as JSON.")
         
-        version = issues_summary.get("learning_path_version", 1) + 1 if existing_learning_path and issues_summary else 1
-        
         learning_path_attributes = {
             "start_date": datetime.strptime(chunked_results["learning_path_start_date"], '%Y-%m-%d').date(),
             "end_date": datetime.strptime(chunked_results["learning_path_end_date"], '%Y-%m-%d').date(),
@@ -605,7 +389,6 @@ async def generate_learning_path(
             "student_id": str(student.id),
             "course_id": str(request.course_id),
             "llm_response": chunked_results,
-            "version": version
         }
         
         add_learning_path = await learning_path_controller.learning_paths_repository.create(
@@ -628,7 +411,8 @@ async def generate_learning_path(
                     "explain": recommend_lesson["explain"],
                     "start_date": recommend_lesson["start_date"],
                     "end_date": recommend_lesson["end_date"],
-                    "duration_notes": recommend_lesson["duration_notes"]
+                    "duration_notes": recommend_lesson["duration_notes"],
+                    "order": recommend_lesson["order"],
                 }
                 recommend_lesson_attributes_list.append(recommend_lesson_attributes)
             
@@ -771,6 +555,43 @@ def assign_recommend_lesson_id(modules, recommend_lessons, created_recommend_les
     return modules
 
 
+def combine_learning_path_results(chunk_results: List[Dict]) -> Dict:
+    combined_result = {
+        "learning_path_start_date": None,
+        "learning_path_end_date": None,
+        "learning_path_objective": None,
+        "learning_path_progress": 0,
+        "student_id": None,
+        "course_id": None,
+        "recommend_lessons": [],
+        "modules": []
+    }
+    
+    for i, result in enumerate(chunk_results):
+        if i == 0:
+            for key in ["learning_path_start_date", "learning_path_end_date",
+                       "learning_path_objective", "student_id", "course_id"]:
+                combined_result[key] = result[key]
+        
+        combined_result["recommend_lessons"].extend(result["recommend_lessons"])
+        combined_result["modules"].extend(result["modules"])
+    
+    combined_result["recommend_lessons"].sort(key=lambda x: x["order"])
+    
+    # Ensure consistent date type (use datetime.date)
+    current_date = datetime.strptime(combined_result["learning_path_start_date"], '%Y-%m-%d').date()
+    for lesson in combined_result["recommend_lessons"]:
+        lesson_start = datetime.strptime(lesson["start_date"], "%Y-%m-%d").date()
+        lesson_end = datetime.strptime(lesson["end_date"], "%Y-%m-%d").date()
+        lesson["start_date"] = lesson_start.strftime("%Y-%m-%d")
+        lesson["end_date"] = lesson_end.strftime("%Y-%m-%d")
+        current_date = lesson_end + timedelta(days=1)
+    
+    end_date = datetime.strptime(combined_result["learning_path_end_date"], '%Y-%m-%d').date()
+    if current_date > end_date:
+        combined_result["learning_path_end_date"] = current_date.strftime("%Y-%m-%d")
+    
+    return combined_result
 @router.get("/generate-student-goals/{course_id}")
 async def generate_student_goals(
     course_id: UUID,
@@ -1226,89 +1047,231 @@ async def generate_quiz(
         print(f"Error generating quiz: {str(e)}")
         raise ApplicationException(message=f"Failed to generate quiz: {str(e)}")
     
-    """
-    {
-  "learning_path_version": 1,
-  "common_issues": [
-    {
-      "type": "concept_misunderstanding",
-      "description": "Confusion between different UML diagram types and their purposes",
-      "frequency": 15,
-      "related_lessons": [
-        433e5361-96b1-44b6-9c29-b8f396992e89
-      ],
-      "related_modules": [
-        4ad673ec-edd3-4892-8280-f5a294f21043,
-        b1a828c6-87bf-4fe3-816c-9dbe66cd5951,
-        c3e0e056-34b6-4287-b6dc-c43c9c5808c6
-      ],
-      "last_occurrence": "2025-03-20T14:25:00Z"
-    },
-    {
-      "type": "quiz_failure",
-      "description": "Difficulty distinguishing between functional and non-functional requirements",
-      "frequency": 12,
-      "related_lessons": [
-        433e5361-96b1-44b6-9c29-b8f396992e89
-      ],
-      "related_modules": [
-        4ad673ec-edd3-4892-8280-f5a294f21043
-      ],
-      "last_occurrence": "2025-03-21T09:15:00Z"
-    },
-    {
-      "type": "concept_misunderstanding",
-      "description": "Misapplication of agile methodologies in project planning phases",
-      "frequency": 10,
-      "related_lessons": [
-        91cc0e05-d1b6-4d72-a9bb-5f3ed272b875,
-        433e5361-96b1-44b6-9c29-b8f396992e89
-      ],
-      "related_modules": [
-        b1a828c6-87bf-4fe3-816c-9dbe66cd5951,
-        550d927d-3440-422d-83f5-7d1c7e86f446
-      ],
-      "last_occurrence": "2025-03-19T11:30:00Z"
-    },
-    {
-      "type": "quiz_failure",
-      "description": "Poor understanding of stakeholder analysis techniques",
-      "frequency": 8,
-      "related_lessons": [
-        91cc0e05-d1b6-4d72-a9bb-5f3ed272b875, 
-        2be38d7c-6385-40e9-aca4-1b1fc57a337d
-      ],
-      "related_modules": [
-        d6ee2df2-0414-43a1-801d-f56c9483facd
-      ],
-      "last_occurrence": "2025-03-22T10:45:00Z"
-    },
-    {
-      "type": "concept_misunderstanding",
-      "description": "Confusion about when to use different system modeling approaches",
-      "frequency": 7,
-      "related_lessons": [
-        e90f6847-a3f4-4056-88c7-e1f0813d7f59,
-        03845bc3-96c0-4a26-82bc-331c4a7b8e3c
-      ],
-      "related_modules": [
-        b117645e-34c6-4829-a4ea-5d76d45179dc,
-        01d22930-8110-4f8d-9472-e7b074642e99
-      ],
-      "last_occurrence": "2025-03-18T16:20:00Z"
-    }
-  ],
-  "issue_trends": {
-    "most_frequent_type": "concept_misunderstanding",
-    "increasing_issues": [
-      "UML diagrams",
-      "agile methodology"
-    ],
-    "decreasing_issues": [
-      "use case analysis"
-    ]
-  },
-  "last_updated": "2025-03-22T10:45:00Z",
-  "total_issues_count": 52
-}
-    """
+    # if existing_learning_path and issues_summary:
+    #     old_response = existing_learning_path.llm_response
+    #     version = existing_learning_path.version + 1
+        
+    #     old_recommend_lessons = await learning_path_controller.get_recommended_lessons_by_learning_path_id(existing_learning_path.id)
+        
+    #     def generate_chunk_prompt(lessons_chunk, chunk_index, total_chunks):
+    #         """
+    #         Generate a prompt for regenerating the learning path based on old response and issues.
+    #         """
+    #         if isinstance(old_response, str):
+    #             old_response_json = json.loads(old_response)
+    #         else:
+    #             old_response_json = old_response
+                
+    #         if isinstance(issues_summary, str):
+    #             issues_summary_json = json.loads(issues_summary)
+    #         else:
+    #             issues_summary_json = issues_summary
+                
+    #         chunk_context = f"""
+    #         # Learning Path Regeneration Task - Chunk {chunk_index + 1} of {total_chunks} (Version {version})
+            
+    #         ## Chunking Context
+    #         You are regenerating a personalized learning path based on a previous version and identified issues.
+    #         This is chunk {chunk_index + 1} of {total_chunks}, containing {len(lessons_chunk)} lessons.
+    #         Focus only on the lessons provided in this chunk when making recommendations.
+    #         """
+            
+    #         old_path_context = f"""
+    #         ## Previous Learning Path (Version {version - 1})
+    #         Below is the previous learning path response:
+    #         {json.dumps(old_response_json, indent=2)}
+            
+    #         This learning path was used as the basis for the student's progress, but issues were identified that need to be addressed.
+    #         """
+            
+    #         issues_context = f"""
+    #         ## Issues Summary (Last Updated: {issues_summary_json.get('last_updated', 'Unknown')})
+    #         The student encountered the following issues in the previous learning path (Total Issues: {issues_summary_json.get('total_issues_count', 0)}):
+    #         ### Common Issues
+    #         {json.dumps(issues_summary_json.get('common_issues', []), indent=2)}
+            
+    #         ### Issue Trends
+    #         {json.dumps(issues_summary_json.get('issue_trends', {}), indent=2)}
+            
+    #         These issues indicate areas where the student struggled, such as concept misunderstandings or quiz failures.
+    #         """
+            
+    #         lessons_chunk_str = json.dumps(lessons_chunk, indent=2)
+            
+    #         prompt = f"""
+    #         {chunk_context}
+            
+    #         {old_path_context}
+            
+    #         {issues_context}
+            
+    #         ## Student Information
+    #         - Student Name: {student.name}
+    #         - Student ID: {student.mssv}
+    #         - Course: {course.name} (ID: {course.courseID})
+    #         - Professor: {professor.fullname}
+    #         - Student's Learning Goal: "{request.goal}"
+            
+    #         ## Course Information
+    #         - Start Date: {course.start_date.isoformat() if course.start_date else start_date.isoformat()}
+    #         - End Date: {course.end_date.isoformat() if course.end_date else end_date.isoformat()}
+    #         - Learning Outcomes: {json.dumps(course.learning_outcomes if course.learning_outcomes else [])}
+            
+    #         ## Available Lessons in This Chunk
+    #         This chunk contains {len(lessons_chunk)} lessons:
+    #         {lessons_chunk_str}
+            
+    #         Old information of recommending lessons and modules:
+    #         {old_recommend_lessons}
+            
+    #         ## Task Requirements
+    #         Regenerate the learning path for this chunk by:
+    #         1. Analyzing the previous learning path and the issues summary.
+    #         2. Recommending lessons from this chunk that address the identified issues (e.g., revisit lessons tied to "related_lessons" or "related_modules", they contains ids of old recommend lessons and old modules).
+    #         3. Adjusting the content focus to correct misunderstandings or reinforce weak areas (e.g., UML diagrams, agile methodologies).
+    #         4. Providing new or updated modules to target the most frequent or increasing issues.
+
+    #         For each recommended lesson, provide:
+    #         1. Recommended content (tailored to address specific issues)
+    #         2. An explanation of why this content helps resolve the issues and supports the student's goal
+    #         3. 2-3 modules per lesson with detailed breakdowns
+            
+    #         ## Timeline Estimation Task (REQUIRED)
+    #         You MUST estimate and include a realistic start date, end date, and duration notes for each recommended lesson.
+    #         Base your estimation on:
+    #         1. The complexity of the recommended lessons
+    #         2. The student's past struggles (e.g., frequency of issues)
+    #         3. The overall course timeline ({course.start_date.isoformat() if course.start_date else start_date.isoformat()} to {course.end_date.isoformat() if course.end_date else end_date.isoformat()})
+    #         4. The number and complexity of recommended lessons
+            
+    #         ## Reading Material Requirements
+    #         For the "reading_material" field in each module:
+    #         1. The theoryContent section must be comprehensive and detailed, with:
+    #         - At least 3 paragraphs in each description section
+    #         - At least 2 examples for each theory content section where applicable
+    #         - codeSnippet must contain actual illustrative code when relevant
+    #         2. All references must be:
+    #         - Valid and reliable sources
+    #         - Directly relevant to the specific module topic
+    #         - Include a mix of academic and practical resources where appropriate
+    #         - At least 3 references per module
+    #         3. The practical guide section should include:
+    #         - At least 4-5 detailed steps for each guide
+    #         - At least 3 common errors with explanations
+            
+    #         ## Output Format
+    #         Your response MUST be in the following JSON format and MUST include all fields shown below:
+    #         {{
+    #             "learning_path_start_date": "{start_date.isoformat()}",
+    #             "learning_path_end_date": "{end_date.isoformat()}",
+    #             "learning_path_objective": "Updated objective based on the student's goal of '{request.goal}' and resolution of identified issues",
+    #             "learning_path_progress": 0,
+    #             "student_id": "{student.mssv}",
+    #             "course_id": "{course.courseID}",
+    #             "recommend_lessons": [
+    #                 {{
+    #                     "lesson_id": "Lesson ID",
+    #                     "recommended_content": "Detailed explanation of what to focus on in this lesson to address specific issues...",
+    #                     "explain": "Explanation of why this content is important for resolving issues and achieving the student's goal...",
+    #                     "status": "new",
+    #                     "progress": 0,
+    #                     "bookmark": false,
+    #                     "start_date": "YYYY-MM-DD",
+    #                     "end_date": "YYYY-MM-DD",
+    #                     "duration_notes": "Brief explanation of how this timeline was determined based on lesson complexity and past issues",
+    #                     "number_of_modules": 2
+    #                 }}
+    #             ],
+    #             "modules": [
+    #                 {{
+    #                     "title": "Module Title",
+    #                     "objectives": ["Learning objective 1", "Learning objective 2", "Learning objective 3"],
+    #                     "reading_material": {{
+    #                         "id": "Unique ID for this reading material",
+    #                         "name": "Name of the reading material",
+    #                         "theoryContent": [
+    #                             {{
+    #                                 "title": "Section title",
+    #                                 "prerequisites": ["Prerequisite 1", "Prerequisite 2"],
+    #                                 "description": [
+    #                                     "Detailed description paragraph 1 - must be substantial",
+    #                                     "Detailed description paragraph 2 - must be substantial",
+    #                                     "Detailed description paragraph 3 - must be substantial"
+    #                                 ],
+    #                                 "examples": [
+    #                                     {{
+    #                                         "title": "Example 1 title",
+    #                                         "codeSnippet": "// Actual illustrative code example when appropriate\\nfunction example() {{\\n  return 'This is sample code';\\n}}",
+    #                                         "explanation": "Detailed explanation of how this code example illustrates the concept"
+    #                                     }},
+    #                                     {{
+    #                                         "title": "Example 2 title",
+    #                                         "codeSnippet": null,
+    #                                         "explanation": "Detailed explanation of this conceptual example"
+    #                                     }}
+    #                                 ]
+    #                             }}
+    #                         ],
+    #                         "practicalGuide": [
+    #                             {{
+    #                                 "title": "Guide title",
+    #                                 "steps": [
+    #                                     "Detailed step 1 with explanation",
+    #                                     "Detailed step 2 with explanation",
+    #                                     "Detailed step 3 with explanation",
+    #                                     "Detailed step 4 with explanation",
+    #                                     "Detailed step 5 with explanation"
+    #                                 ],
+    #                                 "commonErrors": [
+    #                                     "Common error 1 with prevention/solution advice",
+    #                                     "Common error 2 with prevention/solution advice",
+    #                                     "Common error 3 with prevention/solution advice"
+    #                                 ]
+    #                             }}
+    #                         ],
+    #                         "references": [
+    #                             {{
+    #                                 "title": "Academic reference title",
+    #                                 "link": "https://example.com/academic-reference",
+    #                                 "description": "Detailed description of this academic reference and its relevance"
+    #                             }},
+    #                             {{
+    #                                 "title": "Industry reference title",
+    #                                 "link": "https://example.com/industry-reference",
+    #                                 "description": "Detailed description of this industry reference and its relevance"
+    #                             }},
+    #                             {{
+    #                                 "title": "Practical reference title",
+    #                                 "link": "https://example.com/practical-reference",
+    #                                 "description": "Detailed description of this practical reference and its relevance"
+    #                             }}
+    #                         ],
+    #                         "summaryAndReview": {{
+    #                             "keyPoints": ["Key point 1", "Key point 2", "Key point 3", "Key point 4", "Key point 5"],
+    #                             "reviewQuestions": [
+    #                                 {{
+    #                                     "id": "Question ID 1",
+    #                                     "question": "Challenging review question 1",
+    #                                     "answer": "Comprehensive answer to review question 1",
+    #                                     "maxscore": 10,
+    #                                     "score": null,
+    #                                     "inputUser": null
+    #                                 }},
+    #                                 {{
+    #                                     "id": "Question ID 2",
+    #                                     "question": "Challenging review question 2",
+    #                                     "answer": "Comprehensive answer to review question 2",
+    #                                     "maxscore": 10,
+    #                                     "score": null,
+    #                                     "inputUser": null
+    #                                 }}
+    #                             ],
+    #                             "quizLink": "https://example.com/quiz"
+    #                         }}
+    #                     }}
+    #                 }}
+    #             ]
+    #         }}
+    #         """
+    #         return prompt
+    # else:
