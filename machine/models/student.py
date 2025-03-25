@@ -13,7 +13,7 @@ class Student(Base, TimestampMixin):
     name = Column(String(255), nullable=False)  # Username of the student
     email = Column(String(255), unique=True, nullable=False)  # Email of the student
     password = Column(String(255), nullable=True)  # Password of the student
-    avatar_url = Column(String, nullable=True)  # Avatar URL of the student
+    avatar_url = Column(String, default="documents/326750ef-127e-4d24-b7f1-a9aaa87f40d6-User-avatar.svg.png")  # Avatar URL of the student
     mssv = Column(String(10), nullable=True)  # Student ID
     date_of_birth = Column(Date, nullable=True)  # Date of birth of the student
     fullname = Column(String(255), nullable=True)  # Full name of the student
