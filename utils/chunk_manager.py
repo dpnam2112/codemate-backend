@@ -5,23 +5,27 @@ from core.settings import settings
 import google.generativeai as genai
 from langchain_google_genai import ChatGoogleGenerativeAI
 from openai import OpenAI
-
+import time
+from google.api_core import exceptions
 def get_gemini_api_key():
     return settings.GEMINI_API_KEY
 
 api_key = get_gemini_api_key()
 if api_key:
     genai.configure(api_key=api_key)
+from typing import Dict, List, Any, Optional, Callable
+import json
+from datetime import datetime, timedelta
 
 class ChunkingManager:
     def __init__(self, 
                  provider: str = "gemini",
                  openai_model_name: str = "gpt-4-turbo-preview",
                  gemini_model_name: str = "gemini-1.5-pro",
-                 max_tokens_per_chunk: int = 15000,  # Reduced from 25000
+                 max_tokens_per_chunk: int = 15000,
                  openai_api_key: Optional[str] = None,
                  temperature: float = 0.7,
-                 max_output_tokens: int = 8000):  # Increased from 4000
+                 max_output_tokens: int = 8000):
         self.provider = provider.lower()
         self.max_tokens_per_chunk = max_tokens_per_chunk
         self.temperature = temperature
@@ -41,7 +45,7 @@ class ChunkingManager:
                 max_retries=2,
                 api_key=get_gemini_api_key()
             )
-    
+
     def estimate_token_count(self, text: str) -> int:
         return len(text) // 4
     
@@ -66,9 +70,9 @@ class ChunkingManager:
                 print(f"Warning: Item exceeds max token size ({item_tokens} > {max_tokens}). Including as single chunk.")
                 if current_chunk:
                     chunks.append(current_chunk)
-                    current_chunk = []
-                    current_tokens = 0
                 chunks.append([item])
+                current_chunk = []
+                current_tokens = 0
                 continue
             
             current_chunk.append(item)
@@ -80,49 +84,38 @@ class ChunkingManager:
     
     def process_in_chunks(self, 
                          data: List[Dict],
-                         prompt_generator: Callable[[List[Dict], int, int], str],
+                         prompt_generator: Callable[[List[Dict], int, int, Dict], str],  
                          result_extractor: Callable[[Any], Dict],
+                         result_combiner: Callable[[List[Dict]], Dict],  
+                         context: Dict,  
                          token_estimation_field: Optional[str] = None,
                          system_message: str = "You are a helpful AI assistant") -> Dict:
-        effective_max_tokens = self.max_tokens_per_chunk // 2  # Still leaves room for response
+        effective_max_tokens = self.max_tokens_per_chunk // 2
         data_chunks = self.chunk_data(data, effective_max_tokens, token_estimation_field)
         
-        combined_result = {
-            "recommend_lessons": [],
-            "modules": []
-        }
+        chunk_results = []
         
         for i, data_chunk in enumerate(data_chunks):
             print(f"Processing chunk {i+1} of {len(data_chunks)}")
-            chunk_prompt = prompt_generator(data_chunk, i, len(data_chunks))
+            chunk_prompt = prompt_generator(data_chunk, i, len(data_chunks), context)
             
             try:
                 chunk_response = self.call_llm_api(chunk_prompt, system_message)
-                chunk_results = result_extractor(chunk_response)
+                chunk_result = result_extractor(chunk_response)
                 
-                if not chunk_results:
+                if not chunk_result:
                     print(f"Warning: No valid results from chunk {i+1}")
                     continue
                 
-                if i == 0:
-                    for key in ["learning_path_start_date", "learning_path_end_date", 
-                              "learning_path_objective", "learning_path_progress", 
-                              "student_id", "course_id"]:
-                        if key in chunk_results:
-                            combined_result[key] = chunk_results[key]
-                
-                if "recommend_lessons" in chunk_results:
-                    combined_result["recommend_lessons"].extend(chunk_results["recommend_lessons"])
-                if "modules" in chunk_results:
-                    combined_result["modules"].extend(chunk_results["modules"])
+                chunk_results.append(chunk_result)
                     
             except Exception as e:
                 print(f"Error in chunk {i+1}: {str(e)}")
                 if self.provider == "both":
-                    # Fallback logic remains unchanged
                     pass
         
-        return combined_result
+        final_result = result_combiner(chunk_results)
+        return final_result
     
     def call_llm_api(self, prompt: str, system_message: str, override_provider: Optional[str] = None) -> Any:
         provider = override_provider or self.provider
@@ -195,6 +188,38 @@ class ChunkingManager:
 
     
     def _call_gemini_api(self, prompt: str, system_message: str) -> Dict:
+        retries = 3
+        for attempt in range(retries):
+            try:
+                generation_config = {
+                    "temperature": self.temperature,
+                    "top_p": 0.95,
+                    "top_k": 40,
+                    "max_output_tokens": self.max_output_tokens,
+                    "response_mime_type": "application/json"
+                }
+                model = genai.GenerativeModel(
+                    model_name=self.gemini_model_name,
+                    generation_config=generation_config
+                )
+                prompt += "\n\nEnsure the response is a complete, valid JSON object."
+                chat_session = model.start_chat(history=[])
+                chat_session.send_message(system_message)
+                response = chat_session.send_message(prompt)
+                response_text = response.text.strip()
+                if not response_text:
+                    raise ValueError("Empty response from Gemini API")
+                return json.loads(response_text)
+            except exceptions.ResourceExhausted as e:  # Handle 429 specifically
+                if attempt < retries - 1:
+                    wait_time = 2 ** attempt  # Exponential backoff: 2, 4, 8 seconds
+                    print(f"Quota exceeded, retrying in {wait_time} seconds...")
+                    time.sleep(wait_time)
+                    continue
+                raise
+            except Exception as e:
+                print(f"Error calling Gemini API: {str(e)}")
+                raise
         try:
             generation_config = {
                 "temperature": self.temperature,
