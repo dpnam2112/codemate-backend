@@ -20,6 +20,7 @@ class RecommendLessons(Base):
     start_date = Column(Text, nullable=True)
     end_date = Column(Text, nullable=True)
     duration_notes=Column(Text, nullable=True)
+    order = Column(Integer, default=0, nullable=True)
 
     lesson = relationship("Lessons", back_populates="recommend_lesson")
     learning_path = relationship("LearningPaths", back_populates="recommend_lessons")
