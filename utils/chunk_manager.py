@@ -7,6 +7,8 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from openai import OpenAI
 import time
 from google.api_core import exceptions
+import logging
+logger = logging.getLogger(__name__)
 def get_gemini_api_key():
     return settings.GEMINI_API_KEY
 
@@ -186,84 +188,99 @@ class ChunkingManager:
             
             raise e  # Re-raise to allow fallback to other provider if available
 
-    
     def _call_gemini_api(self, prompt: str, system_message: str) -> Dict:
         retries = 3
+        generation_config = {
+            "temperature": self.temperature,
+            "top_p": 0.95,
+            "top_k": 40,
+            "max_output_tokens": self.max_output_tokens,
+            "response_mime_type": "application/json"
+        }
+
+        prompt += "\n\nEnsure the response is a complete, valid JSON object. If the output might exceed token limits, simplify the response but maintain all required fields."
+
         for attempt in range(retries):
             try:
-                generation_config = {
-                    "temperature": self.temperature,
-                    "top_p": 0.95,
-                    "top_k": 40,
-                    "max_output_tokens": self.max_output_tokens,
-                    "response_mime_type": "application/json"
-                }
                 model = genai.GenerativeModel(
                     model_name=self.gemini_model_name,
                     generation_config=generation_config
                 )
-                prompt += "\n\nEnsure the response is a complete, valid JSON object."
                 chat_session = model.start_chat(history=[])
                 chat_session.send_message(system_message)
                 response = chat_session.send_message(prompt)
                 response_text = response.text.strip()
+
                 if not response_text:
                     raise ValueError("Empty response from Gemini API")
+
+                logger.debug(f"Gemini response length: {len(response_text)}")
+                if response_text.count("{") != response_text.count("}"):
+                    logger.warning("Truncated response detected")
+                    fix_prompt = f"The JSON is incomplete: {response_text}\nProvide a complete, simplified version."
+                    fix_response = chat_session.send_message(fix_prompt)
+                    response_text = fix_response.text.strip()
+
                 return json.loads(response_text)
-            except exceptions.ResourceExhausted as e:  # Handle 429 specifically
+
+            except exceptions.ResourceExhausted as e:
                 if attempt < retries - 1:
-                    wait_time = 2 ** attempt  # Exponential backoff: 2, 4, 8 seconds
                     print(f"Quota exceeded, retrying in {wait_time} seconds...")
-                    time.sleep(wait_time)
+                    time.sleep(2 ** attempt)
                     continue
                 raise
             except Exception as e:
-                print(f"Error calling Gemini API: {str(e)}")
-                raise
-        try:
-            generation_config = {
-                "temperature": self.temperature,
-                "top_p": 0.95,
-                "top_k": 40,
-                "max_output_tokens": self.max_output_tokens,
-                "response_mime_type": "application/json"  # Force JSON output
-            }
+                logger.error(f"Error in Gemini API call: {str(e)}")
+                if attempt < retries - 1:
+                    continue
+                raise ValueError(f"Failed after {retries} attempts: {str(e)}")
+        #     except Exception as e:
+        #         print(f"Error calling Gemini API: {str(e)}")
+        #         raise
+        # try:
+        #     generation_config = {
+        #         "temperature": self.temperature,
+        #         "top_p": 0.95,
+        #         "top_k": 40,
+        #         "max_output_tokens": self.max_output_tokens,
+        #         "response_mime_type": "application/json"  # Force JSON output
+        #     }
             
-            model = genai.GenerativeModel(
-                model_name=self.gemini_model_name,
-                generation_config=generation_config
-            )
+        #     model = genai.GenerativeModel(
+        #         model_name=self.gemini_model_name,
+        #         generation_config=generation_config
+        #     )
             
-            # Append instruction to ensure complete JSON
-            prompt += "\n\nEnsure the response is a complete, valid JSON object. Do not truncate or leave incomplete structures."
+        #     # Append instruction to ensure complete JSON
+        #     prompt += "\n\nEnsure the response is a complete, valid JSON object. Do not truncate or leave incomplete structures."
             
-            chat_session = model.start_chat(history=[])
-            chat_session.send_message(system_message)
-            response = chat_session.send_message(prompt)
-            response_text = response.text.strip()
+        #     chat_session = model.start_chat(history=[])
+        #     chat_session.send_message(system_message)
+        #     response = chat_session.send_message(prompt)
+        #     response_text = response.text.strip()
             
-            if not response_text:
-                raise ValueError("Empty response from Gemini API")
+        #     if not response_text:
+        #         raise ValueError("Empty response from Gemini API")
             
-            print(f"Gemini response text length: {len(response_text)}")
-            print(f"Gemini response text preview: {response_text[:100]}...")
+        #     print(f"Gemini response text length: {len(response_text)}")
+        #     print(f"Gemini response text preview: {response_text[:100]}...")
             
-            try:
-                return json.loads(response_text)
-            except json.JSONDecodeError as e:
-                json_match = re.search(r'```json\s*([\s\S]*?)\s*```|(\{[\s\S]*\})', response_text)
-                if json_match:
-                    json_str = json_match.group(1) or json_match.group(2)
-                    try:
-                        return json.loads(json_str)
-                    except json.JSONDecodeError:
-                        # Fallback: Ask the model to fix the JSON
-                        fix_prompt = f"The following JSON is malformed: {response_text}\nPlease provide a corrected, complete version."
-                        fix_response = chat_session.send_message(fix_prompt)
-                        return json.loads(fix_response.text.strip())
-                else:
-                    raise ValueError(f"Invalid JSON from Gemini: {str(e)}")
+        #     try:
+        #         return json.loads(response_text)
+        #     except json.JSONDecodeError as e:
+        #         json_match = re.search(r'```json\s*([\s\S]*?)\s*```|(\{[\s\S]*\})', response_text)
+        #         if json_match:
+        #             json_str = json_match.group(1) or json_match.group(2)
+        #             try:
+        #                 return json.loads(json_str)
+        #             except json.JSONDecodeError:
+        #                 # Fallback: Ask the model to fix the JSON
+        #                 fix_prompt = f"The following JSON is malformed: {response_text}\nPlease provide a corrected, complete version."
+        #                 fix_response = chat_session.send_message(fix_prompt)
+        #                 return json.loads(fix_response.text.strip())
+        #         else:
+        #             raise ValueError(f"Invalid JSON from Gemini: {str(e)}")
                     
-        except Exception as e:
-            print(f"Error calling Gemini API: {str(e)}")
-            raise
+        # except Exception as e:
+        #     print(f"Error calling Gemini API: {str(e)}")
+        #     raise
