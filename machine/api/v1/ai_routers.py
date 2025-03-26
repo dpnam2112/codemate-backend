@@ -1,6 +1,6 @@
 import json
 import os
-import time
+import logging
 from typing import Dict, List, Any, Optional
 from fastapi import APIRouter, Depends
 from core.response import Ok
@@ -22,185 +22,209 @@ load_dotenv()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 router = APIRouter(prefix="/ai", tags=["ai"])
 
-@router.post("/generate-learning-path")
-async def generate_learning_path(
-    request: GenerateLearningPathRequest,
-    token: str = Depends(oauth2_scheme),
-    courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
-    professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
-    student_controller: StudentController = Depends(InternalProvider().get_student_controller),
-    learning_path_controller: LearningPathsController = Depends(InternalProvider().get_learningpaths_controller),
-    modules_controller: ModulesController = Depends(InternalProvider().get_modules_controller),
-    recommend_lessons_controller: RecommendLessonsController = Depends(InternalProvider().get_recommendlessons_controller),
-    documents_controller: DocumentsController = Depends(InternalProvider().get_documents_controller),
-    extracted_text_controller: ExtractedTextController = Depends(InternalProvider().get_extracted_text_controller),
-    lessons_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
-    student_courses_controller: StudentCoursesController = Depends(InternalProvider().get_studentcourses_controller),
-    recommend_documents_controller: RecommendDocumentsController = Depends(InternalProvider().get_recommenddocuments_controller),
-):
+load_dotenv()
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+router = APIRouter(prefix="/ai", tags=["ai"])
+
+async def analyze_goal_and_timeline(
+    goal: str,
+    course_start_date: datetime,
+    course_end_date: datetime,
+    course_name: str,
+    course_learning_outcomes: List[str]
+) -> Dict[str, str]:
+    """Giai đoạn 1: Phân tích goal, xác thực tính hợp lệ và xác định timeline."""
+    
+    # Bước tiền xử lý: Kiểm tra tính hợp lệ cơ bản của goal
+    goal = goal.strip()  # Loại bỏ khoảng trắng thừa
+    if len(goal) < 10:  # Độ dài tối thiểu (ví dụ: "Learn Python" ~ 12 ký tự)
+        raise ApplicationException(message="Goal is too short or incomplete. Please provide a clear and complete learning goal (e.g., 'Learn Python basics').")
+        
+    # Prompt cải tiến với kiểm tra tính hoàn chỉnh
+    prompt = f"""
+    ## Goal Analysis and Validation Task
+    - Student's Learning Goal: "{goal}"
+    - Course Name: "{course_name}"
+    - Course Learning Outcomes: {json.dumps(course_learning_outcomes, indent=2)}
+    - Course Start Date: {course_start_date.strftime('%Y-%m-%d')}
+    - Course End Date: {course_end_date.strftime('%Y-%m-%d')}
+
+    ## Task Requirements
+    1. **Check Goal Completeness:**
+       - Determine if the goal is a complete, meaningful sentence with a clear intent (e.g., "I want to learn Python" is complete, but "I want " is not).
+       - If incomplete or vague, return an error indicating the goal lacks clarity.
+
+    2. **Validate Goal Relevance (if complete):**
+       - Check if the goal is relevant to the course based on its name, description, and learning outcomes.
+       - Example: "Learn to cook" is irrelevant to a "Python Programming" course.
+       - If irrelevant, return an error message.
+
+    3. **Validate Goal Feasibility (if complete and relevant):**
+       - Check if the goal aligns with or is achievable within the scope of the course's learning outcomes.
+       - Example: "Master Machine Learning" is not feasible for a "Basic Python" course.
+       - If not feasible, return an error message.
+
+    4. **Analyze Timeline (if goal is valid):**
+       - Detect any time constraints in the goal (e.g., "in 2 weeks").
+       - Determine a feasible timeline:
+         - If the goal specifies a duration, calculate end_date as start_date + duration.
+         - If no duration is specified, use the full course timeline.
+         - Ensure start_date >= course_start_date and end_date <= course_end_date.
+
+    5. **Return Result:**
+       - If goal is invalid/incomplete, return an error in JSON format.
+       - If goal is valid, return the timeline in JSON format.
+
+    ## Output Format
+    - For valid goal:
+    {{
+        "start_date": "YYYY-MM-DD",
+        "end_date": "YYYY-MM-DD",
+        "duration_notes": "Explanation of how the timeline was determined",
+        "validation": {{
+            "is_complete": true,
+            "is_relevant": true,
+            "is_feasible": true,
+            "notes": "Explanation of why the goal is valid"
+        }}
+    }}
+    - For invalid goal:
+    {{
+        "error": "Goal is incomplete" OR "Goal is not relevant to the course" OR "Goal exceeds the course scope",
+        "details": "Explanation of why the goal is invalid",
+        "validation": {{
+            "is_complete": false/true,
+            "is_relevant": false/true,
+            "is_feasible": false/true,
+            "notes": "Explanation of validation failure"
+        }}
+    }}
     """
-    Generate a personalized learning path for a student based on their goals and course content,
-    or regenerate it based on issues_summary if an existing path exists.
-    
-    Args:
-        request: Contains course_id and student's learning goal
-        Other parameters: Controllers for different database models
-        
-    Returns:
-        Dict containing the generated learning path details
-    """
-    # Verify token
-    payload = verify_token(token)
-    user_id = payload.get("sub")
-    if not user_id:
-        raise BadRequestException(message="Your account is not authorized. Please log in again.")
-    
-    student = await student_controller.student_repository.first(where_=[Student.id == user_id])
-    if not student:
-        raise NotFoundException(message="Your account is not allowed to access this feature.")
-    
-    if not request.goal or not request.course_id:
-        raise BadRequestException(message="Please provide course_id and goal.")
-    
-    # Fetch course details
-    course = await courses_controller.courses_repository.first(where_=[Courses.id == request.course_id])
-    if not course:
-        raise NotFoundException(message="Course not found.")
-    
-    # Fetch professor information
-    professor = await professor_controller.professor_repository.first(where_=[Professor.id == course.professor_id])
-    if not professor:
-        raise NotFoundException(message="Professor information not found.")
-    
-    # Fetch all lessons for the course
-    lessons = await lessons_controller.lessons_repository.get_many(where_=[Lessons.course_id == request.course_id])
-    if not lessons:
-        raise NotFoundException(message="No lessons found for this course.")
-    
-    # Prepare data structure for all lessons with their documents and extracted text
-    lessons_data = []
-    for lesson in lessons:
-        documents = await documents_controller.documents_repository.get_many(where_=[Documents.lesson_id == lesson.id])
-        documents_data = []
-        for document in documents:
-            extracted = await extracted_text_controller.extracted_text_repository.first(
-                where_=[ExtractedText.document_id == document.id]
-            )
-            if extracted and extracted.extracted_content:
-                documents_data.append({
-                    "extracted_content": extracted.extracted_content
-                })
-        
-        lessons_data.append({
-            "id": str(lesson.id),
-            "title": lesson.title,
-            "description": lesson.description,
-            "order": lesson.order,
-            "learning_outcomes": lesson.learning_outcomes if lesson.learning_outcomes else [],
-            "documents": documents_data
-        })
-    
-    lessons_data.sort(key=lambda x: x["order"])
-    
-    # Calculate approximate timeframe for the learning path
-    start_date = datetime.now()
-    end_date = course.end_date if course.end_date else (start_date + timedelta(days=90))
-    
-    # Check if learning path exists for this student and course
-    existing_learning_path = await learning_path_controller.learning_paths_repository.first(
-        where_=[LearningPaths.student_id == student.id, LearningPaths.course_id == request.course_id]
+    chunking_manager = ChunkingManager(
+        provider="gemini",
+        gemini_model_name="gemini-2.0-flash-lite",
+        max_tokens_per_chunk=15000,
+        temperature=0.7,
+        max_output_tokens=8000
     )
+    response = chunking_manager.call_llm_api(prompt, "You are an expert in goal validation and timeline analysis.")
     
-    # Fetch issues summary from student_courses table
-    student_course = await student_courses_controller.student_courses_repository.first(
-        where_=[StudentCourses.student_id == user_id, StudentCourses.course_id == request.course_id]
-    )
-    issues_summary = student_course.issues_summary if student_course and student_course.issues_summary else None
+    # Parse response
+    if isinstance(response, str):
+        response = json.loads(response)
     
-    # Define prompt generator based on whether we're regenerating or creating anew
+    # Check if there's an error
+    if "error" in response:
+        raise ApplicationException(message=f"Goal validation failed: {response['error']}. {response['details']}")
+    
+    return response
 
-    def generate_chunk_prompt(lessons_chunk, chunk_index, total_chunks, context):
-        """
-        Generate a prompt for a new learning path with context.
-        """
-        chunk_context = f"""
-        # Learning Path Generation Task - Chunk {chunk_index + 1} of {total_chunks}
-        
-        ## Chunking Context
-        You are analyzing a subset of lessons ({len(lessons_chunk)} out of total lessons) for a course.
-        This is chunk {chunk_index + 1} of {total_chunks} being processed separately due to size limitations.
-        Focus only on the lessons provided in this chunk when making recommendations, but ensure your recommendations align with the overall course timeline and the student's goal timeline.
-        """
-        
-        prompt = f"""
-        {chunk_context}
-        
-        ## Student Information
-        - Student Name: {student.name}
-        - Student ID: {student.mssv}
-        - Course: {course.name} (ID: {course.courseID})
-        - Professor: {professor.fullname}
-        - Student's Learning Goal: "{context['goal']}"
-        
-        ## Course Information
-        - Start Date: {context['course_start_date']}
-        - End Date: {context['course_end_date']}
-        - Learning Outcomes: {json.dumps(course.learning_outcomes if course.learning_outcomes else [])}
-        
-        ## Available Lessons in This Chunk
-        This chunk contains {len(lessons_chunk)} lessons:
-        {json.dumps(lessons_chunk, indent=2)}
-        
-        ## Task Requirements
-        Analyze ONLY the lessons in this chunk and recommend those that will help the student achieve their stated goal ("{context['goal']}"). The goal may be short-term (e.g., "Master queue and stack in 2 weeks") or long-term (e.g., "Master Python and score 7+ by course end"). Your recommendations must:
+async def select_relevant_lessons(
+    goal: str,
+    lessons_data: List[Dict],
+    timeline: Dict[str, str],
+    course_name: str,
+    course_learning_outcomes: List[str]
+) -> List[Dict]:
+    """Giai đoạn 2: Lọc và sắp xếp các lesson liên quan đến goal trong bối cảnh khóa học."""
+    prompt = f"""
+    ## Lesson Selection Task
+    - Student's Learning Goal: "{goal}"
+    - Course Name: "{course_name}"
+    - Course Learning Outcomes: {json.dumps(course_learning_outcomes, indent=2)}
+    - Timeline: Start Date: {timeline['start_date']}, End Date: {timeline['end_date']}
+    - Available Lessons: {json.dumps(lessons_data, indent=2)}
 
-        1. **Adapt to Goal Timeline:**
-            - Identify the timeline implied by the student's goal (short-term or long-term).
-            - If short-term, limit the number of recommended lessons to fit within the goal's timeline.
-            - If long-term, ensure recommendations cover the full scope of the goal within the course timeline ({context['course_start_date']} to {context['course_end_date']}).
-            - Only recommend lessons relevant to the goal's focus.
+    ## Task Requirements
+    1. **Analyze the Goal in Context:**
+       - Interpret the student's goal in the context of the course name and learning outcomes.
+       - If the goal is vague or grade-based (e.g., "achieve at least B+"), assume it means achieving a subset of the course's learning outcomes sufficient for that grade (e.g., B+ might cover 70-80% of outcomes, while A+ covers 100%).
+       - Example: For a goal "achieve at least B+ grade" in a "Python Programming" course with outcomes like ["Understand loops", "Master functions", "Apply OOP"], select lessons covering core concepts (e.g., loops and functions) but not necessarily advanced topics (e.g., OOP).
 
-        2. **Ensure Sequential Order:**
-            - Assign an "order" to each recommended lesson based on its importance and relevance to the goal.
-            - Ensure "start_date" and "end_date" of recommended lessons are sequential:
-                - The "end_date" of one lesson must be on or before the "start_date" of the next lesson in the sequence.
-                - The sequence must fit within the goal timeline (if short-term) or course timeline (if long-term).
+    2. **Select Relevant Lessons:**
+       - Choose lessons from the available list that directly support achieving the goal, aligned with the course's learning outcomes.
+       - Prioritize foundational lessons if the timeline is short or the goal implies a minimum competency level.
 
-        3. **Provide Detailed Recommendations:**
-            - For each recommended lesson:
-                - "recommended_content": Explain what to focus on in this lesson to achieve the goal.
-                - "explain": Justify why this lesson is critical for the goal.
-                - Include 2-3 modules per lesson to break down key concepts.
+    3. **Assign Order:**
+       - Assign an "order" (1, 2, 3...) based on logical progression (e.g., foundational lessons first, advanced lessons later).
 
-        ## Timeline Estimation Task (REQUIRED)
-        Estimate a realistic "start_date", "end_date", and "duration_notes" for each recommended lesson based on:
-        1. The complexity of the lesson content.
-        2. The student's goal timeline (short-term or long-term).
-        3. The overall course timeline ({context['course_start_date']} to {context['course_end_date']}).
-        4. The number and complexity of recommended lessons in this chunk.
-        5. Sequential dependency: Ensure each lesson’s timeline follows the previous one’s "end_date".
+    4. **Fit the Timeline:**
+       - Limit the number of lessons to fit the timeline (short-term: fewer lessons, long-term: more comprehensive).
+       - Consider the complexity and duration of lessons relative to the timeline.
 
-        ## Reading Material Requirements
-        For the "reading_material" field in each module:
-        1. "theoryContent" must be comprehensive:
-            - At least 3 detailed paragraphs in "description".
-            - At least 2 examples with "codeSnippet" (if applicable) and explanations.
-        2. "references" must include:
-            - At least 3 valid, relevant sources (academic + practical mix).
-        3. "practicalGuide" must include:
-            - 4-5 detailed steps.
-            - At least 3 common errors with solutions.
+    5. **Return Result:**
+       - Return only the relevant lessons with their IDs, order, titles, and explanations.
 
-        ## Output Format
-        Your response MUST be in the following JSON format and MUST include all fields shown below:
+    ## Output Format
+    [
         {{
-            "learning_path_start_date": "{start_date.isoformat()}",
-            "learning_path_end_date": "{end_date.isoformat()}",
-            "learning_path_objective": "Description of the learning path objective based on '{request.goal}'",
-            "learning_path_progress": 0,
-            "student_id": "{student.mssv}",
-            "course_id": "{course.courseID}",
-            "recommend_lessons": [
+            "lesson_id": "Lesson ID",
+            "order": 1,
+            "title": "Lesson Title",
+            "relevance_explanation": "Why this lesson is needed for the goal and how it relates to the course learning outcomes"
+        }}
+    ]
+    """
+    chunking_manager = ChunkingManager(
+        provider="gemini",
+        gemini_model_name="gemini-2.0-flash-lite",
+        max_tokens_per_chunk=15000,
+        temperature=0.7,
+        max_output_tokens=8000
+    )
+    response = chunking_manager.call_llm_api(prompt, "You are an expert in educational content selection.")
+    return response
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+async def generate_detailed_learning_path(
+    goal: str,
+    timeline: Dict[str, str],
+    selected_lessons: List[Dict],
+    lessons_data: List[Dict],
+    student_id: str,
+    course_id: str,
+) -> Dict:
+    """Giai đoạn 3: Tạo learning path chi tiết với đầy đủ các yêu cầu và ràng buộc."""
+    # Split the task into smaller chunks by generating recommend_lessons and modules separately
+    chunking_manager = ChunkingManager(
+        provider="gemini",
+        gemini_model_name="gemini-2.0-flash-lite",
+        max_tokens_per_chunk=10000,  # Reduced to ensure input fits
+        temperature=0.7,
+        max_output_tokens=12000,     # Increased to allow larger output
+    )
+
+    # Step 1: Generate recommend_lessons
+    lessons_prompt = f"""
+    ## Learning Path Lessons Generation Task
+
+    ### Context
+    - Student's Learning Goal: "{goal}"
+    - Timeline: Start Date: {timeline['start_date']}, End Date: {timeline['end_date']}
+    - Selected Lessons: {json.dumps(selected_lessons, indent=2)}
+
+    ## Task Requirements
+    1. Generate ONLY the "recommend_lessons" section using the selected lessons.
+    2. Ensure sequential order and dates:
+       - Use "order" from `selected_lessons`.
+       - Assign "start_date" and "end_date" starting from {timeline['start_date']}.
+    3. Include ALL mandatory fields:
+       - "order": Exact value from `selected_lessons`.
+       - "number_of_modules": 2 or 3 based on complexity.
+
+    ## CRITICAL INSTRUCTIONS
+    - DO NOT OMIT "order" or "number_of_modules".
+    - Return ONLY the "recommend_lessons" array.
+    **Provide Detailed Recommendations:**
+        - For each recommended lesson:
+            - "recommended_content": Explain clearly what to focus on in this lesson to achieve the goal (at least 5 sentences to describe).
+            - "explain": Justify why this lesson is critical for the goal. (at least 5 sentences to describe)
+            - Include 2-3 modules per lesson to break down key concepts.
+
+    ## Output Format
+     [
                 {{
                     "lesson_id": "Lesson ID",
                     "recommended_content": "What to focus on in this lesson...",
@@ -214,12 +238,64 @@ async def generate_learning_path(
                     "number_of_modules": 2,
                     "order": "Integer (1, 2, 3...) based on importance/relevance to goal"
                 }}
-            ],
-            "modules": [
-                {{
-                    "title": "Module Title",
-                    "objectives": ["Objective 1", "Objective 2", "Objective 3"],
-                    "reading_material": {{
+    ]
+    """
+
+    try:
+        lessons_response = chunking_manager.call_llm_api(
+            lessons_prompt,
+            "You are an expert in creating detailed learning paths."
+        )
+        logger.info(f"Raw lessons response from Gemini: {lessons_response}")
+        if isinstance(lessons_response, str):
+            recommend_lessons = json.loads(lessons_response)
+        else:
+            recommend_lessons = lessons_response
+
+        # Validate lessons
+        for lesson in recommend_lessons:
+            if "order" not in lesson or "number_of_modules" not in lesson:
+                matching_lesson = next((sl for sl in selected_lessons if sl["lesson_id"] == lesson["lesson_id"]), None)
+                lesson["order"] = matching_lesson["order"] if matching_lesson else 1
+                lesson["number_of_modules"] = 2  # Default
+            if lesson["number_of_modules"] not in [2, 3]:
+                lesson["number_of_modules"] = 2
+
+    except Exception as e:
+        logger.error(f"Error generating recommend_lessons: {str(e)}")
+        raise ApplicationException(message=f"Failed to generate lessons: {str(e)}")
+
+    # Step 2: Generate modules for each lesson
+    modules = []
+    for lesson in recommend_lessons:
+        num_modules = lesson["number_of_modules"]
+        modules_prompt = f"""
+        ## Modules Generation Task
+
+        ### Context
+        - Lesson ID: "{lesson['lesson_id']}"
+        - Recommended Content: "{lesson['recommended_content']}"
+        - Goal: "{goal}"
+
+        ## Task Requirements
+        1. Generate {num_modules} modules for this lesson.
+        2. Each module must include "title", "objectives", and "reading_material" with all subfields.
+        ## Reading Material Requirements
+        For the "reading_material" field in each module:
+        1. "theoryContent" must be comprehensive:
+            - At least 3 detailed paragraphs in "description".
+            - At least 2 examples with "codeSnippet" (if applicable) and explanations.
+        2. "references" must include:
+            - At least 3 valid, relevant sources (academic + practical mix).
+        3. "practicalGuide" must include:
+            - 4-5 detailed steps.
+            - At least 3 common errors with solutions.
+        ## Output Format
+        [
+            {{
+                "title": "Module Title",
+                "objectives": ["Objective 1", "Objective 2"],
+                "reading_material": {{
                         "id": "Unique ID",
                         "name": "Reading material name",
                         "theoryContent": [
@@ -301,94 +377,164 @@ async def generate_learning_path(
                             ]
                         }}
                     }}
-                }}
-            ]
-        }}
-"""
-        return prompt
-
-    # Define function to extract results from response
-    def extract_results(response):
+            }}
+        ]
         """
-        Extract learning path data from the AI response.
-        
-        Args:
-            response: The AI model response (dictionary or string)
-            
-        Returns:
-            A dictionary with the learning path data structure
-        """
-        if isinstance(response, str):
-            try:
-                if "```json" in response:
-                    json_content = response.split("```json")[1].split("```")[0].strip()
-                    response_json = json.loads(json_content)
-                else:
-                    response_json = json.loads(response)
-            except json.JSONDecodeError as e:
-                print(f"Failed to parse JSON: {e}")
-                return {}
-        else:
-            response_json = response
-        
-        required_keys = ["learning_path_start_date", "learning_path_end_date", 
-                        "learning_path_objective", "recommend_lessons", "modules"]
-        
-        for key in required_keys:
-            if key not in response_json:
-                print(f"Missing required key in response: {key}")
-                return {}
-        
-        return {
-            "learning_path_start_date": response_json["learning_path_start_date"],
-            "learning_path_end_date": response_json["learning_path_end_date"],
-            "learning_path_objective": response_json["learning_path_objective"],
-            "learning_path_progress": response_json.get("learning_path_progress", 0),
-            "student_id": str(student.id),
-            "course_id": str(request.course_id),
-            "recommend_lessons": response_json["recommend_lessons"],
-            "modules": response_json["modules"]
-        }
-    
-    chunking_manager = ChunkingManager(
-        provider="gemini",
-        gemini_model_name="gemini-2.0-flash-lite",
-        max_tokens_per_chunk=15000,
-        temperature=0.7,
-        max_output_tokens=8000
-    )
+        try:
+            module_response = chunking_manager.call_llm_api(
+                modules_prompt,
+                "You are an expert in creating educational modules."
+            )
+            if isinstance(module_response, str):
+                module_data = json.loads(module_response)
+            else:
+                module_data = module_response
+            modules.extend(module_data)
+        except Exception as e:
+            logger.error(f"Error generating modules for lesson {lesson['lesson_id']}: {str(e)}")
+            raise ApplicationException(message=f"Failed to generate modules: {str(e)}")
 
-    context = {
-        "goal": request.goal,
-        "course_start_date": course.start_date.isoformat() if course.start_date else start_date.isoformat(),
-        "course_end_date": course.end_date.isoformat() if course.end_date else end_date.isoformat()
+    # Step 3: Assemble final response
+    final_response = {
+        "learning_path_start_date": timeline["start_date"],
+        "learning_path_end_date": timeline["end_date"],
+        "learning_path_objective": f"Achieve {goal}",
+        "learning_path_progress": 0,
+        "student_id": student_id,
+        "course_id": course_id,
+        "recommend_lessons": recommend_lessons,
+        "modules": modules
     }
 
-    chunked_results = chunking_manager.process_in_chunks(
-        data=lessons_data,
-        prompt_generator=lambda chunk, idx, total, ctx: generate_chunk_prompt(chunk, idx, total, ctx),
-        result_extractor=extract_results,
-        result_combiner=combine_learning_path_results,
-        context=context,
-        token_estimation_field="documents",
-        system_message="You are an expert educational AI assistant that creates personalized learning paths."
-    )
+    logger.info(f"Final validated response: {json.dumps(final_response, indent=2)}")
+    return final_response
+
+@router.post("/generate-learning-path")
+async def generate_learning_path(
+    request: GenerateLearningPathRequest,
+    token: str = Depends(oauth2_scheme),
+    courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
+    professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
+    student_controller: StudentController = Depends(InternalProvider().get_student_controller),
+    learning_path_controller: LearningPathsController = Depends(InternalProvider().get_learningpaths_controller),
+    modules_controller: ModulesController = Depends(InternalProvider().get_modules_controller),
+    recommend_lessons_controller: RecommendLessonsController = Depends(InternalProvider().get_recommendlessons_controller),
+    documents_controller: DocumentsController = Depends(InternalProvider().get_documents_controller),
+    extracted_text_controller: ExtractedTextController = Depends(InternalProvider().get_extracted_text_controller),
+    recommend_documents_controller: RecommendDocumentsController = Depends(InternalProvider().get_recommenddocuments_controller),
+    lessons_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
+):
+    """
+    Generate a personalized learning path for a student based on their goals and course content.
+    """
+    # Verify token
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
     
-    if chunked_results:
-        print(chunked_results)
-        if isinstance(chunked_results, str):
+    student = await student_controller.student_repository.first(where_=[Student.id == user_id])
+    if not student:
+        raise NotFoundException(message="Your account is not allowed to access this feature.")
+    
+    if not request.goal or not request.course_id:
+        raise BadRequestException(message="Please provide course_id and goal.")
+    
+    # Fetch course details
+    course = await courses_controller.courses_repository.first(where_=[Courses.id == request.course_id])
+    if not course:
+        raise NotFoundException(message="Course not found.")
+    
+    # Fetch professor information
+    professor = await professor_controller.professor_repository.first(where_=[Professor.id == course.professor_id])
+    if not professor:
+        raise NotFoundException(message="Professor information not found.")
+    
+    # Fetch all lessons for the course
+    lessons = await lessons_controller.lessons_repository.get_many(where_=[Lessons.course_id == request.course_id])
+    if not lessons:
+        raise NotFoundException(message="No lessons found for this course.")
+    
+    # Prepare data structure for all lessons with their documents and extracted text
+    lessons_data = []
+    for lesson in lessons:
+        documents = await documents_controller.documents_repository.get_many(where_=[Documents.lesson_id == lesson.id])
+        documents_data = []
+        for document in documents:
+            extracted = await extracted_text_controller.extracted_text_repository.first(
+                where_=[ExtractedText.document_id == document.id]
+            )
+            if extracted and extracted.extracted_content:
+                documents_data.append({
+                    "extracted_content": extracted.extracted_content
+                })
+        
+        lessons_data.append({
+            "id": str(lesson.id),
+            "title": lesson.title,
+            "description": lesson.description,
+            "order": lesson.order,
+            "learning_outcomes": lesson.learning_outcomes if lesson.learning_outcomes else [],
+            "documents": documents_data
+        })
+    
+    lessons_data.sort(key=lambda x: x["order"])
+    
+    # Giai đoạn 1: Phân tích goal và xác định timeline
+    timeline = await analyze_goal_and_timeline(
+        goal=request.goal,
+        course_start_date=course.start_date,
+        course_end_date=course.end_date,
+        course_name=course.name,
+        course_learning_outcomes=course.learning_outcomes or []
+    )
+
+    # Giai đoạn 2: Chọn và sắp xếp lessons liên quan
+    selected_lessons = await select_relevant_lessons(
+        goal=request.goal,
+        lessons_data=lessons_data,
+        timeline=timeline,
+        course_name=course.name,
+        course_learning_outcomes=course.learning_outcomes or []
+    )
+
+    # Giai đoạn 3: Tạo learning path chi tiết
+    learning_path = await generate_detailed_learning_path(
+        goal=request.goal,
+        timeline=timeline,
+        selected_lessons=selected_lessons,
+        lessons_data=lessons_data,
+        student_id=str(student.id),
+        course_id=str(request.course_id)
+    )
+    # Save to database
+    if learning_path:
+        logger.info(f"Generated learning path successfully: {json.dumps(learning_path, indent=2)}")
+        # Sanitize date fields to remove timestamp if present
+        for key in ["learning_path_start_date", "learning_path_end_date"]:
+            if 'T' in learning_path[key]:
+                learning_path[key] = learning_path[key].split('T')[0]
+        
+        # Sanitize dates in recommend_lessons
+        for lesson in learning_path["recommend_lessons"]:
+            if 'T' in lesson["start_date"]:
+                lesson["start_date"] = lesson["start_date"].split('T')[0]
+            if 'T' in lesson["end_date"]:
+                lesson["end_date"] = lesson["end_date"].split('T')[0]
+
+        if isinstance(learning_path, str):
             try:
-                chunked_results = json.loads(chunked_results)
+                learning_path = json.loads(learning_path)
             except json.JSONDecodeError:
-                raise ApplicationException(message="Failed to parse chunked_results as JSON.")
+                raise ApplicationException(message="Failed to parse learning_path as JSON.")
         
         learning_path_attributes = {
-            "start_date": datetime.strptime(chunked_results["learning_path_start_date"], '%Y-%m-%d').date(),
-            "end_date": datetime.strptime(chunked_results["learning_path_end_date"], '%Y-%m-%d').date(),
+            "start_date": datetime.strptime(learning_path["learning_path_start_date"], '%Y-%m-%d').date(),
+            "end_date": datetime.strptime(learning_path["learning_path_end_date"], '%Y-%m-%d').date(),
             "objective": request.goal,
             "student_id": str(student.id),
             "course_id": str(request.course_id),
-            "llm_response": chunked_results,
+            "llm_response": learning_path,
         }
         
         add_learning_path = await learning_path_controller.learning_paths_repository.create(
@@ -397,7 +543,7 @@ async def generate_learning_path(
         
         if add_learning_path:
             recommend_lesson_attributes_list = []
-            for recommend_lesson in chunked_results["recommend_lessons"]:
+            for recommend_lesson in learning_path["recommend_lessons"]:
                 if isinstance(recommend_lesson, str):
                     try:
                         recommend_lesson = json.loads(recommend_lesson)
@@ -427,7 +573,7 @@ async def generate_learning_path(
             module_attributes_list = []
             recommend_documents_attributes_list = []
 
-            for i, module_data in enumerate(chunked_results["modules"]):
+            for i, module_data in enumerate(learning_path["modules"]):
                 if isinstance(module_data, str):
                     try:
                         module_data = json.loads(module_data)
@@ -460,7 +606,7 @@ async def generate_learning_path(
 
             # Now assign recommend_lesson_id to the modules
             module_attributes_list = assign_recommend_lesson_id(
-                module_attributes_list, chunked_results["recommend_lessons"], created_recommend_lessons
+                module_attributes_list, learning_path["recommend_lessons"], created_recommend_lessons
             )
 
             # Create modules without reading_material
@@ -480,8 +626,12 @@ async def generate_learning_path(
                 if not created_recommend_documents:
                     raise ApplicationException(message="Failed to create recommend documents.")
                 
-                created_recommend_lessons_response = [
-                    {
+                created_recommend_lessons_response = []
+                for i, recommend_lesson in enumerate(created_recommend_lessons):
+                    # Get the corresponding number_of_modules from learning_path["recommend_lessons"]
+                    original_lesson = learning_path["recommend_lessons"][i]
+                    num_modules = original_lesson.get("number_of_modules", 2)  # Use pre-calculated value
+                    created_recommend_lessons_response.append({
                         "lesson_id": str(recommend_lesson.lesson_id),
                         "recommended_content": recommend_lesson.recommended_content,
                         "explain": recommend_lesson.explain,
@@ -491,17 +641,17 @@ async def generate_learning_path(
                         "start_date": str(recommend_lesson.start_date),
                         "end_date": str(recommend_lesson.end_date),
                         "duration_notes": recommend_lesson.duration_notes,
-                    }
-                    for recommend_lesson in created_recommend_lessons
-                ]
+                        "order": recommend_lesson.order,
+                        "number_of_modules": num_modules,  # Use the pre-calculated value
+                    })
                 
-        
                 created_modules_response = [
                     {
                         "recommend_lesson_id": str(module.recommend_lesson_id),
                         "title": module.title,
                         "objectives": module.objectives,
-                        "last_accessed": module.last_accessed
+                        "last_accessed": module.last_accessed,
+                        "id": str(module.id)
                     }
                     for module in created_modules
                 ]
@@ -529,10 +679,9 @@ async def generate_learning_path(
                 }
                 return Ok(create_response, message="Learning path generated successfully")
         
-        return Ok(chunked_results)
+        return Ok(learning_path)
     else:
         raise ApplicationException(message="Failed to generate recommendations")
-# Helper function 
 
 def assign_recommend_lesson_id(modules, recommend_lessons, created_recommend_lessons):
     current_lesson_index = 0 
@@ -541,7 +690,7 @@ def assign_recommend_lesson_id(modules, recommend_lessons, created_recommend_les
 
     for module in modules:
         recommend_lesson = recommend_lessons[current_lesson_index]
-        number_of_modules = recommend_lesson["number_of_modules"]
+        number_of_modules = recommend_lesson.get("number_of_modules", 2)  # Default to 2 if not specified
 
         module["recommend_lesson_id"] = created_recommend_lessons[created_lesson_index].id
 
@@ -554,44 +703,344 @@ def assign_recommend_lesson_id(modules, recommend_lessons, created_recommend_les
 
     return modules
 
+async def regenerate_lesson_content(
+    recommend_lesson_id: UUID,
+    issues_summary: dict,
+    lessons_controller: LessonsController,
+    recommend_lessons_controller: RecommendLessonsController
+) -> dict:
+    """
+    Regenerate content for a recommended lesson based on identified issues.
+    
+    Returns:
+        Updated recommend_lesson data
+    """
+    recommend_lesson = await recommend_lessons_controller.recommend_lessons_repository.first(
+        where_=[RecommendLessons.id == recommend_lesson_id]
+    )
+    lesson = await lessons_controller.lessons_repository.first(
+        where_=[Lessons.id == recommend_lesson.lesson_id]
+    )
 
-def combine_learning_path_results(chunk_results: List[Dict]) -> Dict:
-    combined_result = {
-        "learning_path_start_date": None,
-        "learning_path_end_date": None,
-        "learning_path_objective": None,
-        "learning_path_progress": 0,
-        "student_id": None,
-        "course_id": None,
-        "recommend_lessons": [],
-        "modules": []
-    }
-    
-    for i, result in enumerate(chunk_results):
-        if i == 0:
-            for key in ["learning_path_start_date", "learning_path_end_date",
-                       "learning_path_objective", "student_id", "course_id"]:
-                combined_result[key] = result[key]
+    chunking_manager = ChunkingManager(
+        provider="gemini",
+        gemini_model_name="gemini-2.0-flash-lite",
+        max_tokens_per_chunk=15000,
+        temperature=0.7,
+        max_output_tokens=8000
+    )
+
+    prompt = f"""
+    ## Lesson Content Regeneration Task
+    - Lesson Title: "{lesson.title}"
+    - Current Recommended Content: "{recommend_lesson.recommended_content}"
+    - Issues Summary: {json.dumps(issues_summary, indent=2)}
+
+    ## Task Requirements
+    1. Generate updated content for this lesson targeting the specific issues identified.
+    2. Focus on:
+       - Addressing concept misunderstandings (e.g., detailed explanations, examples).
+       - Correcting code errors (e.g., improved code snippets, common error fixes).
+       - Reinforcing weak areas from increasing_issues or most_frequent_type.
+    3. Provide 2-3 new modules with detailed breakdowns.
+
+    ## Output Format
+    {{
+        "recommended_content": "Updated content targeting issues...",
+        "explain": "Why this content addresses the issues and supports learning goals...",
+        "modules": [
+            {{
+                "title": "Module Title",
+                "objectives": ["Objective 1", "Objective 2"],
+                "reading_material": {{
+                    "theoryContent": [
+                        {{
+                            "title": "Section Title",
+                            "description": ["Para 1", "Para 2", "Para 3"],
+                            "examples": [
+                                {{
+                                    "title": "Example 1",
+                                    "codeSnippet": "code here",
+                                    "explanation": "Explanation"
+                                }}
+                            ]
+                        }}
+                    ],
+                    "practicalGuide": [
+                        {{
+                            "steps": ["Step 1", "Step 2", "Step 3", "Step 4"],
+                            "commonErrors": ["Error 1 - solution", "Error 2 - solution"]
+                        }}
+                    ],
+                    "references": [
+                        {{
+                            "title": "Ref Title",
+                            "link": "https://example.com",
+                            "description": "Relevance"
+                        }}
+                    ]
+                }}
+            }}
+        ]
+    }}
+    """
+
+    response = chunking_manager.call_llm_api(prompt, "You are an expert in educational content generation.")
+    updated_content = response if isinstance(response, dict) else json.loads(response)
+
+    # Update the recommended lesson
+    await recommend_lessons_controller.recommend_lessons_repository.update(
+        where_=[RecommendLessons.id == recommend_lesson_id],
+        attributes={
+            "recommended_content": updated_content["recommended_content"],
+            "explain": updated_content["explain"],
+            "status": "new",
+            "progress": 0
+        },
+        commit=True
+    )
+
+    return updated_content
+
+async def monitor_study_progress(
+    recommend_lesson_id: UUID,
+    student_id: UUID,
+    course_id: UUID,
+    recommend_lessons_controller: RecommendLessonsController,
+    learning_path_controller: LearningPathsController,
+    lessons_controller: LessonsController,
+    student_courses_controller: StudentCoursesController,
+) -> dict:
+    recommend_lesson = await recommend_lessons_controller.recommend_lessons_repository.first(
+        where_=[RecommendLessons.id == recommend_lesson_id]
+    )
+    if not recommend_lesson:
+        raise NotFoundException(message="Recommended lesson not found.")
+
+    learning_path = await learning_path_controller.learning_paths_repository.first(
+        where_=[LearningPaths.student_id == student_id, LearningPaths.course_id == course_id],
+        order_={"desc": ["version"]}
+    )
+    if not learning_path:
+        raise NotFoundException(message="Learning path not found.")
+
+    if recommend_lesson.progress < 80:
+        return Ok(data=None, message="Student has not met the required learning criteria to analyze their study results.")
+
+    student_course = await student_courses_controller.student_courses_repository.first(
+        where_=[StudentCourses.student_id == student_id, StudentCourses.course_id == course_id]
+    )
+    issues_summary = student_course.issues_summary if student_course and student_course.issues_summary else {}
+
+    analysis_result = await analyze_issues(
+        recommend_lesson,
+        issues_summary,
+        learning_path,
+        recommend_lessons_controller,
+        lessons_controller
+    )
+
+    if analysis_result["can_proceed"]:
+        await recommend_lessons_controller.recommend_lessons_repository.update(
+            where_=[RecommendLessons.id == recommend_lesson_id],
+            attributes={"status": "completed", "progress": 100},
+            commit=True
+        )
+        analysis_result["message"] = "Lesson completed successfully. Student can proceed to the next lesson."
         
-        combined_result["recommend_lessons"].extend(result["recommend_lessons"])
-        combined_result["modules"].extend(result["modules"])
+    if analysis_result["needs_repeat"]:
+        return Ok(data=analysis_result, message="Student needs to repeat the lesson due to identified issues.")
+
+    return Ok(data=analysis_result, message=analysis_result["message"])
+
+async def analyze_issues(
+    recommend_lesson: RecommendLessons,
+    issues_summary: dict,
+    learning_path: LearningPaths,
+    recommend_lessons_controller: RecommendLessonsController,
+    lessons_controller: LessonsController
+) -> dict:
+    """
+    Analyze the issues_summary using AI to determine next steps for the student.
     
-    combined_result["recommend_lessons"].sort(key=lambda x: x["order"])
+    Args:
+        recommend_lesson: The recommended lesson object
+        issues_summary: JSON data from StudentCourses.issues_summary
+        learning_path: The latest learning path for the student
+        recommend_lessons_controller: Controller for recommend_lessons
+        lessons_controller: Controller for lessons
     
-    # Ensure consistent date type (use datetime.date)
-    current_date = datetime.strptime(combined_result["learning_path_start_date"], '%Y-%m-%d').date()
-    for lesson in combined_result["recommend_lessons"]:
-        lesson_start = datetime.strptime(lesson["start_date"], "%Y-%m-%d").date()
-        lesson_end = datetime.strptime(lesson["end_date"], "%Y-%m-%d").date()
-        lesson["start_date"] = lesson_start.strftime("%Y-%m-%d")
-        lesson["end_date"] = lesson_end.strftime("%Y-%m-%d")
-        current_date = lesson_end + timedelta(days=1)
-    
-    end_date = datetime.strptime(combined_result["learning_path_end_date"], '%Y-%m-%d').date()
-    if current_date > end_date:
-        combined_result["learning_path_end_date"] = current_date.strftime("%Y-%m-%d")
-    
-    return combined_result
+    Returns:
+        Dict with AI-driven analysis results and recommendations
+    """
+    result = {
+        "can_proceed": True,
+        "needs_repeat": False,
+        "needs_review_prior": False,
+        "issues_analysis": {},
+        "recommendations": [],
+        "message": ""
+    }
+
+    # If no issues_summary or empty, return early
+    if not issues_summary or "common_issues" not in issues_summary:
+        result["message"] = "No significant issues found."
+        return result
+
+    # Initialize ChunkingManager for AI analysis
+    chunking_manager = ChunkingManager(
+        provider="gemini",
+        gemini_model_name="gemini-2.0-flash-lite",
+        max_tokens_per_chunk=15000,
+        temperature=0.7,
+        max_output_tokens=8000
+    )
+
+    # Fetch lesson and learning path details
+    lesson = await lessons_controller.lessons_repository.first(
+        where_=[Lessons.id == recommend_lesson.lesson_id]
+    )
+    all_recommend_lessons = await recommend_lessons_controller.recommend_lessons_repository.get_many(
+        where_=[RecommendLessons.learning_path_id == learning_path.id]
+    )
+    prior_lessons = [rl for rl in all_recommend_lessons if rl.order < recommend_lesson.order]
+
+    # Construct AI prompt
+    prompt = f"""
+    ## Issues Analysis Task
+    - Lesson Title: "{lesson.title}"
+    - Recommended Lesson ID: "{recommend_lesson.id}"
+    - Student Goal: "{learning_path.objective}"
+    - Issues Summary (JSON): {json.dumps(issues_summary, indent=2)}
+    - Prior Lessons in Learning Path: {json.dumps([{"id": str(rl.lesson_id), "title": (await lessons_controller.lessons_repository.first(where_=[Lessons.id == rl.lesson_id])).title, "order": rl.order} for rl in prior_lessons], indent=2)}
+
+    ## Task Requirements
+    Analyze the provided `issues_summary` to determine the student's next steps. Consider:
+    1. **Severity of Issues**:
+       - Assess the frequency and type of issues (e.g., concept_misunderstanding, code_error).
+       - Identify if issues are significant (e.g., frequency >= 5 or total_issues_count >= 20).
+    2. **Impact on Long-term Goals**:
+       - Evaluate if these issues could hinder achieving the learning path objective.
+    3. **Relation to Prior Lessons**:
+       - Check if issues link to prior lessons (via related_lessons or related_modules).
+       - Suggest revisiting specific prior lessons if applicable.
+    4. **Recommendations**:
+       - Decide if the student can proceed, needs to repeat the lesson, or review prior lessons.
+       - Provide detailed reasoning for each recommendation.
+
+    ## Output Format
+    {{
+        "can_proceed": true/false,
+        "needs_repeat": true/false,
+        "needs_review_prior": true/false,
+        "issues_analysis": {{
+            "significant_issues": [
+                {{
+                    "type": "issue type",
+                    "frequency": number,
+                    "description": "issue description",
+                    "severity": "low/medium/high",
+                    "impact_on_goals": "Explanation of impact"
+                }}
+            ],
+            "total_issues_count": number,
+            "increasing_issues": ["issue1", "issue2"],
+            "most_frequent_type": "type"
+        }},
+        "recommendations": [
+            {{
+                "action": "proceed/repeat/review_prior",
+                "reason": "Detailed reasoning",
+                "details": "Specific lessons or actions (e.g., lesson titles to review)"
+            }}
+        ]
+    }}
+    """
+
+    # Call AI for analysis
+    try:
+        response = chunking_manager.call_llm_api(
+            prompt,
+            "You are an expert AI assistant specializing in educational analysis and student progress evaluation."
+        )
+        analysis_result = response if isinstance(response, dict) else json.loads(response)
+    except Exception as e:
+        print(f"AI analysis failed: {str(e)}")
+        # Fallback to basic analysis if AI fails
+        analysis_result = {
+            "can_proceed": True,
+            "needs_repeat": False,
+            "needs_review_prior": False,
+            "issues_analysis": {"significant_issues": [], "total_issues_count": issues_summary.get("total_issues_count", 0)},
+            "recommendations": []
+        }
+        raise BadRequestException(message="AI analysis unavailable. Defaulting to proceed due to insufficient data.")
+
+    # Populate result from AI response
+    result.update(analysis_result)
+
+    return result
+
+@router.get("/monitor-study-progress/course/{course_id}/recommend_lesson/{recommend_lesson_id}") #haven't tested
+async def monitor_study_progress_endpoint(
+    recommend_lesson_id: UUID,
+    course_id: UUID,
+    token: str = Depends(oauth2_scheme),
+    student_controller: StudentController = Depends(InternalProvider().get_student_controller),
+    recommend_lessons_controller: RecommendLessonsController = Depends(InternalProvider().get_recommendlessons_controller),
+    learning_path_controller: LearningPathsController = Depends(InternalProvider().get_learningpaths_controller),
+    lessons_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
+    student_courses_controller: StudentCoursesController = Depends(InternalProvider().get_student_courses_controller),
+):
+    """Monitor student progress when accessing a recommended lesson."""
+    payload = verify_token(token)
+    student_id = payload.get("sub")
+    if not student_id:
+        raise BadRequestException(message="Invalid token.")
+
+    student = await student_controller.student_repository.first(where_=[Student.id == student_id])
+    if not student:
+        raise NotFoundException(message="Student not found.")
+
+    return await monitor_study_progress(
+        recommend_lesson_id,
+        student_id,
+        course_id,
+        recommend_lessons_controller,
+        learning_path_controller,
+        lessons_controller,
+        student_courses_controller
+    )
+
+@router.post("/regenerate-lesson-content/{recommend_lesson_id}") #haven't tested
+async def regenerate_lesson_content_endpoint(
+    recommend_lesson_id: UUID,
+    token: str = Depends(oauth2_scheme),
+    recommend_lessons_controller: RecommendLessonsController = Depends(InternalProvider().get_recommendlessons_controller),
+    lessons_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
+    student_courses_controller: StudentCoursesController = Depends(InternalProvider().get_student_courses_controller),
+):
+    """Regenerate content for a recommended lesson based on issues."""
+    payload = verify_token(token)
+    student_id = payload.get("sub")
+    if not student_id:
+        raise BadRequestException(message="Invalid token.")
+
+    student_course = await student_courses_controller.student_courses_repository.first(
+        where_=[StudentCourses.student_id == student_id]
+    )
+    if not student_course:
+        raise NotFoundException(message="Student course data not found.")
+
+    updated_content = await regenerate_lesson_content(
+        recommend_lesson_id,
+        student_course.issues_summary,
+        lessons_controller,
+        recommend_lessons_controller
+    )
+    return Ok(data=updated_content, message="Lesson content regenerated successfully.")
+ 
+
 @router.get("/generate-student-goals/{course_id}")
 async def generate_student_goals(
     course_id: UUID,
@@ -1047,231 +1496,74 @@ async def generate_quiz(
         print(f"Error generating quiz: {str(e)}")
         raise ApplicationException(message=f"Failed to generate quiz: {str(e)}")
     
-    # if existing_learning_path and issues_summary:
-    #     old_response = existing_learning_path.llm_response
-    #     version = existing_learning_path.version + 1
-        
-    #     old_recommend_lessons = await learning_path_controller.get_recommended_lessons_by_learning_path_id(existing_learning_path.id)
-        
-    #     def generate_chunk_prompt(lessons_chunk, chunk_index, total_chunks):
-    #         """
-    #         Generate a prompt for regenerating the learning path based on old response and issues.
-    #         """
-    #         if isinstance(old_response, str):
-    #             old_response_json = json.loads(old_response)
-    #         else:
-    #             old_response_json = old_response
-                
-    #         if isinstance(issues_summary, str):
-    #             issues_summary_json = json.loads(issues_summary)
-    #         else:
-    #             issues_summary_json = issues_summary
-                
-    #         chunk_context = f"""
-    #         # Learning Path Regeneration Task - Chunk {chunk_index + 1} of {total_chunks} (Version {version})
-            
-    #         ## Chunking Context
-    #         You are regenerating a personalized learning path based on a previous version and identified issues.
-    #         This is chunk {chunk_index + 1} of {total_chunks}, containing {len(lessons_chunk)} lessons.
-    #         Focus only on the lessons provided in this chunk when making recommendations.
-    #         """
-            
-    #         old_path_context = f"""
-    #         ## Previous Learning Path (Version {version - 1})
-    #         Below is the previous learning path response:
-    #         {json.dumps(old_response_json, indent=2)}
-            
-    #         This learning path was used as the basis for the student's progress, but issues were identified that need to be addressed.
-    #         """
-            
-    #         issues_context = f"""
-    #         ## Issues Summary (Last Updated: {issues_summary_json.get('last_updated', 'Unknown')})
-    #         The student encountered the following issues in the previous learning path (Total Issues: {issues_summary_json.get('total_issues_count', 0)}):
-    #         ### Common Issues
-    #         {json.dumps(issues_summary_json.get('common_issues', []), indent=2)}
-            
-    #         ### Issue Trends
-    #         {json.dumps(issues_summary_json.get('issue_trends', {}), indent=2)}
-            
-    #         These issues indicate areas where the student struggled, such as concept misunderstandings or quiz failures.
-    #         """
-            
-    #         lessons_chunk_str = json.dumps(lessons_chunk, indent=2)
-            
-    #         prompt = f"""
-    #         {chunk_context}
-            
-    #         {old_path_context}
-            
-    #         {issues_context}
-            
-    #         ## Student Information
-    #         - Student Name: {student.name}
-    #         - Student ID: {student.mssv}
-    #         - Course: {course.name} (ID: {course.courseID})
-    #         - Professor: {professor.fullname}
-    #         - Student's Learning Goal: "{request.goal}"
-            
-    #         ## Course Information
-    #         - Start Date: {course.start_date.isoformat() if course.start_date else start_date.isoformat()}
-    #         - End Date: {course.end_date.isoformat() if course.end_date else end_date.isoformat()}
-    #         - Learning Outcomes: {json.dumps(course.learning_outcomes if course.learning_outcomes else [])}
-            
-    #         ## Available Lessons in This Chunk
-    #         This chunk contains {len(lessons_chunk)} lessons:
-    #         {lessons_chunk_str}
-            
-    #         Old information of recommending lessons and modules:
-    #         {old_recommend_lessons}
-            
-    #         ## Task Requirements
-    #         Regenerate the learning path for this chunk by:
-    #         1. Analyzing the previous learning path and the issues summary.
-    #         2. Recommending lessons from this chunk that address the identified issues (e.g., revisit lessons tied to "related_lessons" or "related_modules", they contains ids of old recommend lessons and old modules).
-    #         3. Adjusting the content focus to correct misunderstandings or reinforce weak areas (e.g., UML diagrams, agile methodologies).
-    #         4. Providing new or updated modules to target the most frequent or increasing issues.
+'''
+export interface Root {
+  can_proceed: boolean
+  needs_repeat: boolean
+  needs_review_prior: boolean
+  issues_analysis: IssuesAnalysis
+  recommendations: Recommendation[]
+}
 
-    #         For each recommended lesson, provide:
-    #         1. Recommended content (tailored to address specific issues)
-    #         2. An explanation of why this content helps resolve the issues and supports the student's goal
-    #         3. 2-3 modules per lesson with detailed breakdowns
-            
-    #         ## Timeline Estimation Task (REQUIRED)
-    #         You MUST estimate and include a realistic start date, end date, and duration notes for each recommended lesson.
-    #         Base your estimation on:
-    #         1. The complexity of the recommended lessons
-    #         2. The student's past struggles (e.g., frequency of issues)
-    #         3. The overall course timeline ({course.start_date.isoformat() if course.start_date else start_date.isoformat()} to {course.end_date.isoformat() if course.end_date else end_date.isoformat()})
-    #         4. The number and complexity of recommended lessons
-            
-    #         ## Reading Material Requirements
-    #         For the "reading_material" field in each module:
-    #         1. The theoryContent section must be comprehensive and detailed, with:
-    #         - At least 3 paragraphs in each description section
-    #         - At least 2 examples for each theory content section where applicable
-    #         - codeSnippet must contain actual illustrative code when relevant
-    #         2. All references must be:
-    #         - Valid and reliable sources
-    #         - Directly relevant to the specific module topic
-    #         - Include a mix of academic and practical resources where appropriate
-    #         - At least 3 references per module
-    #         3. The practical guide section should include:
-    #         - At least 4-5 detailed steps for each guide
-    #         - At least 3 common errors with explanations
-            
-    #         ## Output Format
-    #         Your response MUST be in the following JSON format and MUST include all fields shown below:
-    #         {{
-    #             "learning_path_start_date": "{start_date.isoformat()}",
-    #             "learning_path_end_date": "{end_date.isoformat()}",
-    #             "learning_path_objective": "Updated objective based on the student's goal of '{request.goal}' and resolution of identified issues",
-    #             "learning_path_progress": 0,
-    #             "student_id": "{student.mssv}",
-    #             "course_id": "{course.courseID}",
-    #             "recommend_lessons": [
-    #                 {{
-    #                     "lesson_id": "Lesson ID",
-    #                     "recommended_content": "Detailed explanation of what to focus on in this lesson to address specific issues...",
-    #                     "explain": "Explanation of why this content is important for resolving issues and achieving the student's goal...",
-    #                     "status": "new",
-    #                     "progress": 0,
-    #                     "bookmark": false,
-    #                     "start_date": "YYYY-MM-DD",
-    #                     "end_date": "YYYY-MM-DD",
-    #                     "duration_notes": "Brief explanation of how this timeline was determined based on lesson complexity and past issues",
-    #                     "number_of_modules": 2
-    #                 }}
-    #             ],
-    #             "modules": [
-    #                 {{
-    #                     "title": "Module Title",
-    #                     "objectives": ["Learning objective 1", "Learning objective 2", "Learning objective 3"],
-    #                     "reading_material": {{
-    #                         "id": "Unique ID for this reading material",
-    #                         "name": "Name of the reading material",
-    #                         "theoryContent": [
-    #                             {{
-    #                                 "title": "Section title",
-    #                                 "prerequisites": ["Prerequisite 1", "Prerequisite 2"],
-    #                                 "description": [
-    #                                     "Detailed description paragraph 1 - must be substantial",
-    #                                     "Detailed description paragraph 2 - must be substantial",
-    #                                     "Detailed description paragraph 3 - must be substantial"
-    #                                 ],
-    #                                 "examples": [
-    #                                     {{
-    #                                         "title": "Example 1 title",
-    #                                         "codeSnippet": "// Actual illustrative code example when appropriate\\nfunction example() {{\\n  return 'This is sample code';\\n}}",
-    #                                         "explanation": "Detailed explanation of how this code example illustrates the concept"
-    #                                     }},
-    #                                     {{
-    #                                         "title": "Example 2 title",
-    #                                         "codeSnippet": null,
-    #                                         "explanation": "Detailed explanation of this conceptual example"
-    #                                     }}
-    #                                 ]
-    #                             }}
-    #                         ],
-    #                         "practicalGuide": [
-    #                             {{
-    #                                 "title": "Guide title",
-    #                                 "steps": [
-    #                                     "Detailed step 1 with explanation",
-    #                                     "Detailed step 2 with explanation",
-    #                                     "Detailed step 3 with explanation",
-    #                                     "Detailed step 4 with explanation",
-    #                                     "Detailed step 5 with explanation"
-    #                                 ],
-    #                                 "commonErrors": [
-    #                                     "Common error 1 with prevention/solution advice",
-    #                                     "Common error 2 with prevention/solution advice",
-    #                                     "Common error 3 with prevention/solution advice"
-    #                                 ]
-    #                             }}
-    #                         ],
-    #                         "references": [
-    #                             {{
-    #                                 "title": "Academic reference title",
-    #                                 "link": "https://example.com/academic-reference",
-    #                                 "description": "Detailed description of this academic reference and its relevance"
-    #                             }},
-    #                             {{
-    #                                 "title": "Industry reference title",
-    #                                 "link": "https://example.com/industry-reference",
-    #                                 "description": "Detailed description of this industry reference and its relevance"
-    #                             }},
-    #                             {{
-    #                                 "title": "Practical reference title",
-    #                                 "link": "https://example.com/practical-reference",
-    #                                 "description": "Detailed description of this practical reference and its relevance"
-    #                             }}
-    #                         ],
-    #                         "summaryAndReview": {{
-    #                             "keyPoints": ["Key point 1", "Key point 2", "Key point 3", "Key point 4", "Key point 5"],
-    #                             "reviewQuestions": [
-    #                                 {{
-    #                                     "id": "Question ID 1",
-    #                                     "question": "Challenging review question 1",
-    #                                     "answer": "Comprehensive answer to review question 1",
-    #                                     "maxscore": 10,
-    #                                     "score": null,
-    #                                     "inputUser": null
-    #                                 }},
-    #                                 {{
-    #                                     "id": "Question ID 2",
-    #                                     "question": "Challenging review question 2",
-    #                                     "answer": "Comprehensive answer to review question 2",
-    #                                     "maxscore": 10,
-    #                                     "score": null,
-    #                                     "inputUser": null
-    #                                 }}
-    #                             ],
-    #                             "quizLink": "https://example.com/quiz"
-    #                         }}
-    #                     }}
-    #                 }}
-    #             ]
-    #         }}
-    #         """
-    #         return prompt
-    # else:
+export interface IssuesAnalysis {
+  significant_issues: SignificantIssue[]
+  total_issues_count: number
+  increasing_issues: string[]
+  most_frequent_type: string
+}
+
+export interface SignificantIssue {
+  type: string
+  frequency: number
+  description: string
+  severity: string
+  impact_on_goals: string
+}
+
+export interface Recommendation {
+  action: string
+  reason: string
+  details: string
+}
+
+{
+  "can_proceed": false,
+  "needs_repeat": true,
+  "needs_review_prior": true,
+  "issues_analysis": {
+    "significant_issues": [
+      {
+        "type": "concept_misunderstanding",
+        "frequency": 8,
+        "description": "Struggling to grasp recursion base cases.",
+        "severity": "high",
+        "impact_on_goals": "This significantly hinders the student's ability to understand and implement recursive functions, which is fundamental to mastering Python programming."
+      },
+      {
+        "type": "code_error",
+        "frequency": 5,
+        "description": "Errors in recursive function implementation.",
+        "severity": "medium",
+        "impact_on_goals": "Frequent code errors will slow down the student's progress and may lead to frustration, ultimately affecting their ability to master Python programming."
+      }
+    ],
+    "total_issues_count": 13,
+    "increasing_issues": [
+      "recursion application"
+    ],
+    "most_frequent_type": "concept_misunderstanding"
+  },
+  "recommendations": [
+    {
+      "action": "repeat",
+      "reason": "The student demonstrates significant difficulties with base cases and implementing recursive functions. Repeating the current lesson will allow for more practice and clarification of these core concepts.",
+      "details": "Review the 'Advanced Recursion' lesson."
+    },
+    {
+      "action": "review_prior",
+      "reason": "The issues with base cases suggest a potential gap in understanding the foundational concepts of recursion, covered in a prior lesson.",
+      "details": "Review the lesson titled 'Introduction to Recursion' (ID: 6a5216cc-f261-45f2-acac-e602c9ab48e3)."
+    }
+  ]
+}
+'''
