@@ -12,7 +12,7 @@ class Professor(Base, TimestampMixin):
     name = Column(String(255), nullable=False)  # Username of the professor
     email = Column(String(255), unique=True, nullable=False)    # Email of the professor
     password = Column(String(255), nullable=True)   # Password of the professor
-    avatar_url = Column(String, nullable=True)  # Avatar URL of the professor
+    avatar_url = Column(String, default="documents/326750ef-127e-4d24-b7f1-a9aaa87f40d6-User-avatar.svg.png")  # Avatar URL of the professor
     mscb = Column(String(10), nullable=True)    # Employee ID
     date_of_birth = Column(Date, nullable=True) # Date of birth of the professor
     fullname = Column(String(255), nullable=True)   # Full name of the professor
