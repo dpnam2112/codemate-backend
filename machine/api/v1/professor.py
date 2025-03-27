@@ -54,7 +54,8 @@ async def get_professor_courses(
 
     # If no courses are found
     if not courses:
-        return Ok(data=[], message="No courses found.")
+        return Ok(data=GetProfessorCoursesPaginatedResponse(content=[], currentPage=page, pageSize=page_size, totalRows=0, totalPages=0), message="No courses found.")
+
 
     courses_response = []
     for course in courses:
