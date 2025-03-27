@@ -58,17 +58,29 @@ async def create_new_lesson(
     if user.id != course.professor_id:
         raise BadRequestException(message="You are not allowed to create a lesson in this course.")
 
+    # Modify the order retrieval to match the repository's expected format
+    last_lesson = await lesson_controller.lessons_repository.first(
+        where_=[Lessons.course_id == course_id],
+        order_={'desc': ['order']}  # Note the lowercase 'desc'
+    )
+
+    # Set the order to be one more than the last lesson's order, or 1 if no lessons exist
+    next_order = last_lesson.order + 1 if last_lesson else 1
+
     lesson_data = {
         "id": str(uuid.uuid4()),
         "title": title,
         "description": description,
         "course_id": course_id,
+        "order": next_order,
         "learning_outcomes": learning_outcomes,
     }
+    
     created_lesson = await lesson_controller.lessons_repository.create(
         lesson_data,
         commit=True,
     )
+
 
     # documents = []
     # if files:

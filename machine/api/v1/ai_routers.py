@@ -990,7 +990,7 @@ async def monitor_study_progress_endpoint(
     recommend_lessons_controller: RecommendLessonsController = Depends(InternalProvider().get_recommendlessons_controller),
     learning_path_controller: LearningPathsController = Depends(InternalProvider().get_learningpaths_controller),
     lessons_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
-    student_courses_controller: StudentCoursesController = Depends(InternalProvider().get_student_courses_controller),
+    student_courses_controller: StudentCoursesController = Depends(InternalProvider().get_studentcourses_controller),
 ):
     """Monitor student progress when accessing a recommended lesson."""
     payload = verify_token(token)
@@ -1018,7 +1018,7 @@ async def regenerate_lesson_content_endpoint(
     token: str = Depends(oauth2_scheme),
     recommend_lessons_controller: RecommendLessonsController = Depends(InternalProvider().get_recommendlessons_controller),
     lessons_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
-    student_courses_controller: StudentCoursesController = Depends(InternalProvider().get_student_courses_controller),
+    student_courses_controller: StudentCoursesController = Depends(InternalProvider().get_studentcourses_controller),
 ):
     """Regenerate content for a recommended lesson based on issues."""
     payload = verify_token(token)
