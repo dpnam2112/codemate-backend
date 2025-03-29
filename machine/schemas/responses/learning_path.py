@@ -27,6 +27,7 @@ class RecommendedLessonDTO(BaseModel):
     bookmark: bool = Field(..., description="Whether the lesson is bookmarked.")
     modules: Optional[list[ModuleDTO]] = Field(None, description="Modules associated with the recommended lesson.")
     lesson_title: Optional[str] = Field(None, description="Title of the associated lesson.")
+    order: Optional[int] = Field(None, description="Order of the recommended lesson.")
 
     class Config:
         from_attributes = True

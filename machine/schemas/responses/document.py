@@ -29,7 +29,7 @@ class ReferenceResponse(BaseModel):
 
 
 class ReviewQuestionResponse(BaseModel):
-    id: UUID                             # ID của câu hỏi
+    id: str                            # ID của câu hỏi
     question: str                        # Nội dung câu hỏi
     answer: str                          # Đáp án
     maxscore: int                        # Điểm tối đa
