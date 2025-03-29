@@ -1310,7 +1310,10 @@ async def generate_quiz(
     # Define the prompt for quiz generation
     prompt = f"""
     ## Quiz Generation Task
-    
+    ## Difficulty Distribution Requirements
+    - Easy Questions: {request.difficulty_distribution.easy}
+    - Medium Questions: {request.difficulty_distribution.medium}
+    - Hard Questions: {request.difficulty_distribution.hard}
     ## Student Information
     - Student is learning about: "{lesson.title}"
     - Recommended focus areas: "{recommended_content}"
@@ -1332,7 +1335,10 @@ async def generate_quiz(
     1. Focus specifically on assessing the module objectives first and foremost
     2. Align with the recommended content areas as a secondary priority
     3. Cover key concepts and important details from the lesson materials
-    4. Include questions of varying difficulty levels (easy, medium, hard)
+    4. Include EXACTLY the specified number of questions for each difficulty level:
+       - {request.difficulty_distribution.easy} Easy Questions
+       - {request.difficulty_distribution.medium} Medium Questions
+       - {request.difficulty_distribution.hard} Hard Questions
     5. Include clear explanations for each answer
     
     ## Output Format
@@ -1374,12 +1380,15 @@ async def generate_quiz(
     }}
     
     IMPORTANT REQUIREMENTS:
-    1. Generate at least 10 but no more than 15 questions
-    2. Include a mix of single_choice, multiple_choice, and true_false question types
-    3. For single_choice questions have only one correct answer among the four provided options (A, B, C, D).
-    4. For multiple_choice questions may have more than one correct answer, and the user must select all correct options from the four provided choices (A, B, C, D).
-    5. For true/false questions, options should be exactly ["True", "False"]
-    6. The sum of all question points should be 100
+    1. EXACTLY {request.difficulty_distribution.easy + request.difficulty_distribution.medium + request.difficulty_distribution.hard} questions in total
+    2. EXACTLY:
+       - {request.difficulty_distribution.easy} questions with "easy" difficulty
+       - {request.difficulty_distribution.medium} questions with "medium" difficulty 
+       - {request.difficulty_distribution.hard} questions with "hard" difficulty
+    3. Include a mix of single_choice, multiple_choice, and true_false question types
+    4. For single_choice questions have only one correct answer among the four provided options (A, B, C, D).
+    5. For multiple_choice questions may have more than one correct answer, and the user must select all correct options from the four provided choices (A, B, C, D).
+    6. For true/false questions, options should be exactly ["True", "False"]
     7. Each question must have a detailed explanation for the correct answer
     8. Make sure correct_answer exactly matches one of the options
     9. Every question must have a difficulty level of "easy", "medium", or "hard"
@@ -1387,6 +1396,7 @@ async def generate_quiz(
     11. The quiz content should primarily assess the module objectives
     12. Secondary focus should be on the recommended content areas
     13. Ensure each question clearly relates to at least one module objective
+    14. The sum of all question points should be 100
     """
     
     # Initialize Genai client and generate quiz
