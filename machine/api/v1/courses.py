@@ -823,7 +823,6 @@ async def get_personalized_lp(
 
 @router.get(
     "/{course_id}/learning-path/recommended-lessons",
-    response_model=Ok[List[RecommendedLessonDTO]],
 )
 async def get_recommended_lessons(
     course_id: UUID,

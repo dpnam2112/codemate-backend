@@ -841,17 +841,17 @@ async def monitor_study_progress(
     )
 
     if analysis_result["can_proceed"]:
-        await recommend_lessons_controller.recommend_lessons_repository.update(
-            where_=[RecommendLessons.id == recommend_lesson_id],
-            attributes={"status": "completed", "progress": 100},
-            commit=True
-        )
-        analysis_result["message"] = "Lesson completed successfully. Student can proceed to the next lesson."
+        # await recommend_lessons_controller.recommend_lessons_repository.update(
+        #     where_=[RecommendLessons.id == recommend_lesson_id],
+        #     attributes={"status": "completed", "progress": 100},
+        #     commit=True
+        # )
+        return Ok(data=analysis_result, message="Lesson completed successfully. Student can proceed to the next lesson.")
         
     if analysis_result["needs_repeat"]:
         return Ok(data=analysis_result, message="Student needs to repeat the lesson due to identified issues.")
 
-    return Ok(data=analysis_result, message=analysis_result["message"])
+    return Ok(data=analysis_result, message="Student needs to review prior lessons before proceeding.")
 
 async def analyze_issues(
     recommend_lesson: RecommendLessons,
@@ -879,7 +879,6 @@ async def analyze_issues(
         "needs_review_prior": False,
         "issues_analysis": {},
         "recommendations": [],
-        "message": ""
     }
 
     # If no issues_summary or empty, return early
@@ -912,7 +911,7 @@ async def analyze_issues(
     - Recommended Lesson ID: "{recommend_lesson.id}"
     - Student Goal: "{learning_path.objective}"
     - Issues Summary (JSON): {json.dumps(issues_summary, indent=2)}
-    - Prior Lessons in Learning Path: {json.dumps([{"id": str(rl.lesson_id), "title": (await lessons_controller.lessons_repository.first(where_=[Lessons.id == rl.lesson_id])).title, "order": rl.order} for rl in prior_lessons], indent=2)}
+    - Prior Lessons in Learning Path: {json.dumps([{"id": str(rl.id), "title": (await lessons_controller.lessons_repository.first(where_=[Lessons.id == rl.lesson_id])).title, "order": rl.order} for rl in prior_lessons], indent=2)}
 
     ## Task Requirements
     Analyze the provided `issues_summary` to determine the student's next steps. Consider:
@@ -955,6 +954,7 @@ async def analyze_issues(
             }}
         ]
     }}
+    IMPORTANT: YOU MUST RETURN THE RESPONSE IN JSON FORMAT ABOVE. DON'T RETURN ID OF LESSON, RECOMMEND_LESSON, PLEASE RETURN THE NAME INSTEAD.
     """
 
     # Call AI for analysis

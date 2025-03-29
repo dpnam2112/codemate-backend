@@ -61,11 +61,15 @@ class LearningPathsController(BaseController[LearningPaths]):
                     ModuleDTO.model_validate(module)
                     for module in lesson.modules
                 ] if expand == "modules" else None,
+                
             })
             for lesson in learning_path.recommend_lessons
         ]
 
-        return lessons
+        return {
+            "student_goal": learning_path.objective,
+            "lessons": lessons
+        }
 
     async def get_recommended_lessons_by_learning_path_id(self, learning_path_id: UUID) -> list[RecommendedLessonDTO]:
         """
