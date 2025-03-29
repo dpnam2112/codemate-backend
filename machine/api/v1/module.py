@@ -14,7 +14,178 @@ from core.utils.auth_utils import verify_token
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 router = APIRouter(prefix="/modules", tags=["recommendation"])
 
+# async def analyze_quiz_issues(
+#     recommend_lessons_controller,
+#     recommend_quiz_question_controller,
+#     quiz_id: UUID,
+#     student_id: UUID
+# ) -> Dict[str, Any]:
+#     """
+#     Analyze quiz issues and generate insights
+    
+#     Args:
+#         recommend_lessons_controller: Controller for recommend lessons
+#         recommend_quiz_question_controller: Controller for quiz questions
+#         quiz_id: ID of the submitted quiz
+#         student_id: ID of the student who took the quiz
+    
+#     Returns:
+#         Dictionary of analyzed issues
+#     """
+#     # Fetch quiz questions with their details
+#     quiz_questions = await recommend_quiz_question_controller.recommend_quiz_question_repository.get_many(
+#         where_=[RecommendQuizQuestion.quiz_id == quiz_id],
+#     )
+    
+#     # Analyze issues using AI
+#     issue_analysis = await analyze_issues_with_ai(quiz_questions)
+    
+#     return issue_analysis
 
+# async def analyze_issues_with_ai(quiz_questions):
+#     """
+#     Use AI to analyze quiz questions and generate insights
+    
+#     Args:
+#         quiz_questions: List of quiz questions
+    
+#     Returns:
+#         Analyzed issues dictionary
+#     """
+#     try:
+#         # Prepare prompt for AI analysis
+#         prompt = f"""Analyze the following quiz questions and identify common issues:
+#         {json.dumps([{
+#             'question': q.question,
+#             'correct_answer': q.correct_answer,
+#             'user_choice': q.user_choice,
+#             'is_correct': q.user_choice in q.correct_answer
+#         } for q in quiz_questions])}
+        
+#         Provide insights on:
+#         1. Concept misunderstandings
+#         2. Repeated errors
+#         3. Learning gaps
+        
+#         Format the response as a JSON with the following structure:
+#         {
+#             "common_issues": [
+#                 {
+#                     "type": "concept_misunderstanding",
+#                     "description": "Detailed description of the issue",
+#                     "frequency": percentage_of_occurrences,
+#                     "related_lessons": [lesson_ids],
+#                     "related_modules": [module_ids],
+#                     "last_occurrence": "ISO_TIMESTAMP"
+#                 }
+#             ]
+#         }
+#         """
+        
+#         # Call OpenAI or your preferred AI service
+#         response = openai.ChatCompletion.create(
+#             model="gpt-4",
+#             messages=[{"role": "system", "content": prompt}]
+#         )
+        
+#         # Parse AI response
+#         ai_analysis = json.loads(response.choices[0].message.content)
+#         return ai_analysis
+#     except Exception as e:
+#         # Fallback to basic analysis if AI fails
+#         return {
+#             "common_issues": [
+#                 {
+#                     "type": "quiz_failure",
+#                     "description": "General performance issues detected",
+#                     "frequency": len(quiz_questions),
+#                     "related_lessons": [],
+#                     "related_modules": [],
+#                     "last_occurrence": datetime.now(timezone.utc).isoformat()
+#                 }
+#             ]
+#         }
+
+# def merge_issues_summary(current_summary: Dict[str, List[Dict]], new_issues: Dict[str, List[Dict]]) -> Dict[str, List[Dict]]:
+#     """
+#     Merge new issues with existing issues, avoiding duplicates
+    
+#     Args:
+#         current_summary: Existing issues summary
+#         new_issues: Newly analyzed issues
+    
+#     Returns:
+#         Updated issues summary
+#     """
+#     if not current_summary:
+#         current_summary = {"common_issues": []}
+    
+#     # Create a lookup for existing issues to prevent duplicates
+#     existing_issues = {
+#         (issue.get('type'), issue.get('description')) 
+#         for issue in current_summary.get('common_issues', [])
+#     }
+    
+#     # Add new unique issues
+#     for new_issue in new_issues.get('common_issues', []):
+#         issue_key = (new_issue.get('type'), new_issue.get('description'))
+        
+#         if issue_key not in existing_issues:
+#             current_summary['common_issues'].append(new_issue)
+#             existing_issues.add(issue_key)
+#         else:
+#             # If issue already exists, update its frequency and last occurrence
+#             for existing_issue in current_summary['common_issues']:
+#                 if (existing_issue.get('type'), existing_issue.get('description')) == issue_key:
+#                     existing_issue['frequency'] += new_issue.get('frequency', 0)
+#                     existing_issue['last_occurrence'] = max(
+#                         existing_issue.get('last_occurrence', ''), 
+#                         new_issue.get('last_occurrence', '')
+#                     )
+    
+#     return current_summary
+
+# async def update_lesson_issues_summary(
+#     recommend_lessons_controller,
+#     recommend_quiz_question_controller,
+#     quiz_id: UUID,
+#     student_id: UUID,
+#     lesson_id: UUID
+# ):
+#     """
+#     Main function to update lesson issues summary after quiz submission
+    
+#     Args:
+#         recommend_lessons_controller: Controller for recommend lessons
+#         recommend_quiz_question_controller: Controller for quiz questions
+#         quiz_id: ID of the submitted quiz
+#         student_id: ID of the student who took the quiz
+#         lesson_id: ID of the related lesson
+#     """
+#     # Analyze quiz issues
+#     new_issues = await analyze_quiz_issues(
+#         recommend_lessons_controller, 
+#         recommend_quiz_question_controller, 
+#         quiz_id, 
+#         student_id
+#     )
+    
+#     # Fetch current issues summary
+#     recommend_lesson = await recommend_lessons_controller.recommend_lessons_repository.first(
+#         where_=[RecommendLessons.id == lesson_id]
+#     )
+    
+#     current_summary = recommend_lesson.issues_summary or {"common_issues": []}
+    
+#     # Merge and update issues summary
+#     updated_summary = merge_issues_summary(current_summary, new_issues)
+    
+#     # Save updated issues summary
+#     await recommend_lessons_controller.recommend_lessons_repository.update(
+#         where_=[RecommendLessons.id == lesson_id],
+#         attributes={"issues_summary": updated_summary},
+#         commit=True
+#     )
 @router.get("/{moduleId}/quizzes", response_model=Ok[ModuleQuizResponse])
 async def get_module_by_quiz(
     moduleId: UUID,
