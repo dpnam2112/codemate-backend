@@ -903,7 +903,23 @@ async def analyze_issues(
         where_=[RecommendLessons.learning_path_id == learning_path.id]
     )
     prior_lessons = [rl for rl in all_recommend_lessons if rl.order < recommend_lesson.order]
-
+    
+    # Get lesson details for prior lessons (if any)
+    prior_lessons_details = []
+    if prior_lessons:
+        for rl in prior_lessons:
+            prior_lesson = await lessons_controller.lessons_repository.first(
+                where_=[Lessons.id == rl.lesson_id]
+            )
+            prior_lessons_details.append({
+                "id": str(rl.id),
+                "title": prior_lesson.title,
+                "order": rl.order
+            })
+    
+    # Determine if current lesson is the first one
+    is_first_lesson = len(prior_lessons) == 0
+    
     # Construct AI prompt
     prompt = f"""
     ## Issues Analysis Task
@@ -911,21 +927,43 @@ async def analyze_issues(
     - Recommended Lesson ID: "{recommend_lesson.id}"
     - Student Goal: "{learning_path.objective}"
     - Issues Summary (JSON): {json.dumps(issues_summary, indent=2)}
-    - Prior Lessons in Learning Path: {json.dumps([{"id": str(rl.id), "title": (await lessons_controller.lessons_repository.first(where_=[Lessons.id == rl.lesson_id])).title, "order": rl.order} for rl in prior_lessons], indent=2)}
+    - Is First Lesson in Learning Path: {is_first_lesson}
+    - Prior Lessons in Learning Path: {json.dumps(prior_lessons_details, indent=2)}
 
     ## Task Requirements
-    Analyze the provided `issues_summary` to determine the student's next steps. Consider:
+    Analyze the provided `issues_summary` to determine the student's next steps.
+
+    {
+    "For first lesson analysis:" if is_first_lesson else "For subsequent lesson analysis:"
+    }
+
+    {
+    """
+    1. Focus ONLY on issues related to the current lesson (this is the first lesson in the path).
+    2. Look in the common_issues array for issues where related_lessons contains the current recommended lesson ID.
+    """ if is_first_lesson else """
+    1. Analyze issues related to BOTH the current lesson AND any prior lessons.
+    2. Look in the common_issues array for issues where related_lessons contains either the current or prior recommended lesson IDs.
+    """
+    }
+
+    Consider:
     1. **Severity of Issues**:
        - Assess the frequency and type of issues (e.g., concept_misunderstanding, code_error).
        - Identify if issues are significant (e.g., frequency >= 5 or total_issues_count >= 20).
     2. **Impact on Long-term Goals**:
        - Evaluate if these issues could hinder achieving the learning path objective.
-    3. **Relation to Prior Lessons**:
-       - Check if issues link to prior lessons (via related_lessons or related_modules).
-       - Suggest revisiting specific prior lessons if applicable.
+    3. **Relation to Prior Lessons**: {
+    "" if is_first_lesson else """
+       - Check if issues link to specific prior lessons (via related_lessons).
+       - Suggest revisiting specific prior lessons by name if applicable.
+    """
+    }
     4. **Recommendations**:
-       - Decide if the student can proceed, needs to repeat the lesson, or review prior lessons.
+       - Provide ONLY ONE or at most TWO of these recommendations: proceed, repeat, or review_prior.
+       - If recommending two actions, "proceed" and "repeat" CANNOT be recommended simultaneously.
        - Provide detailed reasoning for each recommendation.
+       - Use LESSON NAMES (not IDs) in your recommendations for better readability.
 
     ## Output Format
     {{
@@ -950,12 +988,19 @@ async def analyze_issues(
             {{
                 "action": "proceed/repeat/review_prior",
                 "reason": "Detailed reasoning",
-                "details": "Specific lessons or actions (e.g., lesson titles to review)"
+                "details": "Specific lesson NAMES to review (not IDs)"
             }}
         ]
     }}
-    IMPORTANT: YOU MUST RETURN THE RESPONSE IN JSON FORMAT ABOVE. DON'T RETURN ID OF LESSON, RECOMMEND_LESSON, PLEASE RETURN THE NAME INSTEAD.
+    
+    IMPORTANT RULES:
+    1. YOU MUST RETURN THE RESPONSE IN JSON FORMAT ABOVE.
+    2. NEVER return IDs of lessons in recommendations - use LESSON TITLES instead.
+    3. Give ONLY ONE or at most TWO recommendations.
+    4. If giving two recommendations, "proceed" and "repeat" CANNOT both be included.
     """
+    
+    print(f"AI prompt: {prompt}")
 
     # Call AI for analysis
     try:
