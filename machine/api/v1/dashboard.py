@@ -196,7 +196,7 @@ async def get_professor_dashboard(
         n_exercises += exercises_count
 
     upcoming_exercises_list = []
-    current_time = datetime.datetime.utcnow()
+    current_time = datetime.utcnow()
 
     for course in courses:
         upcoming_exercises = await exercises_controller.exercises_repository.get_many(

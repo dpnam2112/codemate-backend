@@ -1,6 +1,10 @@
-from fastapi import APIRouter, Depends
+from core.db.decorators import Transactional
+import machine.controllers as ctrl
+from fastapi import APIRouter, Depends, Path
 from core.response import Ok
+from machine.schemas.requests.conversation import InvokeAssistantSchema
 from machine.schemas.requests.exercise import  *
+from machine.schemas.responses.conversation import MessageResponseSchema
 from machine.schemas.responses.exercise import  *
 from machine.providers import InternalProvider
 from machine.controllers import *
@@ -414,6 +418,7 @@ async def delete_exercise(
             ],
         ),
         message="Exercise successfully deleted.")
+
 @router.post("/code", response_model=Ok[ExerciseCodeResponse])
 async def add_code_exercise(
     body: ExerciseCodeRequest,
@@ -873,3 +878,43 @@ async def delete_code_exercise(
         ),
         message="Code exercise successfully deleted."
     )
+
+
+@router.get(
+    "/code/{coding_exercise_id}/conversation/messages",
+    response_model=Ok[list[MessageResponseSchema]]
+)
+async def get_coding_assistant_conversation_messages(
+    coding_exercise_id: UUID = Path(...),
+    token: str = Depends(oauth2_scheme),
+    ctrl: ctrl.ExercisesController = Depends(InternalProvider().get_exercises_controller)
+):
+    payload = verify_token(token)
+    user_id = UUID(payload.get("sub"))
+
+    messages = await ctrl.get_coding_assistant_conversation_messages(
+        coding_exercise_id=coding_exercise_id, user_id=user_id
+    )
+
+    return Ok(
+        data=[MessageResponseSchema.model_validate(msg) for msg in messages]
+    )
+
+@router.post(
+    "/code/{coding_exercise_id}/conversation:askAssistant",
+    response_model=Ok[MessageResponseSchema]
+)
+async def ask_coding_assistant(
+    body: InvokeAssistantSchema,
+    coding_exercise_id: UUID = Path(...),
+    token: str = Depends(oauth2_scheme),
+    ctrl: ctrl.ExercisesController = Depends(InternalProvider().get_exercises_controller)
+):
+    payload = verify_token(token)
+    user_id = UUID(payload.get("sub"))
+
+    message = await ctrl.push_coding_assistant_message(
+        coding_exercise_id=coding_exercise_id, user_id=user_id, content=body.content
+    )
+
+    return Ok(data=MessageResponseSchema.model_validate(message))

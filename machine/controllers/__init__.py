@@ -12,6 +12,8 @@ from .recommend import (
     RecommendQuizQuestionController
 )
 from .feedback import FeedbackController
+from .conversation import ConversationController
+
 __all__ = [
     "StudentController",
     "ProfessorController",
@@ -31,5 +33,6 @@ __all__ = [
     "LearningPathsController",
     "FeedbackController",
     "UserLoginsController",
-    "ExtractedTextController"
+    "ExtractedTextController",
+    "ConversationController",
 ]

@@ -1,7 +1,6 @@
-from typing import List
 from uuid import UUID, uuid4
 
-from sqlalchemy import ForeignKey, String, Text
+from sqlalchemy import ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 
@@ -13,11 +12,6 @@ class Conversation(Base, TimestampMixin):
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
 
-    messages: Mapped[List["Message"]] = relationship(
-        back_populates="conversation",
-        cascade="all, delete-orphan",
-    )
-
 class Message(Base):
     __tablename__ = "messages"
 
@@ -25,3 +19,22 @@ class Message(Base):
     role: Mapped[str] = mapped_column(String(20))  # 'user' or 'assistant'
     content: Mapped[str] = mapped_column(Text)
     conversation_id: Mapped[UUID] = mapped_column(ForeignKey("conversations.id", ondelete="CASCADE"))
+
+class CodingConversation(Base, TimestampMixin):
+    __tablename__ = "coding_conversations"
+    __table_args__ = (
+        UniqueConstraint("user_id", "conversation_id", name="uq_user_conversation"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4
+    )
+
+    # For now, no need for foreign key constraint on this column. Coding conversation can be
+    # initiated by any type of users: admin, student or prof. 
+    user_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True))
+    conversation_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("conversations.id", ondelete="CASCADE"))
+
+    conversation: Mapped["Conversation"] = relationship()
