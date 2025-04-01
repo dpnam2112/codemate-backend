@@ -1,6 +1,7 @@
 from functools import partial
 
 from fastapi import Depends
+from openai import AsyncOpenAI, OpenAI
 
 import machine.controllers as ctrl
 from machine.controllers.ai.lp_planning import LPPPlanningController
@@ -8,6 +9,7 @@ import machine.models as modl
 from core.utils import singleton
 import machine.repositories as repo
 from core.db.session import DB_MANAGER, Dialect
+from core.settings import settings as env_settings
 
 
 @singleton
@@ -95,8 +97,14 @@ class InternalProvider:
         )
         
     def get_exercises_controller(self, db_session=Depends(db_session_keeper.get_session)):
+        llm_aclient = AsyncOpenAI(
+            api_key=env_settings.GEMINI_API_KEY,
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+        )
+
         return ctrl.ExercisesController(
-            exercises_repository=self.exercises_repository(db_session=db_session)
+            exercises_repository=self.exercises_repository(db_session=db_session),
+            llm_client=llm_aclient
         )
         
     def get_studentexercises_controller(self, db_session=Depends(db_session_keeper.get_session)):

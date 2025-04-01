@@ -4,5 +4,6 @@ class MessageCreateSchema(BaseModel):
     role: str  # Expect 'user' or 'assistant'
     content: str
 
-class InvokeAssistantSchema(BaseModel):
+class InvokeCodingAssistantSchema(BaseModel):
     content: str
+    user_solution: str

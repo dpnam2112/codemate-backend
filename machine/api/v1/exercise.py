@@ -2,7 +2,7 @@ from core.db.decorators import Transactional
 import machine.controllers as ctrl
 from fastapi import APIRouter, Depends, Path
 from core.response import Ok
-from machine.schemas.requests.conversation import InvokeAssistantSchema
+from machine.schemas.requests.conversation import InvokeCodingAssistantSchema
 from machine.schemas.requests.exercise import  *
 from machine.schemas.responses.conversation import MessageResponseSchema
 from machine.schemas.responses.exercise import  *
@@ -14,6 +14,8 @@ from uuid import UUID
 from fastapi import  Depends
 from fastapi.security import OAuth2PasswordBearer
 from core.utils.auth_utils import verify_token
+from starlette.responses import StreamingResponse
+
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 router = APIRouter(prefix="/exercises", tags=["exercises"])
@@ -901,20 +903,24 @@ async def get_coding_assistant_conversation_messages(
     )
 
 @router.post(
-    "/code/{coding_exercise_id}/conversation:askAssistant",
-    response_model=Ok[MessageResponseSchema]
+    "/code/{coding_exercise_id}/conversation:invokeAssistant",
+    response_class=StreamingResponse
 )
-async def ask_coding_assistant(
-    body: InvokeAssistantSchema,
+async def ask_coding_assistant_stream(
+    body: InvokeCodingAssistantSchema,
     coding_exercise_id: UUID = Path(...),
     token: str = Depends(oauth2_scheme),
     ctrl: ctrl.ExercisesController = Depends(InternalProvider().get_exercises_controller)
 ):
     payload = verify_token(token)
     user_id = UUID(payload.get("sub"))
-
-    message = await ctrl.push_coding_assistant_message(
-        coding_exercise_id=coding_exercise_id, user_id=user_id, content=body.content
+    # The request body should contain both the user message (content) and their current work (user_solution)
+    generator = ctrl.invoke_coding_assistant(
+        user_id=user_id,
+        coding_exercise_id=coding_exercise_id,
+        content=body.content,
+        user_solution=body.user_solution,
     )
+    # Stream the response using text/event-stream media type.
+    return StreamingResponse(generator, media_type="text/event-stream")
 
-    return Ok(data=MessageResponseSchema.model_validate(message))
