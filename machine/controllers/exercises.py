@@ -61,7 +61,11 @@ class ExercisesController(BaseController[Exercises]):
             await session.flush()
 
         # Retrieve all messages for the conversation
-        stmt = select(Message).where(Message.conversation_id == conversation.id)
+        stmt = (
+            select(Message)
+            .where(Message.conversation_id == conversation.id)
+            .order_by(Message.created_at.asc())
+        )
         result = await session.execute(stmt)
         messages = result.scalars().all()
 

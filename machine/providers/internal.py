@@ -97,6 +97,7 @@ class InternalProvider:
         )
         
     def get_exercises_controller(self, db_session=Depends(db_session_keeper.get_session)):
+        # Use Google Gemini
         llm_aclient = AsyncOpenAI(
             api_key=env_settings.GEMINI_API_KEY,
             base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
