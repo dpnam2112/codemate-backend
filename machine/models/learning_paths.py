@@ -19,5 +19,5 @@ class LearningPaths(Base):
     course_id: Mapped[UUID] = mapped_column(ForeignKey("courses.id"), nullable=False)
 
     student: Mapped["Student"] = relationship(back_populates="learning_paths")
-    course: Mapped["Courses"] = relationship(back_populates="learning_paths")
+    course: Mapped["Courses"] = relationship(back_populates="learning_paths", cascade="all")
     recommend_lessons: Mapped[list["RecommendLessons"]] = relationship(back_populates="learning_path", cascade="all, delete-orphan")

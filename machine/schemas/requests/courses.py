@@ -43,3 +43,14 @@ class CreateCourseResponse(BaseModel):
     
 class PutLearningOutcomesCoursesRequest(BaseModel):
     learning_outcomes: List[str]
+
+class UpdateCourseRequest(BaseModel):
+    name: Optional[str] = None
+    professor_id: Optional[str] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    status: Optional[str] = None
+    n_credit: Optional[int] = None
+    n_semester: Optional[int] = None
+    courseID: Optional[str] = None
+    class_name: Optional[str] = None

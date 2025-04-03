@@ -27,6 +27,7 @@ class GetCoursesResponse(BaseModel):
     learning_outcomes: Optional[List[str]] 
     status: StatusType
     last_accessed: str
+    percentage_complete: str
 
  
 class GetCoursesPaginatedResponse(BaseModel):

@@ -108,7 +108,7 @@ async def get_activities(
         GetRecentActivitiesResponse(
             activity_id=activity.id,
             activity_description=activity.description,
-            activity_type=activity.type,
+            activity_type=str(activity.type),
             activity_date=activity.timestamp,
         )
         for activity in recent_activities

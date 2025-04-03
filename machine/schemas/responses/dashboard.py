@@ -11,7 +11,7 @@ class WelcomeMessageResponse(BaseModel):
 class GetRecentActivitiesResponse(BaseModel):
     activity_id: UUID
     activity_description: str
-    activity_type: ActivityType
+    activity_type: str
     activity_date: datetime
     
 class Events(BaseModel):
