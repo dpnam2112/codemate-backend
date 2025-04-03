@@ -1,6 +1,7 @@
+from typing import Optional
 from sqlalchemy import Column, String, ForeignKey, Enum, Integer, DateTime, Boolean, Float
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from core.db import Base
 from uuid import uuid4
 from core.repository.enum import DifficultyLevel, ExerciseType, GradingMethodType
@@ -42,3 +43,11 @@ class Exercises(Base):
     course = relationship("Courses", back_populates="exercises")
     student_exercises = relationship("StudentExercises", back_populates="exercise")
 
+    # For coding exercises, there is a coding assistant. This foreign key points to the conversation
+    # between user and the assistant.
+    conversation_id: Mapped[Optional[UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("conversations.id", ondelete="SET NULL"),
+        nullable=True,
+        comment="Conversation between user and coding assistant",
+    )

@@ -19,3 +19,4 @@ from .learning_paths import LearningPaths
 from .feedback import Feedback
 from .user_logins import UserLogins
 from .extracted_text import ExtractedText
+from .coding_assistant import *

@@ -1,0 +1,6 @@
+from core.repository.base import BaseRepository
+from ..models.coding_assistant import Conversation, Message
+
+class ConversationRepository(BaseRepository[Conversation]): ...
+
+class MessageRepository(BaseRepository[Message]): ...
