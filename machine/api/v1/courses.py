@@ -159,6 +159,7 @@ async def get_student_courses(
         Courses.courseID.label("courseID"),
         Courses.class_name.label("class_name"),
         StudentCourses.last_accessed.label("last_accessed"),
+        StudentCourses.percentage_done.label("percentage_complete"),
     ]
 
     join_conditions = {
@@ -193,6 +194,8 @@ async def get_student_courses(
                 nSemester=course.nSemester,
                 courseID=course.courseID,
                 class_name=str(course.class_name),
+                percentage_complete=str(course.percentage_complete) if course.percentage_complete else "0",
+                
             )
             for course in courses
         ],
@@ -301,6 +304,7 @@ async def get_courses(
         Courses.nSemester.label("nSemester"),
         Courses.courseID.label("courseID"),
         Courses.class_name.label("class_name"),
+        Courses.professor_id.label("professor_id"),
     ]
 
     # Fetch courses based on the filter conditions
@@ -335,10 +339,11 @@ async def get_courses(
                 start_date=str(course.start_date),
                 end_date=str(course.end_date),
                 status=course.status,
-                nCredit=course.nCredit,
-                nSemester=course.nSemester,
+                nCredit=course.nCredit if course.nCredit else 0,
+                nSemester=course.nSemester if course.nSemester else 0,
                 courseID=course.courseID,
                 class_name=course.class_name if course.class_name else "",
+                professor_id=course.professor_id if course.professor_id else "",
             )
             for course in courses
         ],
@@ -906,3 +911,82 @@ async def get_course_exercises(
             grading_method=exercise.grading_method,
         ) for exercise in exercises
     ])
+    
+@router.patch("/admin/{course_id}")
+async def update_course(
+    course_id: UUID,
+    request: UpdateCourseRequest,
+    token: str = Depends(oauth2_scheme),
+    courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
+    admin_controller: AdminController = Depends(InternalProvider().get_admin_controller),
+):
+    # Verify token and extract user ID
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    
+    # Check if user has the correct admin role
+    check_role = await admin_controller.admin_repository.first(where_=[Admin.id == user_id])
+    if not check_role:
+        raise ForbiddenException(message="You are not allowed to access this feature.")
+
+    # Prepare the course attributes to update, only including provided fields
+    course_attributes = {}
+
+    if request.name is not None:
+        course_attributes["name"] = request.name
+    if request.n_credit is not None:
+        course_attributes["nCredit"] = request.n_credit
+    if request.n_semester is not None:
+        course_attributes["nSemester"] = request.n_semester
+    if request.courseID is not None:
+        course_attributes["courseID"] = request.courseID
+    if request.start_date is not None:
+        course_attributes["start_date"] = request.start_date
+    if request.end_date is not None:
+        course_attributes["end_date"] = request.end_date
+    if request.class_name is not None:
+        course_attributes["class_name"] = request.class_name
+    if request.professor_id is not None:
+        course_attributes["professor_id"] = request.professor_id
+    if request.status is not None:
+        course_attributes["status"] = request.status
+
+    # Update the course with the attributes that have been provided
+    update_course = await courses_controller.courses_repository.update(
+        where_=[Courses.id == course_id],
+        attributes=course_attributes,
+        commit=True
+    )
+
+    if not update_course:
+        raise BadRequestException(message="Failed to update course.")
+    
+    return Ok(data=None, message="Successfully updated the course.")
+
+@router.delete("/admin/{course_id}")
+async def delete_course(
+    course_id: UUID,
+    token: str = Depends(oauth2_scheme),
+    courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
+    student_courses_controller: StudentCoursesController = Depends(InternalProvider().get_studentcourses_controller),
+    admin_controller: AdminController = Depends(InternalProvider().get_admin_controller),
+):
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    
+    check_role = await admin_controller.admin_repository.first(where_=[Admin.id == user_id])
+    if not check_role:
+        raise ForbiddenException(message="You are not allowed to access this feature.")
+
+    # Delete the course and its associated data
+    await courses_controller.courses_repository.delete(where_=[Courses.id == course_id])
+    await student_courses_controller.student_courses_repository.delete(where_=[StudentCourses.course_id == course_id])
+    await courses_controller.courses_repository.session.commit()
+    await student_courses_controller.student_courses_repository.session.commit()
+
+    return Ok(data=None, message="Successfully deleted the course."
+)

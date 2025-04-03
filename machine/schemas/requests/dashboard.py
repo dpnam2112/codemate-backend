@@ -4,5 +4,5 @@ from pydantic import BaseModel
 from core.repository.enum import ActivityType
 
 class AddActivityRequest(BaseModel):
-    type: ActivityType
+    type: str
     description: str

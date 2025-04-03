@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from core.repository.enum import FeedbackCategory, FeedbackType, FeedbackStatusType
 from uuid import UUID
+from typing import Optional, List
 class CreateFeedbackRequest(BaseModel):
     type: FeedbackType
     title: str
@@ -15,5 +16,7 @@ class CreateFeedbackCourseRequest(BaseModel):
     description: str
     rate: int
     status: FeedbackStatusType
-    course_id: UUID
+    course_id: Optional[str] = None
     
+class UpdateFeedbackRequest(BaseModel):
+    status: FeedbackStatusType
