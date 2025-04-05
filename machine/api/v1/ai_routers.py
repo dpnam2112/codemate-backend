@@ -1,6 +1,7 @@
 import json
 import os
 import logging
+import re
 from typing import Dict, List, Any, Optional
 from fastapi import APIRouter, Depends
 from core.response import Ok
@@ -1349,207 +1350,226 @@ async def generate_quiz(
         "title": module.title,
         "objectives": module.objectives if module.objectives else [],
     }
+    
     # Get API key from environment variables
     gemini_api_key = os.getenv("GOOGLE_GENAI_API_KEY")
     
-    # Define the prompt for quiz generation
-    prompt = f"""
-    ## Quiz Generation Task
-    ## Difficulty Distribution Requirements
-    - Easy Questions: {request.difficulty_distribution.easy}
-    - Medium Questions: {request.difficulty_distribution.medium}
-    - Hard Questions: {request.difficulty_distribution.hard}
-    ## Student Information
-    - Student is learning about: "{lesson.title}"
-    - Recommended focus areas: "{recommended_content}"
+    # Use AIToolProvider to create the LLM model
+    ai_tool_provider = AIToolProvider()
+    llm = ai_tool_provider.chat_model_factory(LLMModelName.GEMINI_PRO)
     
-    ## Module Information
-    - Module Title: {module.title}
-    - Module Objectives: {json.dumps(module.objectives if module.objectives else [])}
+    # Set fixed parameters with increased token limit
+    llm.temperature = 0.3
+    llm.max_output_tokens = 8192 
     
-    ## Lesson Information
-    - Lesson Title: {lesson.title}
-    - Lesson Description: {lesson.description}
-    - Learning Outcomes: {json.dumps(lesson.learning_outcomes if lesson.learning_outcomes else [])}
+    # Create quiz record first with basic info
+    quiz_attributes = {
+        "name": f"Quiz for {lesson.title}",
+        "description": f"Assessment based on {module.title}",
+        "status": "new",
+        "time_limit": 30,  # Default, will update later
+        "max_score": 100,  # Default, will update later
+        "module_id": module.id,
+    }
     
-    ## Documents Content
-    {json.dumps([doc for doc in lesson_data["documents"]], indent=2)}
+    created_quiz = await recommend_quizzes_controller.recommend_quizzes_repository.create(attributes=quiz_attributes, commit=True)
     
-    ## Task Requirements
-    Generate a comprehensive quiz that primarily tests understanding of the module objectives. The quiz should:
-    1. Focus specifically on assessing the module objectives first and foremost
-    2. Align with the recommended content areas as a secondary priority
-    3. Cover key concepts and important details from the lesson materials
-    4. Include EXACTLY the specified number of questions for each difficulty level:
-       - {request.difficulty_distribution.easy} Easy Questions
-       - {request.difficulty_distribution.medium} Medium Questions
-       - {request.difficulty_distribution.hard} Hard Questions
-    5. Include clear explanations for each answer
+    if not created_quiz:
+        raise ApplicationException(message="Failed to create quiz")
     
-    ## Output Format
-    Your response MUST be in the following JSON format:
-    {{
-        "quiz_title": "Title based on the lesson content",
-        "description": "Brief description of what this quiz covers",
-        "estimated_completion_time": "Time in minutes it would take to complete type number(e.g., 10)",
-        "max_score": 70,
-        "questions": [
-            {{
-                "question_text": "The question text goes here?",
-                "question_type": "single_choice", 
-                "options": ["Option A", "Option B", "Option C", "Option D"],
-                "correct_answer": ["The correct option here"],
-                "difficulty": "easy", 
-                "explanation": "Detailed explanation of why this is the correct answer",
-                "points": 10
-            }},
-            {{
-                "question_text": "The question text goes here?",
-                "question_type": "multiple_choice", 
-                "options": ["Option A", "Option B", "Option C", "Option D"],
-                "correct_answer": "The correct option here",
-                "difficulty": "hard", 
-                "explanation": "Detailed explanation of why this is the correct answer",
-                "points": 10
-            }},
-            {{
-                "question_text": "True/False question text goes here?",
-                "question_type": "true_false",
-                "options": ["True", "False"],
-                "correct_answer": "True or False",
-                "difficulty": "medium", 
-                "explanation": "Explanation of why this is true or false",
-                "points": 5
-            }}
-        ]
-    }}
+    # Initialize questions list
+    all_questions = []
     
-    IMPORTANT REQUIREMENTS:
-    1. EXACTLY {request.difficulty_distribution.easy + request.difficulty_distribution.medium + request.difficulty_distribution.hard} questions in total
-    2. EXACTLY:
-       - {request.difficulty_distribution.easy} questions with "easy" difficulty
-       - {request.difficulty_distribution.medium} questions with "medium" difficulty 
-       - {request.difficulty_distribution.hard} questions with "hard" difficulty
-    3. Include a mix of single_choice, multiple_choice, and true_false question types
-    4. For single_choice questions have only one correct answer among the four provided options (A, B, C, D).
-    5. For multiple_choice questions may have more than one correct answer, and the user must select all correct options from the four provided choices (A, B, C, D).
-    6. For true/false questions, options should be exactly ["True", "False"]
-    7. Each question must have a detailed explanation for the correct answer
-    8. Make sure correct_answer exactly matches one of the options
-    9. Every question must have a difficulty level of "easy", "medium", or "hard"
-    10. All correct_answer values must be provided as arrays, even for single answers
-    11. The quiz content should primarily assess the module objectives
-    12. Secondary focus should be on the recommended content areas
-    13. Ensure each question clearly relates to at least one module objective
-    14. The sum of all question points should be 100
-    """
+    # Generate questions in batches by difficulty
+    difficulties = [
+        {"name": "easy", "count": request.difficulty_distribution.easy},
+        {"name": "medium", "count": request.difficulty_distribution.medium},
+        {"name": "hard", "count": request.difficulty_distribution.hard}
+    ]
     
-    # Initialize Genai client and generate quiz
-    try:
-        question = QuestionRequest(
-            content=prompt,
-            temperature=0.3,
-            max_tokens= 3000
-        )
+    total_points = 0
+    question_count = 0
+    
+    # Generate questions for each difficulty level
+    for difficulty in difficulties:
+        if difficulty["count"] <= 0:
+            continue
+            
+        # Skip if no questions needed for this difficulty
+        difficulty_name = difficulty["name"]
+        questions_needed = difficulty["count"]
         
-        # Use AIToolProvider to create the LLM model
-        ai_tool_provider = AIToolProvider()
-        llm = ai_tool_provider.chat_model_factory(LLMModelName.GEMINI_PRO)
+        # Build prompt for this difficulty only
+        prompt = f"""
+        ## Quiz Generation Task for {difficulty_name.upper()} Questions Only
         
-        # Set fixed parameters
-        llm.temperature = 0.3
-        llm.max_output_tokens = 2000
+        ## Module Information
+        - Module Title: {module.title}
+        - Module Objectives: {json.dumps(module.objectives if module.objectives else [])}
         
-        response = llm.invoke(question.content)
-
-        if not response:
-            raise ApplicationException(message="Failed to generate quiz content")
+        ## Lesson Information
+        - Lesson Title: {lesson.title}
+        - Lesson Description: {lesson.description}
+        - Learning Outcomes: {json.dumps(lesson.learning_outcomes if lesson.learning_outcomes else [])}
+        - Recommended focus areas: "{recommended_content}"
         
-        # Extract the quiz content from response
-        response_text = response.content
+        ## Task Requirements
+        Generate EXACTLY {questions_needed} {difficulty_name} difficulty questions for a quiz on this module. The questions should:
+        1. Focus specifically on assessing the module objectives
+        2. Align with the recommended content areas
+        3. Cover key concepts from the lesson materials
+        
+        ## Document Content Summary
+        {lesson.description}
+        {recommended_content}
+        
+        ## Output Format
+        Your response MUST be valid JSON in the following format:
+        {{
+            "questions": [
+                {{
+                    "question_text": "The question text goes here?",
+                    "question_type": "single_choice", 
+                    "options": ["Option A", "Option B", "Option C", "Option D"],
+                    "correct_answer": ["Option B"],
+                    "difficulty": "{difficulty_name}", 
+                    "explanation": "Detailed explanation of why this is the correct answer",
+                    "points": {10 if difficulty_name == "hard" else (7 if difficulty_name == "medium" else 5)}
+                }},
+                ...
+            ]
+        }}
+        
+        IMPORTANT REQUIREMENTS:
+        1. Generate EXACTLY {questions_needed} questions, all with "{difficulty_name}" difficulty
+        2. Include a mix of single_choice, multiple_choice, and true_false question types
+        3. For single_choice questions: have only one correct answer among options
+        4. For multiple_choice questions: may have multiple correct answers
+        5. For true/false questions: options should be exactly ["True", "False"]
+        6. Each question must have a detailed explanation for the correct answer
+        7. Make sure correct_answer exactly matches one of the options
+        8. All correct_answer values must be provided as arrays, even for single answers
+        9. Each question should be worth {10 if difficulty_name == "hard" else (7 if difficulty_name == "medium" else 5)} points
+        """
         
         try:
-            if "```json" in response_text:
-                json_content = response_text.split("```json")[1].split("```")[0].strip()
-                quiz_data = json.loads(json_content)
-            else:
-                quiz_data = json.loads(response_text)
-        except json.JSONDecodeError as e:
-            print(f"Failed to parse JSON from response: {e}")
-            raise ApplicationException(message="Failed to parse quiz content as JSON")
-        
-        # Validate quiz data structure
-        required_keys = ["quiz_title", "description", "max_score", "questions"]
-        for key in required_keys:
-            if key not in quiz_data:
-                raise ApplicationException(message=f"Generated quiz is missing required field: {key}")
-        
-        # # Create quiz record
-        quiz_attributes = {
-            "name": quiz_data["quiz_title"],
-            "description": quiz_data["description"],
-            "status": "new",
-            "time_limit": quiz_data["estimated_completion_time"],
-            "max_score": quiz_data["max_score"],
-            "module_id": module.id,
+            question_request = QuestionRequest(
+                content=prompt,
+                temperature=0.3,
+                max_tokens=8192  
+            )
+            
+            response = llm.invoke(question_request.content)
+            
+            if not response:
+                print(f"Failed to generate {difficulty_name} questions")
+                continue
+                
+            # Extract JSON from response
+            response_text = response.content
+            
+            try:
+                if "```json" in response_text:
+                    json_content = response_text.split("```json")[1].split("```")[0].strip()
+                    difficulty_data = json.loads(json_content)
+                else:
+                    # Try to find JSON object in the text
+                    json_pattern = r'(\{[\s\S]*\})' 
+                    match = re.search(json_pattern, response_text)
+                    if match:
+                        json_content = match.group(1)
+                        difficulty_data = json.loads(json_content)
+                    else:
+                        difficulty_data = json.loads(response_text)
+                
+                # Add questions to our list
+                if "questions" in difficulty_data and isinstance(difficulty_data["questions"], list):
+                    # Validate each question before adding
+                    for q in difficulty_data["questions"]:
+                        # Ensure required fields exist
+                        if all(key in q for key in ["question_text", "question_type", "options", "correct_answer", "difficulty", "explanation", "points"]):
+                            # Force difficulty to match the current batch
+                            q["difficulty"] = difficulty_name
+                            all_questions.append(q)
+                            total_points += q["points"]
+                            question_count += 1
+                
+            except (json.JSONDecodeError, Exception) as e:
+                print(f"Error parsing {difficulty_name} questions: {str(e)}")
+                # Continue with other difficulties even if one fails
+                
+        except Exception as e:
+            print(f"Error generating {difficulty_name} questions: {str(e)}")
+            # Continue with other difficulties
+    
+    # If we couldn't generate any questions, raise an error
+    if not all_questions:
+        # Clean up by deleting the created quiz
+        await recommend_quizzes_controller.recommend_quizzes_repository.delete(created_quiz.id, commit=True)
+        raise ApplicationException(message="Failed to generate any quiz questions")
+    
+    # Update quiz with actual information
+    updated_quiz_attributes = {
+        "name": f"Quiz: {module.title}",
+        "description": f"Assessment covering key concepts from {lesson.title}",
+        "time_limit": min(60, question_count * 2),  # Estimate 2 minutes per question
+        "max_score": total_points,
+    }
+    
+    await recommend_quizzes_controller.recommend_quizzes_repository.update(
+        where_=[RecommendQuizzes.id == created_quiz.id],
+        attributes=updated_quiz_attributes,
+        commit=True
+    )
+    
+    # Create quiz questions
+    question_attributes_list = []
+    for question in all_questions:
+        question_attributes = {
+            "quiz_id": created_quiz.id,
+            "question_text": question["question_text"],
+            "question_type": question["question_type"],
+            "options": question["options"],
+            "correct_answer": question["correct_answer"],
+            "difficulty": question["difficulty"],
+            "explanation": question["explanation"],
+            "points": question["points"]
         }
-        
-        created_quiz = await recommend_quizzes_controller.recommend_quizzes_repository.create(attributes=quiz_attributes, commit=True)
-        
-        if not created_quiz:
-            raise ApplicationException(message="Failed to create quiz")
-        
-        # # Create quiz questions
-        question_attributes_list = []
-        for question in quiz_data["questions"]:
-            question_attributes = {
-                "quiz_id": created_quiz.id,
-                "question_text": question["question_text"],
-                "question_type": question["question_type"],
-                "options": question["options"],
-                "correct_answer": question["correct_answer"],
-                "difficulty": question["difficulty"],
-                "explanation": question["explanation"],
-                "points": question["points"]
+        question_attributes_list.append(question_attributes)
+    
+    created_questions = await recommend_quiz_questions_controller.recommend_quiz_question_repository.create_many(
+        attributes_list=question_attributes_list, commit=True
+    )
+    
+    if not created_questions:
+        # Clean up
+        await recommend_quizzes_controller.recommend_quizzes_repository.delete(created_quiz.id, commit=True)
+        raise ApplicationException(message="Failed to create quiz questions")
+    
+    # Format the response
+    quiz_response = {
+        "quiz_id": str(created_quiz.id),
+        "name": created_quiz.name,
+        "description": created_quiz.description,
+        "time_limit": created_quiz.time_limit,
+        "max_score": created_quiz.max_score,
+        "module_id": str(created_quiz.module_id),
+        "questions": [
+            {
+                "id": str(question.id),
+                "question_text": question.question_text,
+                "question_type": question.question_type,
+                "options": question.options,
+                "correct_answer": question.correct_answer,
+                "difficulty": question.difficulty,
+                "explanation": question.explanation,
+                "points": question.points,
             }
-            question_attributes_list.append(question_attributes)
-        
-        created_questions = await recommend_quiz_questions_controller.recommend_quiz_question_repository.create_many(
-            attributes_list=question_attributes_list, commit=True
-        )
-        
-        if not created_questions:
-            raise ApplicationException(message="Failed to create quiz questions")
-        
-        # # Format the response
-        quiz_response = {
-            "quiz_id": str(created_quiz.id),
-            "name": created_quiz.name,
-            "description": created_quiz.description,
-            "time_limit": created_quiz.time_limit,
-            "max_score": created_quiz.max_score,
-            "module_id": str(created_quiz.module_id),
-            "questions": [
-                {
-                    "id": str(question.id),
-                    "question_text": question.question_text,
-                    "question_type": question.question_type,
-                    "options": question.options,
-                    "correct_answer": question.correct_answer,
-                    "difficulty": question.difficulty,
-                    "explanation": question.explanation,
-                    "points": question.points,
-
-                }
-                for question in created_questions
-            ]
-        }
-        
-        return Ok(quiz_response, message="Quiz generated successfully")
-        
-    except Exception as e:
-        print(f"Error generating quiz: {str(e)}")
-        raise ApplicationException(message=f"Failed to generate quiz: {str(e)}")
+            for question in created_questions
+        ]
+    }
+    
+    return Ok(quiz_response, message="Quiz generated successfully")
     
 '''
 export interface Root {
