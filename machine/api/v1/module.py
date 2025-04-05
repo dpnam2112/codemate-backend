@@ -241,7 +241,7 @@ async def submit_quiz_answers(
         )
 
     # Calculate score
-    score = (correct_count / len(quiz_questions)) * 100 
+    score = round((correct_count / len(quiz_questions)) * 100, 2)
 
     # Update quiz status and score
     await recommend_quizzes_controller.recommend_quizzes_repository.update(
