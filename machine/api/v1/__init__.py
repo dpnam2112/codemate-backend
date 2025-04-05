@@ -17,7 +17,9 @@ from machine.api.v1.professor import router as professor_router
 from machine.api.v1.llm import router as llm_router
 from machine.api.v1.schedule import router as schedule_router
 from machine.api.v1.ai_routers import router as ai_router
-from .coding_session import router as coding_session_router
+from .coding_assistant import router as coding_assistant_router
+from .conversations import router as conversation_router
+
 router = APIRouter(prefix="/v1")
 router.include_router(auth_router)
 router.include_router(user_router)
@@ -37,7 +39,8 @@ router.include_router(feedback_router)
 router.include_router(llm_router)
 router.include_router(schedule_router)
 router.include_router(ai_router)
-router.include_router(coding_session_router)
+router.include_router(coding_assistant_router)
+router.include_router(conversation_router)
 
 
 __all__ = ["router"]

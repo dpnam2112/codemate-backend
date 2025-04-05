@@ -556,11 +556,6 @@ async def google_login(
     professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
     admin_controller: AdminController = Depends(InternalProvider().get_admin_controller),
 ):
-    google_token_info = await verify_google_token(auth_request.access_token)
-
-    if google_token_info["email"] != auth_request.user_info.email:
-        raise UnauthorizedException("Email does not match")
-
     role = await check_exist_and_get_role_for_user(auth_request.user_info.email, student_controller=student_controller, professor_controller=professor_controller, admin_controller=admin_controller)
 
     user = None

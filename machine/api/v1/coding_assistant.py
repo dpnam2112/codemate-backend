@@ -13,7 +13,7 @@
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 import openai
 import json
 
@@ -23,29 +23,31 @@ from core.settings import settings as env_settings
 class HintRequest(BaseModel):
     problem_statement: str
     code_context: str
-    lines: Optional[str] = None
 
 class FixCodeRequest(BaseModel):
     problem_statement: str
     code_context: str
     error_message: str
 
+class LineHint(BaseModel):
+    line: int
+    hint: str
+
 # Output Schemas
 class HintOutput(BaseModel):
     global_hint: str
-    line_hints: Optional[Dict[str, str]] = None
+    line_hints: Optional[List[LineHint]] = None
 
 class FixOutput(BaseModel):
     fix_hint: str
     # Optionally, specific hints mapped by line number as string
-    line_fix_hints: Optional[Dict[str, str]] = None
+    line_fix_hints: Optional[LineHint] = None
 
 # Initialize the OpenAI client
 openai_client = openai.OpenAI(api_key=env_settings.OPENAI_API_KEY)
 
 def generate_prompt_for_hint(problem_statement: str, code_context: str, lines: Optional[str] = None) -> str:
     # If specific lines are provided, include that information in the prompt.
-    line_info = f"Focus on the following line(s): {lines}\n\n" if lines else ""
     prompt = f"""
 You are an assistant for learning programming. A student is working on the following problem:
 {problem_statement}
@@ -53,16 +55,8 @@ You are an assistant for learning programming. A student is working on the follo
 The student's current code is:
 {code_context}
 
-{line_info}Based on the code, please suggest the next steps for the student to move toward a solution.
-Please provide your answer as a JSON object with the following format:
-{{
-  "global_hint": string,         // A general hint for the problem
-  "line_hints": {{                // (Optional) Specific hints for each line; use line numbers as keys
-      "line_number": string,
-      ...
-  }}
-}}
-
+Based on the code, please suggest the next steps for the student to move toward a solution.
+Please provide your answer as a JSON object with the provided format.
 Ensure that the JSON is valid and that no additional text is included.
     """
     return prompt.strip()
@@ -78,27 +72,18 @@ The student's current code is:
 The code produced the following error:
 {error_message}
 
-Please provide your answer as a JSON object with the following format:
-{{
-  "fix_hint": string,            // A general hint to fix the error
-  "line_fix_hints": {{            // (Optional) Specific hints for each line related to the error; use line numbers as keys
-      "line_number": string,
-      ...
-  }}
-}}
-
+Please provide your answer as a JSON object with the provided format.
 Ensure that the JSON is valid and that no additional text is included.
     """
     return prompt.strip()
 
-router = APIRouter(prefix="/coding-sessions", tags=["Coding sessions"])
+router = APIRouter(prefix="/coding-assistant", tags=["Coding assistants"])
 
 @router.post("/hint", response_model=Ok[HintOutput])
 async def get_hint(request: HintRequest):
     prompt = generate_prompt_for_hint(
         request.problem_statement,
-        request.code_context,
-        request.lines
+        request.code_context
     )
 
     response = openai_client.beta.chat.completions.parse(

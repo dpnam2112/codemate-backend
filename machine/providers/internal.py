@@ -1,14 +1,15 @@
 from functools import partial
 
 from fastapi import Depends
+from openai import AsyncOpenAI, OpenAI
 
 import machine.controllers as ctrl
 from machine.controllers.ai.lp_planning import LPPPlanningController
 import machine.models as modl
 from core.utils import singleton
-import machine.controllers as ctrl
 import machine.repositories as repo
 from core.db.session import DB_MANAGER, Dialect
+from core.settings import settings as env_settings
 
 
 @singleton
@@ -56,6 +57,10 @@ class InternalProvider:
     user_logins_repository = partial(repo.UserLoginsRepository, model=modl.UserLogins)
     
     extracted_text_repository = partial(repo.ExtractedTextRepository, model=modl.ExtractedText)
+
+    conversation_repository = partial(repo.ConversationRepository, model=modl.Conversation)
+
+    message_repository = partial(repo.MessageRepository, model=modl.Message)
     
     def get_student_controller(self, db_session=Depends(db_session_keeper.get_session)):
         return ctrl.StudentController(
@@ -77,8 +82,7 @@ class InternalProvider:
             student_courses_repository=self.student_courses_repository(db_session=db_session)
         )
     
-    def get_activities_controller(self, db_session=Depends(db_session_keeper.get_session)):
-        return ctrl.ActivitiesController(
+    def get_activities_controller(self, db_session=Depends(db_session_keeper.get_session)): return ctrl.ActivitiesController(
             activities_repository=self.activities_repository(db_session=db_session)
         )
 
@@ -93,8 +97,15 @@ class InternalProvider:
         )
         
     def get_exercises_controller(self, db_session=Depends(db_session_keeper.get_session)):
+        # Use Google Gemini
+        llm_aclient = AsyncOpenAI(
+            api_key=env_settings.GEMINI_API_KEY,
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+        )
+
         return ctrl.ExercisesController(
-            exercises_repository=self.exercises_repository(db_session=db_session)
+            exercises_repository=self.exercises_repository(db_session=db_session),
+            llm_client=llm_aclient
         )
         
     def get_studentexercises_controller(self, db_session=Depends(db_session_keeper.get_session)):
@@ -163,3 +174,9 @@ class InternalProvider:
         return ctrl.ExtractedTextController(
             extracted_text_repository=self.extracted_text_repository(db_session=db_session)
         )
+
+    def get_conversation_controller(self, db_session=Depends(db_session_keeper.get_session)) -> ctrl.ConversationController:
+        return ctrl.ConversationController(
+            model_class=modl.Conversation, repository=self.conversation_repository(db_session=db_session)
+        )
+

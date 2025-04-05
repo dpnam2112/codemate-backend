@@ -12,6 +12,7 @@ from .recommend_documents import RecommendDocumentsRepository
 from .learning_paths import LearningPathsRepository
 from .recommend_lessons import RecommendLessonsRepository
 from .feedback import FeedbackRepository
+from .coding_assistant import ConversationRepository, MessageRepository
 
 __all__ = [
     "StudentRepository",
