@@ -61,6 +61,8 @@ class InternalProvider:
     conversation_repository = partial(repo.ConversationRepository, model=modl.Conversation)
 
     message_repository = partial(repo.MessageRepository, model=modl.Message)
+
+    pg_config_repo = partial(repo.ProgrammingLanguageConfigRepository, model=modl.ProgrammingLanguageConfig)
     
     def get_student_controller(self, db_session=Depends(db_session_keeper.get_session)):
         return ctrl.StudentController(
@@ -180,3 +182,10 @@ class InternalProvider:
             model_class=modl.Conversation, repository=self.conversation_repository(db_session=db_session)
         )
 
+    def get_pg_config_controller(self, db_session=Depends(db_session_keeper.get_session)) -> ctrl.ProgrammingLanguageConfigController:
+        return ctrl.ProgrammingLanguageConfigController(
+            model_class=modl.ProgrammingLanguageConfig, repository=self.pg_config_repo(db_session=db_session)
+        )
+
+
+    

@@ -13,6 +13,7 @@ from .learning_paths import LearningPathsRepository
 from .recommend_lessons import RecommendLessonsRepository
 from .feedback import FeedbackRepository
 from .coding_assistant import ConversationRepository, MessageRepository
+from .programming_language_config import ProgrammingLanguageConfigRepository
 
 __all__ = [
     "StudentRepository",

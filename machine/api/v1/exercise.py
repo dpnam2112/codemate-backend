@@ -15,6 +15,7 @@ from fastapi import  Depends
 from fastapi.security import OAuth2PasswordBearer
 from core.utils.auth_utils import verify_token
 from starlette.responses import StreamingResponse
+from machine.schemas.programming_exercise import *
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
@@ -923,4 +924,41 @@ async def ask_coding_assistant_stream(
     )
     # Stream the response using text/event-stream media type.
     return StreamingResponse(generator, media_type="text/event-stream")
+
+
+@router.post("/{exercise_id}/language-configs", response_model=Ok[ProgrammingLanguageConfigResponse])
+async def add_language_config(
+    body: ProgrammingLanguageConfigCreateRequest,
+    exercise_id: UUID = Path(...),
+    controller: ProgrammingLanguageConfigController = Depends(InternalProvider().get_pg_config_controller),
+):
+    attributes = {
+        **body.model_dump(), "exercise_id": exercise_id
+    }
+    pg_config = await controller.create(attributes=attributes)
+    return Ok(data=ProgrammingLanguageConfigResponse.model_validate(pg_config))
+
+@router.get("/{exercise_id}/language-configs", response_model=Ok[ProgrammingLanguageConfigResponse])
+async def get_language_configs(
+    exercise_id: UUID,
+    controller: ExercisesController = Depends(InternalProvider().get_exercises_controller),
+):
+    ...
+
+@router.post("{exercise_id}/testcases", response_model=Ok[ProgrammingTestCaseResponse])
+async def add_test_case(
+    problem_id: UUID,
+    body: ProgrammingTestCaseCreateRequest,
+    token: str = Depends(oauth2_scheme),
+    controller: ExercisesController = Depends(InternalProvider().get_exercises_controller),
+):
+    ...
+
+@router.post("{exercise_id}/submissions", response_model=Ok[ProgrammingSubmissionResponse])
+async def submit_code(
+    body: ProgrammingSubmissionCreateRequest,
+    token: str = Depends(oauth2_scheme),
+    controller: ExercisesController = Depends(InternalProvider().get_exercises_controller),
+):
+    ...
 

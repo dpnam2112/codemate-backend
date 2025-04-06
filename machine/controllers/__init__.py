@@ -13,6 +13,7 @@ from .recommend import (
 )
 from .feedback import FeedbackController
 from .conversation import ConversationController
+from .programming_language_config import ProgrammingLanguageConfigController
 
 __all__ = [
     "StudentController",
@@ -35,4 +36,5 @@ __all__ = [
     "UserLoginsController",
     "ExtractedTextController",
     "ConversationController",
+    "ProgrammingLanguageConfigController"
 ]
