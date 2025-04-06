@@ -10,6 +10,7 @@ from core.utils import singleton
 import machine.repositories as repo
 from core.db.session import DB_MANAGER, Dialect
 from core.settings import settings as env_settings
+from machine.repositories.programming_tc import ProgrammingTestCaseRepository
 
 
 @singleton
@@ -63,6 +64,8 @@ class InternalProvider:
     message_repository = partial(repo.MessageRepository, model=modl.Message)
 
     pg_config_repo = partial(repo.ProgrammingLanguageConfigRepository, model=modl.ProgrammingLanguageConfig)
+
+    programming_tc_repo = partial(ProgrammingTestCaseRepository)
     
     def get_student_controller(self, db_session=Depends(db_session_keeper.get_session)):
         return ctrl.StudentController(
@@ -187,5 +190,7 @@ class InternalProvider:
             model_class=modl.ProgrammingLanguageConfig, repository=self.pg_config_repo(db_session=db_session)
         )
 
-
-    
+    def get_programming_tc_controller(self, db_session=Depends(db_session_keeper.get_session)):
+        return ctrl.ProgrammingTestCaseController(
+            repository=self.programming_tc_repo(db_session=db_session)
+        )

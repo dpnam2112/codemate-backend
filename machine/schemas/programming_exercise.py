@@ -40,6 +40,9 @@ class ProgrammingTestCaseResponse(BaseModel):
     is_public: bool
     score: float
 
+    class Config:
+        from_attributes = True
+
 class ProgrammingSubmissionResponse(BaseModel):
     id: UUID
     exercise_id: UUID

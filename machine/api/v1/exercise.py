@@ -1,6 +1,7 @@
+from os import wait
 from core.db.decorators import Transactional
 import machine.controllers as ctrl
-from fastapi import APIRouter, Depends, Path
+from fastapi import APIRouter, Depends, Path, Query
 from core.response import Ok
 from machine.schemas.requests.conversation import InvokeCodingAssistantSchema
 from machine.schemas.requests.exercise import  *
@@ -941,24 +942,104 @@ async def add_language_config(
 @router.get("/{exercise_id}/language-configs", response_model=Ok[ProgrammingLanguageConfigResponse])
 async def get_language_configs(
     exercise_id: UUID,
-    controller: ExercisesController = Depends(InternalProvider().get_exercises_controller),
+    controller: ProgrammingLanguageConfigController = Depends(InternalProvider().get_pg_config_controller)
 ):
+    # TODO
     ...
 
-@router.post("{exercise_id}/testcases", response_model=Ok[ProgrammingTestCaseResponse])
-async def add_test_case(
-    problem_id: UUID,
-    body: ProgrammingTestCaseCreateRequest,
-    token: str = Depends(oauth2_scheme),
-    controller: ExercisesController = Depends(InternalProvider().get_exercises_controller),
+@router.get("/{exercise_id}/language-configs/{lang_cfg_id}", response_model=Ok[ProgrammingLanguageConfigResponse])
+async def put_lang_cfg(
+    exercise_id: UUID,
+    lang_cfg_id: UUID,
+    body: ProgrammingLanguageConfigCreateRequest,
+    controller: ProgrammingLanguageConfigController = Depends(InternalProvider().get_pg_config_controller)
 ):
+    # TODO
     ...
+
+@router.delete("/{exercise_id}/language-configs/{lang_cfg_id}", response_model=Ok[ProgrammingLanguageConfigResponse])
+async def delete_language_configs(
+    exercise_id: UUID,
+    lang_cfg_id: UUID,
+    controller: ProgrammingLanguageConfigController = Depends(InternalProvider().get_pg_config_controller)
+):
+    # TODO
+    ...
+
+@router.post("/{exercise_id}/testcases", response_model=Ok[ProgrammingTestCaseResponse])
+async def create_testcase(
+    exercise_id: UUID,
+    body: ProgrammingTestCaseCreateRequest,
+    controller: ctrl.ProgrammingTestCaseController = Depends(InternalProvider().get_programming_tc_controller)
+):
+    attributes = body.model_dump()
+    attributes["exercise_id"] = exercise_id
+    testcase = await controller.create(attributes=attributes)
+    return Ok(data=ProgrammingTestCaseResponse.model_validate(testcase))
+
+@router.get("/{testcase_id}", response_model=Ok[ProgrammingTestCaseResponse])
+async def get_testcase(
+    testcase_id: UUID,
+    controller: ctrl.ProgrammingTestCaseController = Depends(InternalProvider().get_programming_tc_controller)
+):
+    testcase = await controller.repository.first(where_=[ProgrammingTestCase.id == testcase_id])
+    if not testcase:
+        raise NotFoundException("Programming TestCase not found")
+    return Ok(data=ProgrammingTestCaseResponse.model_validate(testcase))
+
+@router.get("/", response_model=Ok[list[ProgrammingTestCaseResponse]])
+async def get_testcases(
+    limit: int = Query(10, ge=1),
+    offset: int = Query(0, ge=0),
+    controller: ctrl.ProgrammingTestCaseController = Depends(InternalProvider().get_programming_tc_controller)
+):
+    testcases = await controller.get_many(limit=limit, offset=offset)
+    return Ok(data=[ProgrammingTestCaseResponse.model_validate(tc) for tc in testcases])
+
+@router.put("/{exercise_id}/testcases/{testcase_id}", response_model=Ok[ProgrammingTestCaseResponse])
+async def update_testcase(
+    exercise_id: UUID,
+    testcase_id: UUID,
+    body: ProgrammingTestCaseCreateRequest,
+    controller: ctrl.ProgrammingTestCaseController = Depends(InternalProvider().get_programming_tc_controller)
+):
+    attributes = body.model_dump(exclude_unset=True)
+    updated_testcase = await controller.repository.update(
+        where_=[ProgrammingTestCase.id == testcase_id, ProgrammingTestCase.exercise_id == exercise_id],
+        attributes=attributes,
+        commit=True
+    )
+    if not updated_testcase:
+        raise NotFoundException("Programming TestCase not found")
+    return Ok(data=ProgrammingTestCaseResponse.model_validate(updated_testcase))
+
+@router.delete("/{exercise_id}/testcases/{testcase_id}", response_model=Ok[ProgrammingTestCaseResponse])
+async def delete_testcase(
+    testcase_id: UUID = Path(...),
+    exercise_id: UUID = Path(...),
+    controller: ctrl.ProgrammingTestCaseController = Depends(InternalProvider().get_programming_tc_controller)
+):
+    testcase = await controller.repository.first(
+        where_=[ProgrammingTestCase.id == testcase_id, ProgrammingTestCase.exercise_id == exercise_id]
+    )
+    if not testcase:
+        raise NotFoundException("Programming TestCase not found")
+    await controller.repository.delete(where_=[ProgrammingTestCase.id == testcase_id])
+    await controller.repository.session.commit()
+    return Ok(data=ProgrammingTestCaseResponse.model_validate(testcase))
+
 
 @router.post("{exercise_id}/submissions", response_model=Ok[ProgrammingSubmissionResponse])
 async def submit_code(
     body: ProgrammingSubmissionCreateRequest,
-    token: str = Depends(oauth2_scheme),
+    token : str = Depends(oauth2_scheme),
+    user_controller: StudentController = Depends(InternalProvider().get_student_controller),
     controller: ExercisesController = Depends(InternalProvider().get_exercises_controller),
 ):
-    ...
-
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    users = await user_controller.get_many(where_=[Student.id == user_id])
+    assert users != []
+    user = users[0]
