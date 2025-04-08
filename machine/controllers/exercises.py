@@ -1,23 +1,33 @@
+from typing import Sequence
 from uuid import UUID
 
 from openai import AsyncOpenAI, OpenAI
 from sqlalchemy import select
 from core.controller import BaseController
+from core.db.session import DB_MANAGER, DBSessionKeeper, Dialect
+from core.db.utils import session_context
 from core.exceptions.base import NotFoundException
 from machine.models import Exercises
 from machine.models.coding_assistant import CodingConversation, Conversation, Message
+from machine.models.coding_submission import ProgrammingSubmission, ProgrammingTestCase, ProgrammingTestResult
 from machine.repositories import ExercisesRepository
 from core.db import Transactional
-
+from machine.repositories.programming_submission import ProgrammingSubmissionRepository
+import machine.services.judge0_client as judge0_client
+from core.logger import syslog
 
 class ExercisesController(BaseController[Exercises]):
     def __init__(
-        self, exercises_repository: ExercisesRepository, llm_client: AsyncOpenAI
+        self,
+        exercises_repository: ExercisesRepository,
+        submission_repo: ProgrammingSubmissionRepository,
+        llm_client: AsyncOpenAI
     ):
         super().__init__(
             model_class=Exercises, repository=exercises_repository
         )
         self.exercises_repository = exercises_repository
+        self.submission_repo = submission_repo
         self.llm_client = llm_client
 
     @Transactional()
@@ -220,4 +230,171 @@ class ExercisesController(BaseController[Exercises]):
 
         # Persist the assistant's full reply after streaming completes.
         await self.push_coding_assistant_message(user_id, coding_exercise_id, assistant_reply, role="assistant")
+
+    @Transactional()
+    async def create_coding_submission(
+        self, user_id: UUID, exercise_id: UUID, judge0_lang_id: int, user_solution: str
+    ) -> ProgrammingSubmission:
+        """Submits a coding exercise solution and stores test result tokens.
+
+        Args:
+            user_id (UUID): The user ID.
+            exercise_id (UUID): The coding exercise ID.
+            judge0_lang_id (int): The language ID for Judge0.
+            user_solution (str): The user's code.
+
+        Returns:
+            ProgrammingSubmission: The stored submission entry.
+        """
+        exercise = await self.repository.first(where_=[Exercises.id == exercise_id])
+        if not exercise:
+            raise NotFoundException(message=f"Exercise {exercise_id} not found.")
+
+        session = self.repository.session
+        stmt = select(ProgrammingTestCase).where(ProgrammingTestCase.exercise_id == exercise_id)
+        result = await session.execute(stmt)
+        test_case_objs = result.scalars().all()
+        if not test_case_objs:
+            raise NotFoundException(message="No test cases defined for this exercise.")
+
+        test_cases = [{"input": tc.input, "expected": tc.expected_output} for tc in test_case_objs]
+        test_results = await judge0_client.evaluate_test_cases(user_solution, judge0_lang_id, test_cases)
+
+        submission_data = {
+            "user_id": user_id,
+            "exercise_id": exercise_id,
+            "judge0_language_id": judge0_lang_id,
+            "code": user_solution,
+            "status": "pending",
+            "score": None,
+        }
+        submission = await self.submission_repo.create(attributes=submission_data, commit=True)
+
+        for i, tc in enumerate(test_case_objs):
+            result_data = test_results[i]
+            test_result = ProgrammingTestResult(
+                submission_id=submission.id,
+                testcase_id=tc.id,
+                status=result_data["status"],
+                stdout=result_data["stdout"],
+                stderr=result_data["stderr"],
+                judge0_token=result_data["token"],
+                time=None,
+                memory=None,
+            )
+            session.add(test_result)
+
+        await session.flush()
+        return submission
+
+
+    @Transactional()
+    async def poll_submission_results(
+        self, submission_id: UUID
+    ) -> Sequence[ProgrammingTestResult]:
+        """Polls Judge0 to update only test results still in 'Processing' state.
+
+        Args:
+            submission_id (UUID): ID of the submission.
+
+        Returns:
+            Sequence[ProgrammingTestResult]: All test results, with updated ones if applicable.
+        """
+        session = self.repository.session
+
+        # Get all results for the submission
+        stmt_all = select(ProgrammingTestResult).where(
+            ProgrammingTestResult.submission_id == submission_id
+        )
+        result_all = await session.execute(stmt_all)
+        all_results = result_all.scalars().all()
+        if not all_results:
+            raise NotFoundException(f"No test results found for submission {submission_id}")
+
+        # Only poll those still processing
+        stmt_processing = select(ProgrammingTestResult).where(
+            ProgrammingTestResult.submission_id == submission_id,
+            ProgrammingTestResult.status == "Processing"
+        )
+        result_pending = await session.execute(stmt_processing)
+        pending_results = result_pending.scalars().all()
+
+        if not pending_results:
+            return all_results
+
+        tokens = [tr.judge0_token for tr in pending_results if tr.judge0_token]
+        if not tokens:
+            return all_results
+
+        test_cases: list[dict] = []
+        for tr in pending_results:
+            tc = await session.get(ProgrammingTestCase, tr.testcase_id)
+            test_cases.append({"input": tc.input, "expected": tc.expected_output})
+
+        judge0_results = await judge0_client.get_submission_results(tokens, test_cases)
+
+        for tr, res in zip(pending_results, judge0_results):
+            tr.status = res["status"]
+            tr.stdout = res["stdout"]
+            tr.stderr = res["stderr"]
+            tr.time = None
+            tr.memory = None
+
+        await session.flush()
+        return all_results
+
+if __name__ == "__main__":
+    import asyncio
+    from uuid import UUID
+    from machine.models import Exercises, ProgrammingSubmission
+    from machine.repositories import ExercisesRepository
+    from machine.repositories.programming_submission import ProgrammingSubmissionRepository
+    from core.db.session import DB_MANAGER, Dialect
+    from core.db.utils import session_context
+
+    async def main() -> None:
+        async with session_context(DB_MANAGER[Dialect.POSTGRES]) as session:
+            exercises_repo = ExercisesRepository(db_session=session, model=Exercises)
+            submission_repo = ProgrammingSubmissionRepository(db_session=session, model=ProgrammingSubmission)
+            controller = ExercisesController(exercises_repo, submission_repo=submission_repo, llm_client=None)
+
+            user_id = UUID("4dcc4c38-7615-4b02-9c89-4c4466c4314f")
+            exercise_id = UUID("646cae67-e1c0-47db-b025-9b7da88693f5")
+
+            user_solution = """# -*- coding: utf-8 -*-
+def is_valid_parentheses(s):
+    stack = []
+    mapping = {')': '(', ']': '[', '}': '{'}
+
+    for char in s:
+        if char in mapping.values():
+            stack.append(char)
+        elif char in mapping:
+            if not stack or stack[-1] != mapping[char]:
+                return False
+            stack.pop()
+        else:
+            continue
+
+    return not stack
+
+if __name__ == "__main__":
+    import sys
+    input_string = sys.stdin.read().strip()
+    print(is_valid_parentheses(input_string))"""
+
+            submission = await controller.create_coding_submission(
+                user_id=user_id,
+                exercise_id=exercise_id,
+                judge0_lang_id=71,
+                user_solution=user_solution.encode("utf-8", errors="ignore").decode("utf-8"),
+            )
+
+            syslog.info(f"Submission created with ID: {submission.id}")
+
+            results = await controller.poll_submission_results(submission.id)
+            for r in results:
+                syslog.info(f"Result: {r.status} | stdout: {r.stdout} | stderr: {r.stderr}")
+
+    asyncio.run(main())
 

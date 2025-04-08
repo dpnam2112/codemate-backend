@@ -67,6 +67,7 @@ def upgrade() -> None:
     sa.Column('stdout', sa.Text(), nullable=True),
     sa.Column('stderr', sa.Text(), nullable=True),
     sa.Column('time', sa.Float(), nullable=True),
+    sa.Column('judge0_token', sa.Text(), nullable=False),
     sa.Column('memory', sa.Integer(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
