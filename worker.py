@@ -5,9 +5,10 @@ from dramatiq.brokers.redis import RedisBroker
 from dramatiq.middleware import AgeLimit, AsyncIO, Retries, TimeLimit
 
 from core.settings import settings
+from core.logger import syslog
 
 redis_parameters = urlparse(settings.REDIS_URL)
-
+syslog.info(f"Redis URL: {settings.REDIS_URL}")
 
 middleware = [
     AsyncIO(),
@@ -27,4 +28,4 @@ broker = RedisBroker(
 )
 dramatiq.set_broker(broker)
 
-from tasks import *  # noqa
+import tasks.update_submission_result

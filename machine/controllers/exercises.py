@@ -1,8 +1,9 @@
-from typing import Sequence
+from operator import and_
+from typing import Optional, Sequence, TypedDict
 from uuid import UUID
 
 from openai import AsyncOpenAI, OpenAI
-from sqlalchemy import select
+from sqlalchemy import func, select
 from core.controller import BaseController
 from core.db.session import DB_MANAGER, DBSessionKeeper, Dialect
 from core.db.utils import session_context
@@ -15,6 +16,12 @@ from core.db import Transactional
 from machine.repositories.programming_submission import ProgrammingSubmissionRepository
 import machine.services.judge0_client as judge0_client
 from core.logger import syslog
+from tasks.update_submission_result import poll_judge0_submission_result
+
+class SubmissionWithStats(TypedDict):
+    submission: ProgrammingSubmission
+    passed_testcases: int
+    total_testcases: int
 
 class ExercisesController(BaseController[Exercises]):
     def __init__(
@@ -285,11 +292,101 @@ class ExercisesController(BaseController[Exercises]):
             session.add(test_result)
 
         await session.flush()
+        poll_judge0_submission_result.send(str(submission.id))
         return submission
+
+    async def get_submission(
+        self, submission_id: UUID
+    ):
+        session = self.repository.session
+
+        # Get the submission instance
+        submission = await self.submission_repo.first(
+            where_=[ProgrammingSubmission.id == submission_id]
+        )
+        if not submission:
+            raise NotFoundException(f"Submission {submission_id} not found")
+
+        # Get total number of test cases for this submission
+        stmt_total = select(func.count()).select_from(ProgrammingTestResult).where(
+            ProgrammingTestResult.submission_id == submission_id
+        )
+        result_total = await session.execute(stmt_total)
+        total_testcases = result_total.scalar_one()
+
+        # Get number of passed test cases (status == ACCEPTED)
+        stmt_passed = select(func.count()).select_from(ProgrammingTestResult).where(
+            ProgrammingTestResult.submission_id == submission_id,
+            ProgrammingTestResult.status == "Accepted"
+        )
+
+        result_passed = await session.execute(stmt_passed)
+        passed_testcases = result_passed.scalar_one()
+
+        return submission, passed_testcases, total_testcases
+
+    async def list_submissions_with_stats(
+        self, user_id: Optional[UUID] = None, exercise_id: Optional[UUID] = None
+    ) -> list[SubmissionWithStats]:
+        """
+        Retrieve a list of submissions with test case stats (passed/total).
+
+        Args:
+            user_id (UUID, optional): If provided, filter submissions by this user.
+            exercise_id (UUID, optional): If provided, filter submissions by this exercise.
+
+        Returns:
+            List[SubmissionWithStats]: Each item contains submission and test case stats.
+        """
+        session = self.repository.session
+
+        # Base query for submissions
+        stmt = select(ProgrammingSubmission)
+
+        # Dynamically apply filters
+        filters = []
+        if user_id:
+            filters.append(ProgrammingSubmission.user_id == user_id)
+        if exercise_id:
+            filters.append(ProgrammingSubmission.exercise_id == exercise_id)
+        if filters:
+            stmt = stmt.where(and_(*filters) if len(filters) > 1 else filters[0])
+
+
+        result = await session.execute(stmt)
+        submissions = result.scalars().all()
+
+        response = []
+
+        for submission in submissions:
+            submission_id = submission.id
+
+            # Total testcases
+            stmt_total = select(func.count()).select_from(ProgrammingTestResult).where(
+                ProgrammingTestResult.submission_id == submission_id
+            )
+            total_result = await session.execute(stmt_total)
+            total_count: int = total_result.scalar_one()
+
+            # Passed testcases
+            stmt_passed = select(func.count()).select_from(ProgrammingTestResult).where(
+                ProgrammingTestResult.submission_id == submission_id,
+                ProgrammingTestResult.status == "Accepted"
+            )
+            passed_result = await session.execute(stmt_passed)
+            passed_count: int = passed_result.scalar_one()
+
+            response.append({
+                "submission": submission,
+                "passed_testcases": passed_count,
+                "total_testcases": total_count
+            })
+
+        return response
 
 
     @Transactional()
-    async def poll_submission_results(
+    async def get_submission_results(
         self, submission_id: UUID
     ) -> Sequence[ProgrammingTestResult]:
         """Polls Judge0 to update only test results still in 'Processing' state.
@@ -311,14 +408,7 @@ class ExercisesController(BaseController[Exercises]):
         if not all_results:
             raise NotFoundException(f"No test results found for submission {submission_id}")
 
-        # Only poll those still processing
-        stmt_processing = select(ProgrammingTestResult).where(
-            ProgrammingTestResult.submission_id == submission_id,
-            ProgrammingTestResult.status == "Processing"
-        )
-        result_pending = await session.execute(stmt_processing)
-        pending_results = result_pending.scalars().all()
-
+        pending_results = [result.status == 'Processing' for result in result_all]
         if not pending_results:
             return all_results
 
@@ -392,9 +482,18 @@ if __name__ == "__main__":
 
             syslog.info(f"Submission created with ID: {submission.id}")
 
-            results = await controller.poll_submission_results(submission.id)
+            results = await controller.get_submission_results(submission.id)
             for r in results:
                 syslog.info(f"Result: {r.status} | stdout: {r.stdout} | stderr: {r.stderr}")
+
+            submissions_with_stats = await controller.list_submissions_with_stats(user_id=user_id)
+
+            for item in submissions_with_stats:
+                submission = item["submission"]
+                passed = item["passed_testcases"]
+                total = item["total_testcases"]
+                print(f"Submission ID: {submission.id} | Passed: {passed}/{total} | Status: {submission.status}")
+
 
     asyncio.run(main())
 

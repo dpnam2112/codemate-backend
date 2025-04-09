@@ -66,6 +66,8 @@ class InternalProvider:
     pg_config_repo = partial(repo.ProgrammingLanguageConfigRepository, model=modl.ProgrammingLanguageConfig)
 
     programming_tc_repo = partial(ProgrammingTestCaseRepository)
+
+    programming_submission_repo = partial(repo.ProgrammingSubmissionRepository, model=modl.ProgrammingSubmission)
     
     def get_student_controller(self, db_session=Depends(db_session_keeper.get_session)):
         return ctrl.StudentController(
@@ -110,6 +112,7 @@ class InternalProvider:
 
         return ctrl.ExercisesController(
             exercises_repository=self.exercises_repository(db_session=db_session),
+            submission_repo=self.programming_submission_repo(db_session=db_session),
             llm_client=llm_aclient
         )
         

@@ -3,6 +3,7 @@ from core.db.decorators import Transactional
 import machine.controllers as ctrl
 from fastapi import APIRouter, Depends, Path, Query
 from core.response import Ok
+from machine.schemas.programming_submission import ProgrammingSubmissionItemSchema
 from machine.schemas.requests.conversation import InvokeCodingAssistantSchema
 from machine.schemas.requests.exercise import  *
 from machine.schemas.responses.conversation import MessageResponseSchema
@@ -939,13 +940,16 @@ async def add_language_config(
     pg_config = await controller.create(attributes=attributes)
     return Ok(data=ProgrammingLanguageConfigResponse.model_validate(pg_config))
 
-@router.get("/{exercise_id}/language-configs", response_model=Ok[ProgrammingLanguageConfigResponse])
+@router.get("/{exercise_id}/language-configs", response_model=Ok[list[ProgrammingLanguageConfigResponse]])
 async def get_language_configs(
     exercise_id: UUID,
     controller: ProgrammingLanguageConfigController = Depends(InternalProvider().get_pg_config_controller)
 ):
     # TODO
-    ...
+    language_configs = await controller.get_many(
+        where_=[ProgrammingLanguageConfig.exercise_id == exercise_id]
+    )
+    return Ok(data=[ProgrammingLanguageConfigResponse.model_validate(lc) for lc in language_configs])
 
 @router.get("/{exercise_id}/language-configs/{lang_cfg_id}", response_model=Ok[ProgrammingLanguageConfigResponse])
 async def put_lang_cfg(
@@ -1029,12 +1033,12 @@ async def delete_testcase(
     return Ok(data=ProgrammingTestCaseResponse.model_validate(testcase))
 
 
-@router.post("{exercise_id}/submissions", response_model=Ok[ProgrammingSubmissionResponse])
+@router.post("{exercise_id}/coding-submissions", response_model=Ok[ProgrammingSubmissionResponse])
 async def submit_code(
     body: ProgrammingSubmissionCreateRequest,
     token : str = Depends(oauth2_scheme),
     user_controller: StudentController = Depends(InternalProvider().get_student_controller),
-    controller: ExercisesController = Depends(InternalProvider().get_exercises_controller),
+    exercise_controller: ExercisesController = Depends(InternalProvider().get_exercises_controller),
 ):
     payload = verify_token(token)
     user_id = payload.get("sub")
@@ -1043,3 +1047,38 @@ async def submit_code(
     users = await user_controller.get_many(where_=[Student.id == user_id])
     assert users != []
     user = users[0]
+
+@router.get("/{exercise_id}/coding-submissions/{submission_id}/status", response_model=Ok[ProgrammingSubmissionResponse])
+async def get_coding_submission_status(
+    submission_id: UUID,
+    token : str = Depends(oauth2_scheme),
+    exercise_controller: ExercisesController = Depends(InternalProvider().get_exercises_controller)
+):
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    submission = await exercise_controller.submission_repo.first(
+        where_=[ProgrammingSubmission.id == submission_id]
+    )
+    if not submission:
+        raise NotFoundException(message="Submission not found.")
+    return Ok(data=ProgrammingSubmissionResponse.model_validate(submission))
+
+@router.get("/{exercise_id}/coding-submissions", response_model=Ok[list[ProgrammingSubmissionItemSchema]])
+async def get_coding_submissions(
+    exercise_id: UUID = Path(...),
+    token : str = Depends(oauth2_scheme),
+    exercise_controller: ExercisesController = Depends(InternalProvider().get_exercises_controller)
+):
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+
+    submission_repo = exercise_controller.submission_repo
+    submissions = await submission_repo.get_many(
+        where_=[ProgrammingSubmission.exercise_id == exercise_id, Student.id == user_id]
+    )
+
+    return Ok(data=[ProgrammingSubmissionItemSchema.model_validate(submission) for submission in submissions])

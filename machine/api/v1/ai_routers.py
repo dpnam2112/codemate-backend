@@ -865,3 +865,291 @@ async def generate_quiz(
     except Exception as e:
         print(f"Error generating quiz: {str(e)}")
         raise ApplicationException(message=f"Failed to generate quiz: {str(e)}")
+
+@router.post("/generate-code-exercise")
+async def generate_quiz(
+    request: GenerateQuizRequest,
+    token: str = Depends(oauth2_scheme),
+    student_controller: StudentController = Depends(InternalProvider().get_student_controller),
+    modules_controller: ModulesController = Depends(InternalProvider().get_modules_controller),
+    recommend_lessons_controller: RecommendLessonsController = Depends(InternalProvider().get_recommendlessons_controller),
+    lessons_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
+    documents_controller: DocumentsController = Depends(InternalProvider().get_documents_controller),
+    extracted_text_controller: ExtractedTextController = Depends(InternalProvider().get_extracted_text_controller),
+    recommend_quizzes_controller: RecommendQuizzesController = Depends(InternalProvider().get_recommend_quizzes_controller),
+    recommend_quiz_questions_controller: RecommendQuizQuestionController = Depends(InternalProvider().get_recommend_quiz_question_controller),
+):
+    """
+    Generate a quiz based on a recommended lesson.
+    
+    Args:
+        request: Contains recommend_lesson_id
+        Other parameters: Controllers for different database models
+        
+    Returns:
+        Dict containing the generated quiz details
+    """
+    # Verify token
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    
+    student = await student_controller.student_repository.first(where_=[Student.id == user_id])
+    if not student:
+        raise NotFoundException(message="Your account is not allowed to access this feature.")
+    
+    if not request.module_id:
+        raise BadRequestException(message="Please provide recommend_lesson_id.")
+    
+    # Fetch module details
+    module = await modules_controller.modules_repository.first(where_=[Modules.id == request.module_id])
+    if not module:
+        raise NotFoundException(message="Module not found")
+    
+    # Fetch recommended lesson details
+    recommend_lesson = await recommend_lessons_controller.recommend_lessons_repository.first(
+        where_=[RecommendLessons.id == module.recommend_lesson_id]
+    )
+    if not recommend_lesson:
+        raise NotFoundException(message="Recommended lesson not found.")
+    
+    # Fetch the original lesson
+    lesson = await lessons_controller.lessons_repository.first(
+        where_=[Lessons.id == recommend_lesson.lesson_id]
+    )
+    if not lesson:
+        raise NotFoundException(message="Original lesson not found.")
+    
+    # Get documents for this lesson
+    documents = await documents_controller.documents_repository.get_many(
+        where_=[Documents.lesson_id == lesson.id]
+    )
+    if not documents:
+        raise NotFoundException(message="No documents found for this lesson.")
+    
+    # Prepare data structure with lesson details and its documents and extracted text
+    lesson_data = {
+        "id": str(lesson.id),
+        "title": lesson.title,
+        "description": lesson.description,
+        "order": lesson.order,
+        "learning_outcomes": lesson.learning_outcomes if lesson.learning_outcomes else [],
+        "documents": []
+    }
+    
+    for document in documents:
+        # Get extracted text for each document
+        extracted = await extracted_text_controller.extracted_text_repository.first(
+            where_=[ExtractedText.document_id == document.id]
+        )
+        
+        # Only include documents with extracted text
+        if extracted and extracted.extracted_content:
+            lesson_data["documents"].append({
+                "id": str(document.id),
+                "name": document.name,
+                "type": document.type,
+                "description": document.description,
+                "extracted_content": extracted.extracted_content
+            })
+    
+    # Get recommended content for extra context
+    recommended_content = recommend_lesson.recommended_content
+    explanation = recommend_lesson.explain
+    module_data = {
+        "id": str(module.id),
+        "title": module.title,
+        "objectives": module.objectives if module.objectives else [],
+    }
+    # Get API key from environment variables
+    gemini_api_key = os.getenv("GOOGLE_GENAI_API_KEY")
+    
+    # Define the prompt for quiz generation
+    prompt = f"""
+    ## Quiz Generation Task
+    
+    ## Student Information
+    - Student is learning about: "{lesson.title}"
+    - Recommended focus areas: "{recommended_content}"
+    
+    ## Module Information
+    - Module Title: {module.title}
+    - Module Objectives: {json.dumps(module.objectives if module.objectives else [])}
+    
+    ## Lesson Information
+    - Lesson Title: {lesson.title}
+    - Lesson Description: {lesson.description}
+    - Learning Outcomes: {json.dumps(lesson.learning_outcomes if lesson.learning_outcomes else [])}
+    
+    ## Documents Content
+    {json.dumps([doc for doc in lesson_data["documents"]], indent=2)}
+    
+    ## Task Requirements
+    Generate a comprehensive quiz that primarily tests understanding of the module objectives. The quiz should:
+    1. Focus specifically on assessing the module objectives first and foremost
+    2. Align with the recommended content areas as a secondary priority
+    3. Cover key concepts and important details from the lesson materials
+    4. Include questions of varying difficulty levels (easy, medium, hard)
+    5. Include clear explanations for each answer
+    
+    ## Output Format
+    Your response MUST be in the following JSON format:
+    {{
+        "quiz_title": "Title based on the lesson content",
+        "description": "Brief description of what this quiz covers",
+        "estimated_completion_time": "Time in minutes it would take to complete type number(e.g., 10)",
+        "max_score": 70,
+        "questions": [
+            {{
+                "question_text": "The question text goes here?",
+                "question_type": "single_choice", 
+                "options": ["Option A", "Option B", "Option C", "Option D"],
+                "correct_answer": ["The correct option here"],
+                "difficulty": "easy", 
+                "explanation": "Detailed explanation of why this is the correct answer",
+                "points": 10
+            }},
+            {{
+                "question_text": "The question text goes here?",
+                "question_type": "multiple_choice", 
+                "options": ["Option A", "Option B", "Option C", "Option D"],
+                "correct_answer": "The correct option here",
+                "difficulty": "hard", 
+                "explanation": "Detailed explanation of why this is the correct answer",
+                "points": 10
+            }},
+            {{
+                "question_text": "True/False question text goes here?",
+                "question_type": "true_false",
+                "options": ["True", "False"],
+                "correct_answer": "True or False",
+                "difficulty": "medium", 
+                "explanation": "Explanation of why this is true or false",
+                "points": 5
+            }}
+        ]
+    }}
+    
+    IMPORTANT REQUIREMENTS:
+    1. Generate at least 10 but no more than 15 questions
+    2. Include a mix of single_choice, multiple_choice, and true_false question types
+    3. For single_choice questions have only one correct answer among the four provided options (A, B, C, D).
+    4. For multiple_choice questions may have more than one correct answer, and the user must select all correct options from the four provided choices (A, B, C, D).
+    5. For true/false questions, options should be exactly ["True", "False"]
+    6. The sum of all question points should be 100
+    7. Each question must have a detailed explanation for the correct answer
+    8. Make sure correct_answer exactly matches one of the options
+    9. Every question must have a difficulty level of "easy", "medium", or "hard"
+    10. All correct_answer values must be provided as arrays, even for single answers
+    11. The quiz content should primarily assess the module objectives
+    12. Secondary focus should be on the recommended content areas
+    13. Ensure each question clearly relates to at least one module objective
+    """
+    
+    # Initialize Genai client and generate quiz
+    try:
+        question = QuestionRequest(
+            content=prompt,
+            temperature=0.3,
+            max_tokens= 3000
+        )
+        
+        # Use AIToolProvider to create the LLM model
+        ai_tool_provider = AIToolProvider()
+        llm = ai_tool_provider.chat_model_factory(LLMModelName.GEMINI_PRO)
+        
+        # Set fixed parameters
+        llm.temperature = 0.3
+        llm.max_output_tokens = 2000
+        
+        response = llm.invoke(question.content)
+
+        if not response:
+            raise ApplicationException(message="Failed to generate quiz content")
+        
+        # Extract the quiz content from response
+        response_text = response.content
+        
+        try:
+            if "```json" in response_text:
+                json_content = response_text.split("```json")[1].split("```")[0].strip()
+                quiz_data = json.loads(json_content)
+            else:
+                quiz_data = json.loads(response_text)
+        except json.JSONDecodeError as e:
+            print(f"Failed to parse JSON from response: {e}")
+            raise ApplicationException(message="Failed to parse quiz content as JSON")
+        
+        # Validate quiz data structure
+        required_keys = ["quiz_title", "description", "max_score", "questions"]
+        for key in required_keys:
+            if key not in quiz_data:
+                raise ApplicationException(message=f"Generated quiz is missing required field: {key}")
+        
+        # # Create quiz record
+        quiz_attributes = {
+            "name": quiz_data["quiz_title"],
+            "description": quiz_data["description"],
+            "status": "new",
+            "time_limit": quiz_data["estimated_completion_time"],
+            "max_score": quiz_data["max_score"],
+            "module_id": module.id,
+        }
+        
+        created_quiz = await recommend_quizzes_controller.recommend_quizzes_repository.create(attributes=quiz_attributes, commit=True)
+        
+        if not created_quiz:
+            raise ApplicationException(message="Failed to create quiz")
+        
+        # # Create quiz questions
+        question_attributes_list = []
+        for question in quiz_data["questions"]:
+            question_attributes = {
+                "quiz_id": created_quiz.id,
+                "question_text": question["question_text"],
+                "question_type": question["question_type"],
+                "options": question["options"],
+                "correct_answer": question["correct_answer"],
+                "difficulty": question["difficulty"],
+                "explanation": question["explanation"],
+                "points": question["points"]
+            }
+            question_attributes_list.append(question_attributes)
+        
+        created_questions = await recommend_quiz_questions_controller.recommend_quiz_question_repository.create_many(
+            attributes_list=question_attributes_list, commit=True
+        )
+        
+        if not created_questions:
+            raise ApplicationException(message="Failed to create quiz questions")
+        
+        # # Format the response
+        quiz_response = {
+            "quiz_id": str(created_quiz.id),
+            "name": created_quiz.name,
+            "description": created_quiz.description,
+            "time_limit": created_quiz.time_limit,
+            "max_score": created_quiz.max_score,
+            "module_id": str(created_quiz.module_id),
+            "questions": [
+                {
+                    "id": str(question.id),
+                    "question_text": question.question_text,
+                    "question_type": question.question_type,
+                    "options": question.options,
+                    "correct_answer": question.correct_answer,
+                    "difficulty": question.difficulty,
+                    "explanation": question.explanation,
+                    "points": question.points,
+
+                }
+                for question in created_questions
+            ]
+        }
+        
+        return Ok(quiz_response, message="Quiz generated successfully")
+        
+    except Exception as e:
+        print(f"Error generating quiz: {str(e)}")
+        raise ApplicationException(message=f"Failed to generate quiz: {str(e)}")
