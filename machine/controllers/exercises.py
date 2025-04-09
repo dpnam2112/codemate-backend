@@ -325,61 +325,56 @@ class ExercisesController(BaseController[Exercises]):
 
         return submission, passed_testcases, total_testcases
 
+
     async def list_submissions_with_stats(
         self, user_id: Optional[UUID] = None, exercise_id: Optional[UUID] = None
     ) -> list[SubmissionWithStats]:
-        """
-        Retrieve a list of submissions with test case stats (passed/total).
-
-        Args:
-            user_id (UUID, optional): If provided, filter submissions by this user.
-            exercise_id (UUID, optional): If provided, filter submissions by this exercise.
-
-        Returns:
-            List[SubmissionWithStats]: Each item contains submission and test case stats.
-        """
         session = self.repository.session
 
-        # Base query for submissions
+        # Build base query for submissions
         stmt = select(ProgrammingSubmission)
-
-        # Dynamically apply filters
         filters = []
         if user_id:
             filters.append(ProgrammingSubmission.user_id == user_id)
         if exercise_id:
             filters.append(ProgrammingSubmission.exercise_id == exercise_id)
         if filters:
-            stmt = stmt.where(and_(*filters) if len(filters) > 1 else filters[0])
-
+            stmt = stmt.where(and_(*filters))
 
         result = await session.execute(stmt)
         submissions = result.scalars().all()
+        if not submissions:
+            return []
 
-        response = []
+        submission_ids = [sub.id for sub in submissions]
 
-        for submission in submissions:
-            submission_id = submission.id
-
-            # Total testcases
-            stmt_total = select(func.count()).select_from(ProgrammingTestResult).where(
-                ProgrammingTestResult.submission_id == submission_id
+        # Aggregate passed and total testcases per submission using GROUP BY
+        stats_stmt = (
+            select(
+                ProgrammingTestResult.submission_id,
+                func.count().label("total"),
+                func.count(
+                    func.nullif(
+                        ProgrammingTestResult.status != "Accepted",
+                        True
+                    )
+                ).label("passed")
             )
-            total_result = await session.execute(stmt_total)
-            total_count: int = total_result.scalar_one()
+            .where(ProgrammingTestResult.submission_id.in_(submission_ids))
+            .group_by(ProgrammingTestResult.submission_id)
+        )
 
-            # Passed testcases
-            stmt_passed = select(func.count()).select_from(ProgrammingTestResult).where(
-                ProgrammingTestResult.submission_id == submission_id,
-                ProgrammingTestResult.status == "Accepted"
-            )
-            passed_result = await session.execute(stmt_passed)
-            passed_count: int = passed_result.scalar_one()
+        stats_result = await session.execute(stats_stmt)
+        stats_map = {row.submission_id: {"passed": row.passed, "total": row.total} for row in stats_result}
 
+        # Combine stats with submissions
+        response: List[SubmissionWithStats] = []
+        for sub in submissions:
+            stats = stats_map.get(sub.id, {"passed": 0, "total": 0})
             response.append({
-                "submission": submission,
-                "passed_testcases": passed_count,
-                "total_testcases": total_count
+                "submission": sub,
+                "passed_testcases": stats["passed"],
+                "total_testcases": stats["total"]
             })
 
         return response

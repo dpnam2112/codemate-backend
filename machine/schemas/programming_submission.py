@@ -58,8 +58,14 @@ class ProgrammingSubmissionSchema(BaseModel):
     class Config:
         from_attributes = True
 
-
-# Optional: Create models for creation/update requests
+class ProgrammingSubmissionStatSchema(BaseModel):
+    id: UUID
+    user_id: UUID
+    exercise_id: UUID
+    judge0_language_id: int
+    status: str
+    passed_testcases: int
+    total_testcases: int
 
 class ProgrammingSubmissionCreate(BaseModel):
     user_id: UUID
