@@ -10,7 +10,7 @@ from core.db.utils import session_context
 from core.exceptions.base import NotFoundException
 from machine.models import Exercises
 from machine.models.coding_assistant import CodingConversation, Conversation, Message
-from machine.models.coding_submission import ProgrammingSubmission, ProgrammingTestCase, ProgrammingTestResult
+from machine.models.coding_submission import ProgrammingSubmission, ProgrammingTestCase, ProgrammingTestResult, SubmissionStatus
 from machine.repositories import ExercisesRepository
 from core.db import Transactional
 from machine.repositories.programming_submission import ProgrammingSubmissionRepository
@@ -277,6 +277,8 @@ class ExercisesController(BaseController[Exercises]):
         }
         submission = await self.submission_repo.create(attributes=submission_data, commit=True)
 
+        submission_status = SubmissionStatus.COMPLETED
+
         for i, tc in enumerate(test_case_objs):
             result_data = test_results[i]
             test_result = ProgrammingTestResult(
@@ -289,8 +291,15 @@ class ExercisesController(BaseController[Exercises]):
                 time=None,
                 memory=None,
             )
+
+            if result_data["status"] in ["In Queue", "Processing"]:
+                submission_status = SubmissionStatus.PENDING
+            elif result_data["status"] != "Accepted":
+                submission_status = SubmissionStatus.FAILED
+
             session.add(test_result)
 
+        submission.status = submission_status
         await session.flush()
         poll_judge0_submission_result.send(str(submission.id))
         return submission
@@ -368,7 +377,7 @@ class ExercisesController(BaseController[Exercises]):
         stats_map = {row.submission_id: {"passed": row.passed, "total": row.total} for row in stats_result}
 
         # Combine stats with submissions
-        response: List[SubmissionWithStats] = []
+        response = []
         for sub in submissions:
             stats = stats_map.get(sub.id, {"passed": 0, "total": 0})
             response.append({

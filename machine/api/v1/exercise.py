@@ -1032,9 +1032,13 @@ async def delete_testcase(
     await controller.repository.session.commit()
     return Ok(data=ProgrammingTestCaseResponse.model_validate(testcase))
 
-
-@router.post("{exercise_id}/coding-submissions", response_model=Ok[ProgrammingSubmissionResponse])
+@router.post(
+    "/{exercise_id}/coding-submissions",
+    response_model=Ok[ProgrammingSubmissionResponse],
+    status_code=201
+)
 async def submit_code(
+    exercise_id: UUID,
     body: ProgrammingSubmissionCreateRequest,
     token : str = Depends(oauth2_scheme),
     user_controller: StudentController = Depends(InternalProvider().get_student_controller),
@@ -1047,6 +1051,15 @@ async def submit_code(
     users = await user_controller.get_many(where_=[Student.id == user_id])
     assert users != []
     user = users[0]
+
+    submission = await exercise_controller.create_coding_submission(
+        user_id=user.id,
+        exercise_id=exercise_id,
+        user_solution=body.code,
+        judge0_lang_id=body.judge0_language_id
+    )
+
+    return Ok(data=ProgrammingSubmissionResponse.model_validate(submission))
 
 @router.get("/{exercise_id}/coding-submissions/{submission_id}/status", response_model=Ok[ProgrammingSubmissionResponse])
 async def get_coding_submission_status(

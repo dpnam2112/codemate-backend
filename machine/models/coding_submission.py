@@ -9,6 +9,22 @@ Judge0 evaluates it using:
 - The problem's test cases
 - The selected config (boilerplate + limits)
 
+In the Judge0 API, each submission is assigned a status_id that indicates its current state in the
+processing lifecycle. The possible status_id values and their corresponding meanings are:
+
+    1: In Queue – The submission is waiting in the queue to be processed.
+    2: Processing – The submission is currently being processed.
+    3: Accepted – The submission was successfully executed without errors.
+    4: Wrong Answer – The output of the submission did not match the expected output.
+    5: Time Limit Exceeded – The submission exceeded the allowed execution time.
+    6: Compilation Error – There was an error during the compilation of the submission.
+    7: Runtime Error (SIGSEGV) – Segmentation fault occurred during execution.
+    8: Runtime Error (SIGXFSZ) – Output file size limit exceeded.
+    9: Runtime Error (SIGFPE) – Floating point exception occurred.
+    10: Runtime Error (SIGABRT) – Process was aborted.
+    11: Runtime Error (NZEC) – Non-zero exit code returned.
+    12: Runtime Error (Other) – An unspecified runtime error occurred.
+    13: Internal Error – An internal error occurred within the Judge0 system.
 """
 from typing import Optional
 from uuid import UUID, uuid4

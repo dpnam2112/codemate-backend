@@ -19,7 +19,6 @@ class ProgrammingTestCaseCreateRequest(BaseModel):
     score: float = Field(default=1.0)
 
 class ProgrammingSubmissionCreateRequest(BaseModel):
-    exercise_id: UUID
     judge0_language_id: int
     code: str
 
@@ -48,3 +47,6 @@ class ProgrammingSubmissionResponse(BaseModel):
     exercise_id: UUID
     judge0_language_id: int
     status: str
+
+    class Config:
+        from_attributes = True
