@@ -40,7 +40,8 @@ class LearningPathsController(BaseController[LearningPaths]):
     async def get_learning_path(self, user_id: UUID, course_id: UUID):
         lp = await self.repository.first(
             where_=[LearningPaths.course_id == course_id, LearningPaths.student_id == user_id],
-            relations=[LearningPaths.recommend_lessons]
+            relations=[LearningPaths.recommend_lessons],
+            order_={"desc": ["version"]}
         )
         if lp is None: raise NotFoundException(message="learning path is not created.")
         return lp
