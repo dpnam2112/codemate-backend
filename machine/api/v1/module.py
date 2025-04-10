@@ -252,10 +252,26 @@ async def submit_quiz_answers(
         },
         commit=True, 
     )
-
-    # Analyze quiz results and update issues summary
+    module_quizzes = await recommend_quizzes_controller.recommend_quizzes_repository.get_many(
+        where_=[RecommendQuizzes.module_id == module.id]
+    )
+    completed_quizzes = [q for q in module_quizzes if q.status == StatusType.completed and q.score is not None]
+    if completed_quizzes:
+        total_score = sum(q.score for q in completed_quizzes)
+        average_score = round(total_score / len(completed_quizzes), 2)
+        
+        await modules_controller.modules_repository.update(
+            where_=[Modules.id == module.id],
+            attributes={"progress": average_score},
+            commit=True
+        )
+        
+    # Variable to store identified issues
+    identified_issues = None
+    
     try:
-        await analyze_and_update_issues_summary(
+        # Call the analysis function and capture any identified issues
+        identified_issues = await analyze_and_return_issues(
             quiz_id=quizId,
             user_id=user.id,
             module=module,
@@ -269,6 +285,10 @@ async def submit_quiz_answers(
         # Log the error but don't fail the quiz submission
         print(f"Error during issues analysis: {str(e)}")
         # You might want to add proper logging here
+        
+    await modules_controller.modules_repository.update_module_progress(module.id)
+    await recommend_lessons_controller.recommend_lessons_repository.update_recommend_lesson_progress(recommend_lesson.id)
+    await learning_paths_controller.learning_paths_repository.update_learning_path_progress(recommend_lesson.learning_path.id)
     
     # Prepare response
     response = QuizScoreResponse(
@@ -277,11 +297,12 @@ async def submit_quiz_answers(
         correct_answers=correct_count,
         score=score,
         results=results,
+        identified_issues=identified_issues  # Include identified issues in the response
     )
 
     return Ok(data=response, message="Quiz answers submitted successfully.")
 
-async def analyze_and_update_issues_summary(
+async def analyze_and_return_issues(
     quiz_id: UUID,
     user_id: UUID,
     module,
@@ -292,12 +313,12 @@ async def analyze_and_update_issues_summary(
     student_courses_controller: StudentCoursesController,
 ):
     """
-    Analyze quiz results and update the issues_summary in student_courses
+    Analyze quiz results, update the issues_summary in student_courses, and return identified issues
     """
     # Only proceed with analysis if there are incorrect answers
     incorrect_answers = [q for q in questions_results if not q["is_correct"]]
     if not incorrect_answers:
-        return  # No issues to analyze
+        return None  # No issues to analyze
     
     # Get current issues summary from student_courses
     learning_path = await learning_paths_controller.learning_paths_repository.first(
@@ -330,14 +351,20 @@ async def analyze_and_update_issues_summary(
         
         if not response:
             print("Failed to get analysis from LLM")
-            return
+            return None
         
         response_text = response.content
         analyzed_issues = extract_json_from_response(response_text)
         
+        # Check if analysis returned valid data with issues
         if not analyzed_issues or "common_issues" not in analyzed_issues:
             print("Invalid response format from LLM")
-            return
+            return None
+        
+        # Check if there are any issues to add
+        if len(analyzed_issues["common_issues"]) == 0:
+            print("No new issues identified based on quiz performance")
+            return None  # No issues identified
         
         # Merge new issues with existing issues
         updated_summary = merge_issues_summary(current_summary, analyzed_issues)
@@ -349,15 +376,28 @@ async def analyze_and_update_issues_summary(
             commit=True
         )
         
+        # Return the newly identified issues for the API response
+        return analyzed_issues["common_issues"]
+        
     except Exception as e:
         print(f"Error during AI analysis: {str(e)}")
-        raise
+        raise e
 def prepare_analysis_prompt(quiz_id, module, recommend_lesson, questions_results, current_summary):
     """
     Prepare the prompt for AI analysis
     """
     # Extract information about incorrect answers
     incorrect_answers = [q for q in questions_results if not q["is_correct"]]
+    
+    # Calculate performance metrics
+    total_questions = len(questions_results)
+    incorrect_count = len(incorrect_answers)
+    correct_percentage = ((total_questions - incorrect_count) / total_questions) * 100
+    
+    # Check if performance is good enough to potentially skip issue creation
+    high_performance = correct_percentage >= 90
+    only_few_errors = incorrect_count <= 2
+    complex_errors_only = all(q.get("difficulty", "").lower() in ["hard", "difficult", "advanced"] for q in incorrect_answers)
     
     prompt = f"""
     ## Quiz Analysis Task
@@ -372,9 +412,12 @@ def prepare_analysis_prompt(quiz_id, module, recommend_lesson, questions_results
     - Learning Outcomes: {json.dumps(recommend_lesson.learning_outcomes if hasattr(recommend_lesson, 'learning_outcomes') and recommend_lesson.learning_outcomes else [])}
     
     ## Quiz Results
-    - Total Questions: {len(questions_results)}
-    - Incorrect Answers: {len(incorrect_answers)}
-    - Correct Percentage: {(len(questions_results) - len(incorrect_answers)) / len(questions_results) * 100:.1f}%
+    - Total Questions: {total_questions}
+    - Incorrect Answers: {incorrect_count}
+    - Correct Percentage: {correct_percentage:.1f}%
+    - High Performance: {high_performance}
+    - Only Few Errors: {only_few_errors}
+    - Complex Questions Only: {complex_errors_only}
     
     ## Questions with Incorrect Answers
     {json.dumps(incorrect_answers, indent=2)}
@@ -385,6 +428,9 @@ def prepare_analysis_prompt(quiz_id, module, recommend_lesson, questions_results
     ## Task
     Analyze the incorrectly answered questions and identify common issues or misunderstandings. 
     Consider the pattern of incorrect answers, the difficulty of questions, and any recurring themes.
+    
+    IMPORTANT: If the user performed well (high percentage correct) and only missed a few difficult questions,
+    you may determine there are no significant issues to add. In such cases, return an empty issues list.
     
     ## Output Format
     Your response MUST be in the following JSON format:
@@ -418,6 +464,7 @@ def prepare_analysis_prompt(quiz_id, module, recommend_lesson, questions_results
     6. Focus on meaningful issues rather than superficial ones
     7. Look for patterns across multiple questions when possible
     8. Do not include issues that are already exactly the same in the current issues summary
+    9. If the student performed very well (90%+ correct) or only missed a few difficult questions, return an empty "common_issues" list like: {{"common_issues": []}}
     
     Respond ONLY with the JSON. Do not include any other text, explanations, or notes.
     """
