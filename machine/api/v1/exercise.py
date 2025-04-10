@@ -571,10 +571,7 @@ async def get_code_exercise(
     user_id = payload.get("sub")
     if not user_id:
         raise BadRequestException(message="Your account is not authorized. Please log in again.")
-    professor = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
-    if not professor:
-        raise NotFoundException(message="Your account is not allowed to get detail of code exercise.")
-    
+
     # Fetch the exercise
     exercise = await exercises_controller.exercises_repository.first(
         where_=[Exercises.id == exercise_id]

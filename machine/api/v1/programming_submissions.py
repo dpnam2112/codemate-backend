@@ -15,7 +15,7 @@ from fastapi.security import OAuth2PasswordBearer
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 router = APIRouter(prefix="/programming-submissions", tags=["Programming submissions"])
 
-@router.get("/{submission_id}")
+@router.get("/{submission_id}", response_model=Ok[ProgrammingSubmissionSchema])
 async def get_submission_details(
     submission_id: UUID,
     exercise_controller: ExercisesController = Depends(InternalProvider().get_exercises_controller)

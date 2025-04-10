@@ -4,6 +4,7 @@ from uuid import UUID
 
 from openai import AsyncOpenAI, OpenAI
 from sqlalchemy import func, select
+from sqlalchemy.orm import selectinload, with_loader_criteria
 from core.controller import BaseController
 from core.db.session import DB_MANAGER, DBSessionKeeper, Dialect
 from core.db.utils import session_context
@@ -310,29 +311,20 @@ class ExercisesController(BaseController[Exercises]):
         session = self.repository.session
 
         # Get the submission instance
-        submission = await self.submission_repo.first(
-            where_=[ProgrammingSubmission.id == submission_id]
+        stmt = select(ProgrammingSubmission).where(
+            ProgrammingSubmission.id == submission_id
+        ).options(
+            selectinload(ProgrammingSubmission.test_results),
+            with_loader_criteria(ProgrammingTestResult, ProgrammingTestCase.is_public == True, include_aliases=True)
         )
+
+        result = await session.execute(stmt)
+        submission = result.scalars().first()
+
         if not submission:
             raise NotFoundException(f"Submission {submission_id} not found")
 
-        # Get total number of test cases for this submission
-        stmt_total = select(func.count()).select_from(ProgrammingTestResult).where(
-            ProgrammingTestResult.submission_id == submission_id
-        )
-        result_total = await session.execute(stmt_total)
-        total_testcases = result_total.scalar_one()
-
-        # Get number of passed test cases (status == ACCEPTED)
-        stmt_passed = select(func.count()).select_from(ProgrammingTestResult).where(
-            ProgrammingTestResult.submission_id == submission_id,
-            ProgrammingTestResult.status == "Accepted"
-        )
-
-        result_passed = await session.execute(stmt_passed)
-        passed_testcases = result_passed.scalar_one()
-
-        return submission, passed_testcases, total_testcases
+        return submission
 
 
     async def list_submissions_with_stats(
