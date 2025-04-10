@@ -3,7 +3,7 @@ import os
 import logging
 import re
 from typing import Dict, List, Any, Optional
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Body
 from core.response import Ok
 from core.exceptions import *
 from machine.models import *
@@ -706,23 +706,41 @@ def assign_recommend_lesson_id(modules, recommend_lessons, created_recommend_les
 
 async def regenerate_lesson_content(
     recommend_lesson_id: UUID,
-    issues_summary: dict,
+    analysis_result: dict,
+    prior_recommend_lessons_data: List[dict],
     lessons_controller: LessonsController,
-    recommend_lessons_controller: RecommendLessonsController
+    recommend_lessons_controller: RecommendLessonsController,
+    modules_controller: ModulesController,
+    recommend_documents_controller: RecommendDocumentsController
 ) -> dict:
-    """
-    Regenerate content for a recommended lesson based on identified issues.
-    
-    Returns:
-        Updated recommend_lesson data
-    """
+    """Regenerate content for a recommended lesson based on analysis result."""
+    # Fetch existing data
     recommend_lesson = await recommend_lessons_controller.recommend_lessons_repository.first(
         where_=[RecommendLessons.id == recommend_lesson_id]
     )
+    if not recommend_lesson:
+        raise NotFoundException(message="Recommended lesson not found.")
+    
     lesson = await lessons_controller.lessons_repository.first(
         where_=[Lessons.id == recommend_lesson.lesson_id]
     )
+    if not lesson:
+        raise NotFoundException(message="Lesson not found.")
 
+    # Step 1: Delete old modules and their recommend documents
+    old_modules = await modules_controller.modules_repository.get_many(
+        where_=[Modules.recommend_lesson_id == recommend_lesson_id]
+    )
+    for module in old_modules:
+        await recommend_documents_controller.recommend_documents_repository.delete(
+            where_=[RecommendDocuments.module_id == module.id]
+        )
+        await modules_controller.modules_repository.delete(
+            where_=[Modules.id == module.id]
+        )
+    await modules_controller.modules_repository.session.commit()
+
+    # Step 2: Generate new content
     chunking_manager = ChunkingManager(
         provider="gemini",
         gemini_model_name="gemini-2.0-flash-lite",
@@ -733,22 +751,66 @@ async def regenerate_lesson_content(
 
     prompt = f"""
     ## Lesson Content Regeneration Task
+    ### Context
     - Lesson Title: "{lesson.title}"
     - Current Recommended Content: "{recommend_lesson.recommended_content}"
-    - Issues Summary: {json.dumps(issues_summary, indent=2)}
+    - Current Explanation: "{recommend_lesson.explain}"
+    - Start Date: "{recommend_lesson.start_date}"
+    - End Date: "{recommend_lesson.end_date}"
+    - Duration Notes: "{recommend_lesson.duration_notes}"
+    - Analysis Result: {json.dumps(analysis_result, indent=2)}
 
-    ## Task Requirements
-    1. Generate updated content for this lesson targeting the specific issues identified.
-    2. Focus on:
-       - Addressing concept misunderstandings (e.g., detailed explanations, examples).
-       - Correcting code errors (e.g., improved code snippets, common error fixes).
-       - Reinforcing weak areas from increasing_issues or most_frequent_type.
-    3. Provide 2-3 new modules with detailed breakdowns.
-
-    ## Output Format
+    ### Prior Recommend Lessons Context (Only if Review Prior is Required)
+    - Prior Recommend Lessons:
     {{
-        "recommended_content": "Updated content targeting issues...",
-        "explain": "Why this content addresses the issues and supports learning goals...",
+        "lessons": {json.dumps(prior_recommend_lessons_data, indent=2) if prior_recommend_lessons_data else "No prior recommend lessons provided"}
+    }}
+
+    ### Task Requirements
+    You are tasked with regenerating the content for a recommended lesson to optimize the student's learning experience based on the analysis result from their study progress. Follow these steps:
+
+    1. **Analyze Current Content and Analysis Result:**
+       - Review the `Current Recommended Content` and `Current Explanation` to understand the original focus.
+       - Use the `Analysis Result` to identify specific struggles:
+         - `issues_analysis.significant_issues`: Focus on these issues (e.g., concept misunderstandings, code errors).
+         - `recommendations`: Address actions like "repeat" and "review_prior" if present.
+       - Determine why the original content failed to resolve these issues.
+
+    2. **Regenerate Content with Improvements:**
+       - **Recommended Content**: Rewrite to address the significant issues:
+         - Provide detailed explanations (5-7 sentences) targeting each significant issue from `issues_analysis`.
+         - Include 2-3 practical examples with code snippets (if applicable) tailored to the issues.
+         - If `recommendations` includes "review_prior" and prior data is provided, briefly reintroduce relevant concepts from `Prior Recommend Lessons` (e.g., 1-2 sentences linking back).
+         - Suggest actionable steps to overcome errors or gaps (e.g., debugging tips).
+       - **Explanation**: Update to:
+         - Justify why this lesson is critical to the learning path (tie to long-term goals).
+         - Explain how the new content resolves the issues from `issues_analysis` (5-7 sentences).
+         - Maintain coherence with prior and subsequent lessons.
+
+    3. **Design Targeted Modules:**
+       - Generate 2-3 new modules, each focusing on one significant issue from `issues_analysis`.
+       - If "review_prior" is in `recommendations`, include a brief review of relevant prior content in the first module (1-2 paragraphs).
+       - Each module should include:
+         - `theoryContent`: 3+ paragraphs with 2+ examples.
+         - `practicalGuide`: 4-5 steps and 3+ common errors/solutions.
+         - 3+ references (academic and practical mix).
+
+    4. **Maintain Timeline:**
+       - Keep `start_date` ("{recommend_lesson.start_date}") and `end_date` ("{recommend_lesson.end_date}") unchanged.
+       - Adjust `duration_notes` if needed based on new content complexity.
+
+    5. **Optimize for Learning:**
+       - Use a supportive tone (e.g., "Let’s tackle this together").
+       - Incorporate scaffolding: Start with foundational concepts (if gaps exist) before advancing.
+       - Ensure content is engaging and actionable.
+
+    ### Output Format
+    {{
+        "recommended_content": "Updated content addressing the student's specific issues...",
+        "explain": "Explanation of how this content resolves the issues...",
+        "start_date": "{recommend_lesson.start_date}",
+        "end_date": "{recommend_lesson.end_date}",
+        "duration_notes": "Updated notes on timeline...",
         "modules": [
             {{
                 "title": "Module Title",
@@ -762,45 +824,104 @@ async def regenerate_lesson_content(
                                 {{
                                     "title": "Example 1",
                                     "codeSnippet": "code here",
-                                    "explanation": "Explanation"
+                                    "explanation": "How this addresses the issue"
+                                }},
+                                {{
+                                    "title": "Example 2",
+                                    "codeSnippet": "code here",
+                                    "explanation": "Further clarification"
                                 }}
                             ]
                         }}
                     ],
                     "practicalGuide": [
                         {{
-                            "steps": ["Step 1", "Step 2", "Step 3", "Step 4"],
-                            "commonErrors": ["Error 1 - solution", "Error 2 - solution"]
+                            "steps": ["Step 1", "Step Now available for free at https://www.nostarch.com/sites/default/files/other/Alice_Excerpt.pdf", "Step 2", "Step 3", "Step 4"],
+                            "commonErrors": ["Error 1 - solution", "Error 2 - solution", "Error 3 - solution"]
                         }}
                     ],
                     "references": [
                         {{
-                            "title": "Ref Title",
+                            "title": "Ref Title 1",
                             "link": "https://example.com",
-                            "description": "Relevance"
+                            "description": "Relevance to issue"
+                        }},
+                        {{
+                            "title": "Ref Title 2",
+                            "link": "https://example.com",
+                            "description": "Practical support"
+                        }},
+                        {{
+                            "title": "Ref Title 3",
+                            "link": "https://example.com",
+                            "description": "Deep dive resource"
                         }}
                     ]
                 }}
             }}
+            // Additional modules (2-3 total)
         ]
     }}
+
+    ### Important Rules
+    1. Return valid JSON matching the output format.
+    2. Do NOT modify `start_date` or `end_date`.
+    3. Address all significant issues from `issues_analysis`.
+    4. Use `Prior Recommend Lessons` only if "review_prior" is in `recommendations`.
+    5. Maintain logical progression and coherence with the learning path.
+    6. Use clear, student-friendly language.
     """
 
     response = chunking_manager.call_llm_api(prompt, "You are an expert in educational content generation.")
     updated_content = response if isinstance(response, dict) else json.loads(response)
 
-    # Update the recommended lesson
+    # Step 3: Update recommend_lesson
     await recommend_lessons_controller.recommend_lessons_repository.update(
         where_=[RecommendLessons.id == recommend_lesson_id],
         attributes={
             "recommended_content": updated_content["recommended_content"],
             "explain": updated_content["explain"],
+            "start_date": updated_content["start_date"],
+            "end_date": updated_content["end_date"],
+            "duration_notes": updated_content["duration_notes"],
             "status": "new",
             "progress": 0
         },
         commit=True
     )
 
+    # Step 4: Create new modules and recommend documents
+    module_attributes_list = []
+    recommend_documents_attributes_list = []
+
+    for module_data in updated_content["modules"]:
+        module_attr = {
+            "recommend_lesson_id": recommend_lesson_id,
+            "title": module_data["title"],
+            "objectives": module_data["objectives"]
+        }
+        module_attributes_list.append(module_attr)
+        recommend_documents_attributes_list.append({
+            "module_id": None,
+            "content": module_data["reading_material"]
+        })
+
+    created_modules = await modules_controller.modules_repository.create_many(
+        attributes_list=module_attributes_list,
+        commit=True
+    )
+
+    for i, module in enumerate(created_modules):
+        recommend_documents_attributes_list[i]["module_id"] = module.id
+
+    await recommend_documents_controller.recommend_documents_repository.create_many(
+        attributes_list=recommend_documents_attributes_list,
+        commit=True
+    )
+
+    updated_content["modules"] = [
+        {**mod, "id": str(created_modules[i].id)} for i, mod in enumerate(updated_content["modules"])
+    ]
     return updated_content
 
 async def monitor_study_progress(
@@ -842,11 +963,12 @@ async def monitor_study_progress(
     )
 
     if analysis_result["can_proceed"]:
-        # await recommend_lessons_controller.recommend_lessons_repository.update(
-        #     where_=[RecommendLessons.id == recommend_lesson_id],
-        #     attributes={"status": "completed", "progress": 100},
-        #     commit=True
-        # )
+        
+        await recommend_lessons_controller.recommend_lessons_repository.update(
+            where_=[RecommendLessons.id == recommend_lesson_id],
+            attributes={"status": "completed", "progress": 100},
+            commit=True
+        )
         return Ok(data=analysis_result, message="Lesson completed successfully. Student can proceed to the next lesson.")
         
     if analysis_result["needs_repeat"]:
@@ -1027,44 +1149,84 @@ async def analyze_issues(
 
     return result
 
-@router.get("/monitor-study-progress/course/{course_id}/recommend_lesson/{recommend_lesson_id}") #haven't tested
-async def monitor_study_progress_endpoint(
-    recommend_lesson_id: UUID,
-    course_id: UUID,
+class RegenerateLessonRequest(BaseModel):
+    recommend_lesson_id: UUID
+    analysis_result: dict  # Kết quả từ monitor_study_progress_endpoint
+
+@router.post("/regenerate-lesson-content")
+async def regenerate_lesson_content_endpoint(
+    request: RegenerateLessonRequest = Body(...),
     token: str = Depends(oauth2_scheme),
-    student_controller: StudentController = Depends(InternalProvider().get_student_controller),
     recommend_lessons_controller: RecommendLessonsController = Depends(InternalProvider().get_recommendlessons_controller),
-    learning_path_controller: LearningPathsController = Depends(InternalProvider().get_learningpaths_controller),
     lessons_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
-    student_courses_controller: StudentCoursesController = Depends(InternalProvider().get_studentcourses_controller),
+    modules_controller: ModulesController = Depends(InternalProvider().get_modules_controller),
+    learning_path_controller: LearningPathsController = Depends(InternalProvider().get_learningpaths_controller),
+    recommend_documents_controller: RecommendDocumentsController = Depends(InternalProvider().get_recommenddocuments_controller),
 ):
-    """Monitor student progress when accessing a recommended lesson."""
+    """Regenerate content for a recommended lesson based on analysis result from monitor_study_progress."""
     payload = verify_token(token)
     student_id = payload.get("sub")
     if not student_id:
         raise BadRequestException(message="Invalid token.")
 
-    student = await student_controller.student_repository.first(where_=[Student.id == student_id])
-    if not student:
-        raise NotFoundException(message="Student not found.")
+    # Kiểm tra analysis_result
+    analysis_result = request.analysis_result
+    if not analysis_result.get("needs_repeat", False):
+        raise BadRequestException(message="Regeneration is only allowed when the lesson needs to be repeated.")
 
-    return await monitor_study_progress(
-        recommend_lesson_id,
-        student_id,
-        course_id,
-        recommend_lessons_controller,
-        learning_path_controller,
-        lessons_controller,
-        student_courses_controller
+    # Fetch recommend_lesson
+    recommend_lesson = await recommend_lessons_controller.recommend_lessons_repository.first(
+        where_=[RecommendLessons.id == request.recommend_lesson_id]
     )
+    if not recommend_lesson:
+        raise NotFoundException(message="Recommended lesson not found.")
 
-@router.post("/regenerate-lesson-content/{recommend_lesson_id}") #haven't tested
+    # Check if review_prior is required
+    needs_review_prior = analysis_result.get("needs_review_prior", False)
+    prior_recommend_lessons_data = []
+    if needs_review_prior:
+        # Fetch prior recommend lessons if review_prior is in recommendations
+        learning_path = await learning_path_controller.learning_paths_repository.first(
+            where_=[LearningPaths.id == recommend_lesson.learning_path_id]
+        )
+        prior_recommend_lessons = await recommend_lessons_controller.recommend_lessons_repository.get_many(
+            where_=[RecommendLessons.learning_path_id == learning_path.id, RecommendLessons.order < recommend_lesson.order],
+            order_={"asc": ["order"]}
+        )
+        # Limit to 2 most recent prior recommend lessons
+        for prior_rl in prior_recommend_lessons[-2:]:
+            prior_lesson = await lessons_controller.lessons_repository.first(
+                where_=[Lessons.id == prior_rl.lesson_id]
+            )
+            prior_recommend_lessons_data.append({
+                "title": prior_lesson.title,
+                "recommended_content": prior_rl.recommended_content,
+                "explain": prior_rl.explain,
+                "order": prior_rl.order,
+                "progress": prior_rl.progress
+            })
+
+    # Call regenerate_lesson_content with analysis_result and prior data
+    updated_content = await regenerate_lesson_content(
+        recommend_lesson_id=request.recommend_lesson_id,
+        analysis_result=analysis_result,
+        prior_recommend_lessons_data=prior_recommend_lessons_data,
+        lessons_controller=lessons_controller,
+        recommend_lessons_controller=recommend_lessons_controller,
+        modules_controller=modules_controller,
+        recommend_documents_controller=recommend_documents_controller
+    )
+    return Ok(data=updated_content, message="Lesson content regenerated successfully.")
+
+@router.get("/regenerate-lesson-content/{recommend_lesson_id}") #haven't tested
 async def regenerate_lesson_content_endpoint(
     recommend_lesson_id: UUID,
     token: str = Depends(oauth2_scheme),
     recommend_lessons_controller: RecommendLessonsController = Depends(InternalProvider().get_recommendlessons_controller),
     lessons_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
     student_courses_controller: StudentCoursesController = Depends(InternalProvider().get_studentcourses_controller),
+    modules_controller: ModulesController = Depends(InternalProvider().get_modules_controller),
+    learning_path_controller: LearningPathsController = Depends(InternalProvider().get_learningpaths_controller),
 ):
     """Regenerate content for a recommended lesson based on issues."""
     payload = verify_token(token)
