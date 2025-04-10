@@ -277,7 +277,6 @@ class ExercisesController(BaseController[Exercises]):
             "score": None,
         }
         submission = await self.submission_repo.create(attributes=submission_data, commit=True)
-
         submission_status = SubmissionStatus.COMPLETED
 
         for i, tc in enumerate(test_case_objs):
@@ -325,6 +324,7 @@ class ExercisesController(BaseController[Exercises]):
                 noload(ProgrammingSubmission.test_results)
             )
 
+        stmt = stmt.order_by(ProgrammingSubmission.created_at.desc())
         result = await session.execute(stmt)
         submission = result.scalars().first()
 

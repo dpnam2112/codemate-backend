@@ -9,6 +9,9 @@ from core.logger import syslog
 from worker import broker
 
 
+class StillProcessingError(Exception):
+    pass
+
 @actor(max_retries=3, min_backoff=10, max_backoff=60, broker=broker)
 async def poll_judge0_submission_result(submission_id_str: str):
     submission_id = UUID(submission_id_str)
@@ -42,6 +45,7 @@ async def poll_judge0_submission_result(submission_id_str: str):
         judge0_results = await judge0_client.get_submission_results(tokens, test_cases)
 
         submission_status = SubmissionStatus.COMPLETED
+        still_processing = False
 
         for tr, res in zip(pending_results, judge0_results):
             tr.status = res["status"]
@@ -51,14 +55,19 @@ async def poll_judge0_submission_result(submission_id_str: str):
             tr.memory = res.get("memory")
 
             if res["status"] in ["In Queue", "Processing"]:
+                still_processing = True
                 submission_status = SubmissionStatus.PENDING
             elif res["status"] != "Accepted":
                 submission_status = SubmissionStatus.FAILED
 
         # Update submission status
         submission = await session.get(ProgrammingSubmission, submission_id)
-        if submission: submission.status = submission_status
+        if submission:
+            submission.status = submission_status
 
-        await session.flush()
+        await session.commit()
         syslog.info(f"Updated submission {submission_id} status to {submission.status}")
+
+        if still_processing:
+            raise StillProcessingError(f"Submission {submission_id} still has pending results.")
 
