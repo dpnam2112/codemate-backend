@@ -91,8 +91,6 @@ async def get_activities(
     recent_activities = await activities_controller.activities_repository.get_many(
         where_=[Activities.student_id == user_id],
         order_={"desc": [{"field": "timestamp", "model_class": Activities}]},
-        limit=5,
-        skip=0,
     )
 
     # if not recent_activities:

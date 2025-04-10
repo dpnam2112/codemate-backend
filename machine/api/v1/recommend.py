@@ -65,6 +65,8 @@ async def recommend_lesson(
             ModuleResponse(
                 module_id=module.id,
                 title=module.title,
+                progress=module.progress,
+                objectives=[objective for objective in module.objectives],
             )
             for module in get_modules
         ],

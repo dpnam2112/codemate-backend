@@ -132,6 +132,7 @@ async def get_student_courses(
     search_query: Optional[str] = Query(None, description="Search query to filter courses"),
     student_courses_controller: StudentCoursesController = Depends(InternalProvider().get_studentcourses_controller),
     student_controller: StudentController = Depends(InternalProvider().get_student_controller),
+    learning_paths_controller: LearningPathsController = Depends(InternalProvider().get_learningpaths_controller),
 ):
 
     payload = verify_token(token)
@@ -153,7 +154,7 @@ async def get_student_courses(
         Courses.end_date.label("end_date"),
         Courses.learning_outcomes.label("learning_outcomes"),
         Courses.status.label("status"),
-        Courses.image_url.label("image"),
+        Courses.image_url.label("image_url"),
         Courses.nCredit.label("nCredit"),
         Courses.nSemester.label("nSemester"),
         Courses.courseID.label("courseID"),
@@ -177,34 +178,36 @@ async def get_student_courses(
 
     if not courses:
         return Ok(data=[], message="No courses found.")
-
+    
     total_page = math.ceil(len(courses) / page_size)
+    content = []
+    for course in courses:
+        learning_path = await learning_paths_controller.get_learning_path(user_id=user_id, course_id=course.id)
+        course_response = GetCoursesResponse(
+            id=course.id,
+            name=course.name,
+            start_date=str(course.start_date),
+            end_date=str(course.end_date),
+            learning_outcomes=course.learning_outcomes or [],
+            status=course.status,
+            image_url=generate_presigned_url(course.image_url, expiration=604800) if course.image_url else "",
+            last_accessed=str(course.last_accessed),
+            nCredit=course.nCredit,
+            nSemester=course.nSemester,
+            courseID=course.courseID,
+            class_name=str(course.class_name),
+            percentage_complete=str(learning_path.progress) if learning_path else "0",
+        )
+        content.append(course_response)
+
+            
     courses_response = {
-        "content": [
-            GetCoursesResponse(
-                id=course.id,
-                name=course.name,
-                start_date=str(course.start_date),
-                end_date=str(course.end_date),
-                learning_outcomes=course.learning_outcomes or [],
-                status=course.status,
-                image_url=generate_presigned_url(course.image, expiration=604800) if course.image else "",
-                last_accessed=str(course.last_accessed),
-                nCredit=course.nCredit,
-                nSemester=course.nSemester,
-                courseID=course.courseID,
-                class_name=str(course.class_name),
-                percentage_complete=str(course.percentage_complete) if course.percentage_complete else "0",
-                
-            )
-            for course in courses
-        ],
+        "content": content,
         "pageSize": page_size,
         "currentPage": page,
         "totalRows": len(courses),
         "totalPages": total_page,
     }
-
     return Ok(data=courses_response, message="Successfully fetched the courses.")
 
 @router.get("/count/", response_model=Ok[int])
@@ -356,22 +359,23 @@ async def get_courses(
     return Ok(data=courses_response, message="Successfully fetched the courses.")
 
 
-@router.get("/{courseId}", response_model=Ok[GetCourseDetailResponse])
+@router.get("/{courseId}/students/{studentId}", response_model=Ok[GetCourseDetailResponse])
 async def get_course_for_student(
     courseId: str,
+    studentId: str,
     token: str = Depends(oauth2_scheme),
     student_courses_controller: StudentCoursesController = Depends(InternalProvider().get_studentcourses_controller),
-    student_controller: StudentController = Depends(InternalProvider().get_student_controller),
+    professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
+    learning_paths_controller: LearningPathsController = Depends(InternalProvider().get_learningpaths_controller),
 ):
     payload = verify_token(token)
     user_id = payload.get("sub")
     if not user_id:
         raise BadRequestException(message="Your account is not authorized. Please log in again.")
-
-    student = await student_controller.student_repository.first(where_=[Student.id == user_id])
-    if not student:
-        raise ForbiddenException(message=f"Your account is not allowed to access this feature. {student}")
-
+    professor = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
+    if not professor:
+        raise ForbiddenException(message="You are not allowed to access this feature.")
+    
     select_fields = [
         Courses.name.label("name"),
         Courses.id.label("id"),
@@ -379,7 +383,7 @@ async def get_course_for_student(
         Courses.end_date.label("end_date"),
         Courses.learning_outcomes.label("learning_outcomes"),
         Courses.status.label("status"),
-        Courses.image_url.label("image"),
+        Courses.image_url.label("image_url"),
         Courses.nCredit.label("nCredit"),
         Courses.nSemester.label("nSemester"),
         Courses.courseID.label("courseID"),
@@ -396,11 +400,12 @@ async def get_course_for_student(
     }
 
     course = await student_courses_controller.student_courses_repository._get_many(
-        where_=[and_(StudentCourses.course_id == courseId, StudentCourses.student_id == user_id)],
+        where_=[and_(StudentCourses.course_id == courseId, StudentCourses.student_id == studentId)],
         fields=select_fields,
         join_=join_conditions,
     )
     get_course = course[0] if course else None
+    learning_path = await learning_paths_controller.get_learning_path(user_id=studentId, course_id=courseId)
     if not course:
         course_response = GetCourseDetailResponse(
             course_id=courseId,
@@ -422,8 +427,8 @@ async def get_course_for_student(
         )
         return Ok(data=course_response, message="You are not enrolled in this course.")
     image_url = ""
-    if get_course.image:
-        image_url = generate_presigned_url(get_course.image, expiration=604800)
+    if get_course.image_url:
+        image_url = generate_presigned_url(get_course.image_url, expiration=604800)
     course_response = GetCourseDetailResponse(
         course_id=str(courseId),
         course_name=get_course.name,
@@ -431,21 +436,110 @@ async def get_course_for_student(
         course_end_date=str(get_course.end_date) if get_course.end_date else "",
         course_learning_outcomes=get_course.learning_outcomes or [],
         course_status=get_course.status,
-        course_image=image_url if get_course.image else "",
+        course_image=image_url if get_course.image_url else "",
         course_nCredit=get_course.nCredit,
         course_nSemester=get_course.nSemester,
         course_courseID=get_course.courseID,
         course_classname=get_course.class_name,
-        course_percentage_complete="",
+        course_percentage_complete=str(learning_path.progress) if learning_path else "0",
         course_last_accessed=str(get_course.last_accessed) if get_course.last_accessed else "",
         completed_lessons=get_course.completed_lessons or 0,
         time_spent=str(get_course.time_spent) if get_course.time_spent else "",
-        percentage_done=get_course.percentage_done or 0,
+        percentage_done=str(learning_path.progress) if learning_path else "0",
     )
 
     return Ok(data=course_response, message="Successfully fetched the course.")
 
+@router.get("/{courseId}", response_model=Ok[GetCourseDetailResponse])
+async def get_course_for_student(
+    courseId: str,
+    token: str = Depends(oauth2_scheme),
+    student_courses_controller: StudentCoursesController = Depends(InternalProvider().get_studentcourses_controller),
+    student_controller: StudentController = Depends(InternalProvider().get_student_controller),
+    learning_paths_controller: LearningPathsController = Depends(InternalProvider().get_learningpaths_controller),
+):
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
 
+    student = await student_controller.student_repository.first(where_=[Student.id == user_id])
+    if not student:
+        raise ForbiddenException(message=f"Your account is not allowed to access this feature. {student}")
+
+    select_fields = [
+        Courses.name.label("name"),
+        Courses.id.label("id"),
+        Courses.start_date.label("start_date"),
+        Courses.end_date.label("end_date"),
+        Courses.learning_outcomes.label("learning_outcomes"),
+        Courses.status.label("status"),
+        Courses.image_url.label("image_url"),
+        Courses.nCredit.label("nCredit"),
+        Courses.nSemester.label("nSemester"),
+        Courses.courseID.label("courseID"),
+        Courses.class_name.label("class_name"),
+        Courses.courseID.label("courseID"),
+        StudentCourses.last_accessed.label("last_accessed"),
+        StudentCourses.completed_lessons.label("completed_lessons"),
+        StudentCourses.time_spent.label("time_spent"),
+        StudentCourses.percentage_done.label("percentage_done"),
+    ]
+
+    join_conditions = {
+        "courses": {"type": "left", "alias": "courses_alias"},
+    }
+
+    course = await student_courses_controller.student_courses_repository._get_many(
+        where_=[and_(StudentCourses.course_id == courseId, StudentCourses.student_id == user_id)],
+        fields=select_fields,
+        join_=join_conditions,
+    )
+    get_course = course[0] if course else None
+    learning_path = await learning_paths_controller.get_learning_path(user_id=user_id, course_id=courseId)
+    if not course:
+        course_response = GetCourseDetailResponse(
+            course_id=courseId,
+            course_name="",
+            course_start_date="",
+            course_end_date="",
+            course_learning_outcomes=[],
+            course_status="",
+            course_image="",
+            course_nCredit=0,
+            course_nSemester=0,
+            course_courseID="",
+            course_classname="",
+            course_percentage_complete="",
+            course_last_accessed="",
+            completed_lessons=0,
+            time_spent="",
+            percentage_done=0,
+        )
+        return Ok(data=course_response, message="You are not enrolled in this course.")
+    image_url = ""
+    if get_course.image_url:
+        image_url = generate_presigned_url(get_course.image_url, expiration=604800)
+    course_response = GetCourseDetailResponse(
+        course_id=str(courseId),
+        course_name=get_course.name,
+        course_start_date=str(get_course.start_date) if get_course.start_date else "",
+        course_end_date=str(get_course.end_date) if get_course.end_date else "",
+        course_learning_outcomes=get_course.learning_outcomes or [],
+        course_status=get_course.status,
+        course_image=image_url if get_course.image_url else "",
+        course_nCredit=get_course.nCredit,
+        course_nSemester=get_course.nSemester,
+        course_courseID=get_course.courseID,
+        course_classname=get_course.class_name,
+        course_percentage_complete=str(learning_path.progress) if learning_path else "0",
+        course_last_accessed=str(get_course.last_accessed) if get_course.last_accessed else "",
+        completed_lessons=get_course.completed_lessons or 0,
+        time_spent=str(get_course.time_spent) if get_course.time_spent else "",
+        percentage_done=str(learning_path.progress) if learning_path else "0",
+    )
+
+    return Ok(data=course_response, message="Successfully fetched the course.")
 @router.get("/{courseId}/professor", response_model=Ok[ProfessorInformation])
 async def get_professor_for_course(
     courseId: str,
@@ -845,6 +939,25 @@ async def get_recommended_lessons(
 
     return Ok(data=recommended_lessons)
 
+@router.get(
+    "/{course_id}/students/{student_id}/learning-path/recommended-lessons",
+)
+async def get_recommended_lessons(
+    course_id: UUID,
+    student_id: UUID,
+    token: str = Depends(oauth2_scheme),
+    expand: Optional[Literal["modules"]] = Query(None, description="Expand related data, e.g., 'modules'."),
+    lp_controller: LearningPathsController = Depends(InternalProvider().get_learningpaths_controller),
+):
+    payload = verify_token(token)
+    professor_id = payload.get("sub")
+    if not professor_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    recommended_lessons = await lp_controller.get_recommended_lessons(
+        user_id=student_id, course_id=course_id, expand=expand
+    )
+
+    return Ok(data=recommended_lessons)
 
 @router.delete("/{course_id}/learning-path")
 async def delete_learning_path(

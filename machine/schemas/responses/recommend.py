@@ -46,7 +46,8 @@ class ModuleResponse(BaseModel):
     module_id: UUID
     title: str
     # description: str
-    # objectives: List[str]
+    progress: int
+    objectives: List[str]
     
 class ModuleQuizResponse(BaseModel):
     module_id: UUID
