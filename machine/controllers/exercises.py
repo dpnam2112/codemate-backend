@@ -4,7 +4,7 @@ from uuid import UUID
 
 from openai import AsyncOpenAI, OpenAI
 from sqlalchemy import func, select
-from sqlalchemy.orm import selectinload, with_loader_criteria
+from sqlalchemy.orm import noload, selectinload, with_loader_criteria
 from core.controller import BaseController
 from core.db.session import DB_MANAGER, DBSessionKeeper, Dialect
 from core.db.utils import session_context
@@ -306,17 +306,24 @@ class ExercisesController(BaseController[Exercises]):
         return submission
 
     async def get_submission(
-        self, submission_id: UUID
+        self, submission_id: UUID, include_public_test_results: bool
     ):
         session = self.repository.session
 
         # Get the submission instance
         stmt = select(ProgrammingSubmission).where(
             ProgrammingSubmission.id == submission_id
-        ).options(
-            selectinload(ProgrammingSubmission.test_results),
-            with_loader_criteria(ProgrammingTestResult, ProgrammingTestCase.is_public == True, include_aliases=True)
         )
+        
+        if include_public_test_results:
+            stmt = stmt.options(
+                selectinload(ProgrammingSubmission.test_results),
+                with_loader_criteria(ProgrammingTestResult, ProgrammingTestCase.is_public == True, include_aliases=True)
+            )
+        else:
+            stmt = stmt.options(
+                noload(ProgrammingSubmission.test_results)
+            )
 
         result = await session.execute(stmt)
         submission = result.scalars().first()
@@ -325,7 +332,6 @@ class ExercisesController(BaseController[Exercises]):
             raise NotFoundException(f"Submission {submission_id} not found")
 
         return submission
-
 
     async def list_submissions_with_stats(
         self, user_id: Optional[UUID] = None, exercise_id: Optional[UUID] = None

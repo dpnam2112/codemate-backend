@@ -11,6 +11,7 @@ from machine.schemas.responses.document import *
 from machine.controllers import *
 from machine.providers import InternalProvider
 from fastapi.security import OAuth2PasswordBearer
+import machine.controllers as ctrl
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 router = APIRouter(prefix="/programming-submissions", tags=["Programming submissions"])
@@ -18,10 +19,18 @@ router = APIRouter(prefix="/programming-submissions", tags=["Programming submiss
 @router.get("/{submission_id}", response_model=Ok[ProgrammingSubmissionSchema])
 async def get_submission_details(
     submission_id: UUID,
+    include_public_test_results: bool = True,
     exercise_controller: ExercisesController = Depends(InternalProvider().get_exercises_controller)
 ):
-    submission = await exercise_controller.get_submission(submission_id)
+    submission = await exercise_controller.get_submission(submission_id, include_public_test_results)
     return Ok(data=ProgrammingSubmissionSchema.model_validate(submission))
+
+@router.get("/{submission_id}/status", response_model=Ok[SubmissionStatus])
+async def get_submission_status(
+    submission_id: UUID,
+    submission_controller: ctrl.ProgrammingSubmissionController = Depends(InternalProvider().get_programming_submission_controller)
+):
+    return Ok(data=await submission_controller.get_submission_status(submission_id))
 
 @router.get("", response_model=PaginationResponse[ProgrammingSubmissionStatSchema])
 async def get_submissions_with_stat(

@@ -197,3 +197,9 @@ class InternalProvider:
         return ctrl.ProgrammingTestCaseController(
             repository=self.programming_tc_repo(db_session=db_session)
         )
+
+    def get_programming_submission_controller(self, db_session=Depends(db_session_keeper.get_session)):
+        return ctrl.ProgrammingSubmissionController(
+            model_class=modl.ProgrammingSubmission,
+            repository=self.programming_submission_repo(db_session=db_session)
+        )
