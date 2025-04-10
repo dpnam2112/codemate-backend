@@ -41,20 +41,23 @@ async def poll_judge0_submission_result(submission_id_str: str):
 
         judge0_results = await judge0_client.get_submission_results(tokens, test_cases)
 
-        all_passed = True
+        submission_status = SubmissionStatus.COMPLETED
+
         for tr, res in zip(pending_results, judge0_results):
             tr.status = res["status"]
             tr.stdout = res["stdout"]
             tr.stderr = res["stderr"]
             tr.time = res.get("time")
             tr.memory = res.get("memory")
-            if res["status"] != "Accepted":
-                all_passed = False
+
+            if res["status"] in ["In Queue", "Processing"]:
+                submission_status = SubmissionStatus.PENDING
+            elif res["status"] != "Accepted":
+                submission_status = SubmissionStatus.FAILED
 
         # Update submission status
         submission = await session.get(ProgrammingSubmission, submission_id)
-        if submission:
-            submission.status = SubmissionStatus.COMPLETED if all_passed else SubmissionStatus.FAILED
+        if submission: submission.status = submission_status
 
         await session.flush()
         syslog.info(f"Updated submission {submission_id} status to {submission.status}")

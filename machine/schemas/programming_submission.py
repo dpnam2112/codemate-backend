@@ -3,6 +3,8 @@ from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
 
+from machine.models.coding_submission import SubmissionStatus
+
 class ProgrammingTestCaseSchema(BaseModel):
     id: UUID
     exercise_id: UUID
@@ -43,6 +45,15 @@ class ProgrammingSubmissionItemSchema(BaseModel):
     class Config:
         from_attributes = True
 
+class CreateProgrammingSubmissionSchema(BaseModel):
+    user_id: UUID
+    exercise_id: UUID
+    judge0_language_id: int
+    code: str
+
+    class Config:
+        from_attributes = True
+
 class ProgrammingSubmissionSchema(BaseModel):
     id: UUID
     user_id: UUID
@@ -67,12 +78,19 @@ class ProgrammingSubmissionStatSchema(BaseModel):
     passed_testcases: int
     total_testcases: int
 
-class ProgrammingSubmissionCreate(BaseModel):
-    user_id: UUID
-    exercise_id: UUID
+class ProgrammingSubmissionBriefSchema(BaseModel):
+    id: UUID
     judge0_language_id: int
-    code: str
+    status: str
+    passed_testcases: int
+    total_testcases: int
 
+class ProgrammingSubmissionCreateResponse(BaseModel):
+    id: UUID
+    status: SubmissionStatus
+
+    class Config:
+        from_attributes = True
 
 class ProgrammingSubmissionUpdate(BaseModel):
     status: Optional[str] = None

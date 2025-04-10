@@ -3,7 +3,7 @@ from core.db.decorators import Transactional
 import machine.controllers as ctrl
 from fastapi import APIRouter, Depends, Path, Query
 from core.response import Ok
-from machine.schemas.programming_submission import ProgrammingSubmissionItemSchema
+from machine.schemas.programming_submission import ProgrammingSubmissionCreateResponse, ProgrammingSubmissionItemSchema, ProgrammingSubmissionSchema
 from machine.schemas.requests.conversation import InvokeCodingAssistantSchema
 from machine.schemas.requests.exercise import  *
 from machine.schemas.responses.conversation import MessageResponseSchema
@@ -1030,8 +1030,8 @@ async def delete_testcase(
     return Ok(data=ProgrammingTestCaseResponse.model_validate(testcase))
 
 @router.post(
-    "/{exercise_id}/coding-submissions",
-    response_model=Ok[ProgrammingSubmissionResponse],
+    "/{exercise_id}/programming-submissions",
+    response_model=Ok[ProgrammingSubmissionCreateResponse],
     status_code=201
 )
 async def submit_code(
@@ -1056,7 +1056,7 @@ async def submit_code(
         judge0_lang_id=body.judge0_language_id
     )
 
-    return Ok(data=ProgrammingSubmissionResponse.model_validate(submission))
+    return Ok(data=ProgrammingSubmissionCreateResponse.model_validate(submission))
 
 @router.get("/{exercise_id}/coding-submissions/{submission_id}/status", response_model=Ok[ProgrammingSubmissionResponse])
 async def get_coding_submission_status(

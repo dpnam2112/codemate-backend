@@ -1,9 +1,10 @@
 from fastapi.security import OAuth2
 from core.response.api_response import Ok, PaginationResponse
 from core.utils.auth_utils import verify_token
+from machine.controllers.exercises import SubmissionWithStats
 from machine.models import *
 from fastapi import APIRouter, Depends
-from machine.schemas.programming_submission import ProgrammingSubmissionSchema, ProgrammingSubmissionStatSchema
+from machine.schemas.programming_submission import ProgrammingSubmissionBriefSchema, ProgrammingSubmissionSchema, ProgrammingSubmissionStatSchema
 from machine.schemas.requests import *
 from machine.schemas.responses.recommend import *
 from machine.schemas.responses.quiz import *
@@ -31,6 +32,17 @@ async def get_submission_status(
     submission_controller: ctrl.ProgrammingSubmissionController = Depends(InternalProvider().get_programming_submission_controller)
 ):
     return Ok(data=await submission_controller.get_submission_status(submission_id))
+
+@router.get("/{submission_id}/stat", response_model=Ok[ProgrammingSubmissionStatSchema])
+async def get_submission_brief(
+    submission_id: UUID,
+    submission_controller: ctrl.ProgrammingSubmissionController = Depends(InternalProvider().get_programming_submission_controller)
+):
+    submission_with_stat = await submission_controller.get_submission_with_stat(submission_id)
+    if submission_with_stat is None:
+        return Ok(data=None)
+    submission = submission_with_stat["submission"]
+    return Ok(data=ProgrammingSubmissionStatSchema.model_validate({**submission.to_dict(), **submission_with_stat}))
 
 @router.get("", response_model=PaginationResponse[ProgrammingSubmissionStatSchema])
 async def get_submissions_with_stat(
