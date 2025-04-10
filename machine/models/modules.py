@@ -15,6 +15,6 @@ class Modules(Base):
     last_accessed = Column(DateTime, default=func.now(), nullable=False)
     progress = Column(Integer, default=0, nullable=True)
     
-    quizzes = relationship("RecommendQuizzes", back_populates="module")  
+    quizzes = relationship("RecommendQuizzes", back_populates="module", cascade="all, delete-orphan")  
     recommendDocuments = relationship("RecommendDocuments", back_populates="module", cascade="all, delete-orphan")
     recommend_lesson = relationship("RecommendLessons", back_populates="modules")    
