@@ -157,8 +157,7 @@ async def select_relevant_lessons(
     5. **Return Result:**
        - Return only the relevant lessons with their IDs, order, titles, and explanations.
 
-    ## Output Format
-    [
+    ## Output Format [
         {{
             "lesson_id": "Lesson ID",
             "order": 1,
@@ -1735,6 +1734,10 @@ async def generate_quiz(
     }
     
     return Ok(quiz_response, message="Quiz generated successfully")
+
+@router.post("/generate-code-exercise")
+async def generate_code_exercise():
+    pass
     
 '''
 export interface Root {
