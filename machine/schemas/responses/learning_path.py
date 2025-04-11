@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 class ModuleDTO(BaseModel):
@@ -9,6 +9,7 @@ class ModuleDTO(BaseModel):
     title: Optional[str] = Field(None, description="Title of the module.")
     objectives: Optional[list[str]] = Field(None, description="List of objectives for the module.")
     last_accessed: datetime = Field(..., description="Last accessed timestamp of the module.")
+    progress: float = Field(..., description="Progress of the module, represented as a percentage.")
 
     class Config:
         from_attributes = True
@@ -27,6 +28,8 @@ class RecommendedLessonDTO(BaseModel):
     bookmark: bool = Field(..., description="Whether the lesson is bookmarked.")
     modules: Optional[list[ModuleDTO]] = Field(None, description="Modules associated with the recommended lesson.")
     lesson_title: Optional[str] = Field(None, description="Title of the associated lesson.")
+    order: Optional[int] = Field(None, description="Order of the recommended lesson.")
+    time_spent: Optional[str] = Field(None, description="Time spent on the recommended lesson.")
 
     class Config:
         from_attributes = True

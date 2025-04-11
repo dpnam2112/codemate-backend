@@ -11,7 +11,8 @@ from core.utils.auth_utils import verify_token
 from machine.schemas.responses.courses import *
 from fastapi.security import OAuth2PasswordBearer
 from core.exceptions import *
-from machine.schemas.responses.learning_path import LearningPathDTO, RecommendedLessonDTO
+from datetime import datetime, timezone, timedelta
+from core.repository.enum import FeedbackStatusType
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 router = APIRouter(prefix="/feedback", tags=["feedback"])
 
@@ -21,7 +22,7 @@ from pydantic import BaseModel
 
 @router.post("/")
 async def create_feedback(
-    request: Union[CreateFeedbackRequest, CreateFeedbackCourseRequest],  # Use Union for type hinting
+    request: Union[CreateFeedbackRequest, CreateFeedbackCourseRequest],
     token: str = Depends(oauth2_scheme),
     feedback_controller: FeedbackController = Depends(InternalProvider().get_feedback_controller),
     student_controller: StudentController = Depends(InternalProvider().get_student_controller),
@@ -41,7 +42,7 @@ async def create_feedback(
     user_type = "student" if student else "professor"
 
     feedback_attributes = {
-        "feedback_type": request.type,
+        "feedback_type": "course" if request.type == "course" else "system",  # Fixed here
         "title": request.title,
         "category": request.category,
         "description": request.description,
@@ -49,6 +50,7 @@ async def create_feedback(
         "status": "pending",
         "student_id": user_id if user_type == "student" else None,
         "professor_id": user_id if user_type == "professor" else None,
+        "course_id": request.course_id if request.type == "course" else None,
     }
 
     if isinstance(request, CreateFeedbackCourseRequest):
@@ -66,7 +68,7 @@ async def create_feedback(
 
     feedback_response = CreateFeedbackResponse(
         id=str(feedback.id),
-        type=feedback.feedback_type,
+        type=feedback.feedback_type,  # Now works as expected
         title=feedback.title,
         category=feedback.category,
         description=feedback.description,
@@ -77,8 +79,6 @@ async def create_feedback(
     )
 
     return Ok(data=feedback_response, message="Feedback created successfully.")
-
-
 @router.get("/courses/{course_id}", response_model=Ok[List[GetFeedbackProfessorResponse]])
 async def get_feedback_professor(
     course_id: str,
@@ -213,7 +213,7 @@ async def get_feedback_list(
     feedbacks = await feedback_controller.feedback_repository._get_many(where_=filters, join_=join_conditions, fields=select_fields)
     feedback_response = [
         {"id": feedback.id,
-        "type": feedback.feedback_type,
+        "type": "course" if feedback.feedback_type == "course" else "system",
         "title": feedback.title,
         "category": feedback.category,
         "description": feedback.description,
@@ -247,3 +247,75 @@ async def get_feedback_list(
     
     return Ok(data=feedback_response, message="Feedbacks retrieved successfully.")
 
+@router.patch("/{feedback_id}")
+async def update_feedback(
+    feedback_id: str,
+    request: UpdateFeedbackRequest,
+    token: str = Depends(oauth2_scheme),
+    feedback_controller: FeedbackController = Depends(InternalProvider().get_feedback_controller),
+    admin_controller: AdminController = Depends(InternalProvider().get_admin_controller),
+):
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+
+    is_admin = await admin_controller.admin_repository.exists(where_=[Admin.id == user_id])
+    if not is_admin:
+        raise ForbiddenException(message="You are not allowed to update feedbacks.")
+
+    feedback = await feedback_controller.feedback_repository.first(where_=[Feedback.id == feedback_id])
+    if not feedback:
+        raise BadRequestException(message="Feedback not found.")
+
+    # Log the status and resolved_at values for debugging
+    print(f"Updating feedback with ID={feedback_id}: Status={request.status}, Resolved At={datetime.now(timezone(timedelta(hours=7))) if request.status == FeedbackStatusType.resolved else None}")
+    
+    try:
+        # Handle timezone-naive datetime for resolved_at
+        resolved_at = datetime.now(timezone(timedelta(hours=7))).replace(tzinfo=None) if request.status == FeedbackStatusType.resolved else None
+        
+        updated_feedback = await feedback_controller.feedback_repository.update(
+            where_=[Feedback.id == feedback_id],
+            attributes={
+                "status": request.status,
+                "resolved_at": resolved_at,  # Ensure it's timezone-naive
+            },
+            commit=True,
+        )
+        
+        if not updated_feedback:
+            raise BadRequestException(message="Failed to update feedback.")
+        
+        return Ok(data=bool(True), message="Feedback updated successfully.")
+
+    except Exception as e:
+        print(f"Error updating feedback: {str(e)}")
+        raise BadRequestException(message=f"Failed to update feedback: {str(e)}")   
+@router.delete("/{feedback_id}")
+async def delete_feedback(
+    feedback_id: str,
+    token: str = Depends(oauth2_scheme),
+    feedback_controller: FeedbackController = Depends(InternalProvider().get_feedback_controller),
+    admin_controller: AdminController = Depends(InternalProvider().get_admin_controller),
+):
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+
+    is_admin = await admin_controller.admin_repository.exists(where_=[Admin.id == user_id])
+    if not is_admin:
+        raise ForbiddenException(message="You are not allowed to delete feedbacks.")
+
+    feedback = await feedback_controller.feedback_repository.first(where_=[Feedback.id == feedback_id])
+    if not feedback:
+        raise BadRequestException(message="Feedback not found.")
+
+    try:
+        await feedback_controller.feedback_repository.delete(where_=[Feedback.id == feedback_id])
+        await feedback_controller.feedback_repository.session.commit()
+    except Exception as e:
+        raise BadRequestException(message=f"Failed to delete feedback: {str(e)}")
+
+    return Ok(data=bool(True), message="Feedback deleted successfully.")

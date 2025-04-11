@@ -588,3 +588,45 @@ async def get_user_information(
         "ms": check_user.mssv if hasattr(check_user, "mssv") else check_user.mscb,
     }
     return Ok(data=user_response, message="User information")
+
+# Update status of user for admin 
+@router.patch("/status/{user_id}", description="Update user status for admin")
+async def update_user_status(
+    user_id: str,
+    token: str = Depends(oauth2_scheme),
+    student_controller: StudentController = Depends(InternalProvider().get_student_controller),
+    professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
+    admin_controller: AdminController = Depends(InternalProvider().get_admin_controller),
+):
+    payload = verify_token(token)
+    user_id_from_token = payload.get("sub")
+
+    if not user_id_from_token:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+
+    check_role = await admin_controller.admin_repository.first(where_=Admin.id == user_id_from_token)
+    if not check_role:
+        raise ForbiddenException(message="You are not allowed to access this feature.")
+
+    check_user = await student_controller.student_repository.first(where_=Student.id == user_id)
+    if not check_user:
+        check_user = await professor_controller.professor_repository.first(where_=Professor.id == user_id)
+        if not check_user:
+            check_user = await admin_controller.admin_repository.first(where_=Admin.id == user_id)
+            if not check_user:
+                raise NotFoundException(message="User not found")
+    
+    if isinstance(check_user, Student):
+        await student_controller.student_repository.update(
+            where_=[Student.id == user_id], attributes={"is_active": not check_user.is_active}, commit=True
+        )
+    elif isinstance(check_user, Professor):
+        await professor_controller.professor_repository.update(
+            where_=[Professor.id == user_id], attributes={"is_active": not check_user.is_active}, commit=True
+        )
+    elif isinstance(check_user, Admin):
+        await admin_controller.admin_repository.update(
+            where_=[Admin.id == user_id], attributes={"is_active": not check_user.is_active}, commit=True
+        )
+    
+    return Ok(data=True, message="User status updated successfully")

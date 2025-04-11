@@ -2,7 +2,7 @@ from uuid import uuid4
 from core.db import Base
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy import Column, Integer, Text, DateTime, ForeignKey, Enum, func
+from sqlalchemy import Column, Integer, Text, DateTime, ForeignKey, Enum, func, String
 from core.repository.enum import FeedbackCategory, FeedbackType, FeedbackStatusType
 from sqlalchemy.orm import relationship
 
@@ -16,7 +16,7 @@ class Feedback(Base):
     rate = Column(Integer, nullable=False)
     student_id = Column(UUID, ForeignKey("student.id"), nullable=True)
     professor_id = Column(UUID, ForeignKey("professors.id"), nullable=True)
-    feedback_type = Column(Enum(FeedbackType), default="system", nullable=False)
+    feedback_type = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=func.now(), nullable=False)
     resolved_at = Column(DateTime, nullable=True)
     status = Column(Enum(FeedbackStatusType), default="pending", nullable=False)

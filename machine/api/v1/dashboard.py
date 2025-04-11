@@ -13,7 +13,7 @@ from fastapi.security import OAuth2PasswordBearer
 from fastapi import APIRouter, Depends, HTTPException
 from core.exceptions import NotFoundException, BadRequestException
 from core.utils.auth_utils import verify_token
-import datetime
+from datetime import datetime
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -91,8 +91,6 @@ async def get_activities(
     recent_activities = await activities_controller.activities_repository.get_many(
         where_=[Activities.student_id == user_id],
         order_={"desc": [{"field": "timestamp", "model_class": Activities}]},
-        limit=5,
-        skip=0,
     )
 
     # if not recent_activities:
@@ -108,7 +106,7 @@ async def get_activities(
         GetRecentActivitiesResponse(
             activity_id=activity.id,
             activity_description=activity.description,
-            activity_type=activity.type,
+            activity_type=str(activity.type),
             activity_date=activity.timestamp,
         )
         for activity in recent_activities

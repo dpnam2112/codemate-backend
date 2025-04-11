@@ -33,7 +33,6 @@ async def create_new_lesson(
     title: str = Form(...),
     description: str = Form(...),
     course_id: UUID = Form(...),
-    order: int = Form(...),
     learning_outcomes: List[str] = Form(...),
     token: str = Depends(oauth2_scheme),
     lesson_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
@@ -59,18 +58,29 @@ async def create_new_lesson(
     if user.id != course.professor_id:
         raise BadRequestException(message="You are not allowed to create a lesson in this course.")
 
+    # Modify the order retrieval to match the repository's expected format
+    last_lesson = await lesson_controller.lessons_repository.first(
+        where_=[Lessons.course_id == course_id],
+        order_={'desc': ['order']}  # Note the lowercase 'desc'
+    )
+
+    # Set the order to be one more than the last lesson's order, or 1 if no lessons exist
+    next_order = last_lesson.order + 1 if last_lesson else 1
+
     lesson_data = {
         "id": str(uuid.uuid4()),
         "title": title,
         "description": description,
         "course_id": course_id,
-        "order": order,
+        "order": next_order,
         "learning_outcomes": learning_outcomes,
     }
+    
     created_lesson = await lesson_controller.lessons_repository.create(
         lesson_data,
         commit=True,
     )
+
 
     # documents = []
     # if files:
@@ -101,11 +111,10 @@ async def create_new_lesson(
 
     return Ok(
         data=CreateNewLessonResponse(
-            id=created_lesson.id,
+            lessonId=created_lesson.id,
             title=created_lesson.title,
             description=created_lesson.description,
             course_id=created_lesson.course_id,
-            order=created_lesson.order,
             learning_outcomes=created_lesson.learning_outcomes,
             # documents=[DocumentResponse(**doc.__dict__) for doc in documents],
         ),
@@ -118,7 +127,6 @@ async def update_lesson(
     lesson_id: UUID = Form(...),
     title: str = Form(...),
     description: str = Form(...),
-    order: int = Form(...),
     learning_outcomes: List[str] = Form(...),
     # files: List[UploadFile] = File(None),
     # description_file: List[str] = Form(None),
@@ -159,7 +167,6 @@ async def update_lesson(
             "learning_outcomes": learning_outcomes,
             "title": title,
             "description": description,
-            "order": order,
         },
         commit=True,
     )
@@ -201,7 +208,6 @@ async def update_lesson(
             lesson_id=updated_lesson.id,
             title=updated_lesson.title,
             description=updated_lesson.description,
-            order=updated_lesson.order,
             learning_outcomes=updated_lesson.learning_outcomes,
             # documents=[DocumentResponse(**doc.__dict__) for doc in documents if doc],
         ),
@@ -275,7 +281,6 @@ async def delete_lesson(
                 lesson_id=lesson.id,
                 title=lesson.title,
                 description=lesson.description,
-                order=lesson.order,
                 learning_outcomes=lesson.learning_outcomes,
             ),
             message="Successfully deleted the lesson.",
