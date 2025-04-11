@@ -1,0 +1,1 @@
+from .update_submission_result import poll_judge0_submission_result

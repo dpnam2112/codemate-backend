@@ -570,6 +570,7 @@ class BaseRepository(Generic[ModelType]):
         where_: Optional[list] = None,
         *,
         synchronize_session: SynchronizeSessionEnum = SynchronizeSessionEnum.FALSE,
+        commit: bool = False
     ):
         """Deletes model instances that match the given conditions.
 
@@ -587,6 +588,7 @@ class BaseRepository(Generic[ModelType]):
             for condition in where_:
                 query = query.where(condition)
         query = query.execution_options(synchronize_session=synchronize_session.value)
+        if commit: await self.session.commit()
         await self.session.execute(query)
         
         return del_instances

@@ -68,6 +68,9 @@ class ExerciseCodeResponse(BaseModel):
     show_correct_answers: Optional[bool]
     penalty_per_attempt: Optional[float]
     pass_mark: Optional[float]
+
+    class Config:
+        from_attributes = True
     
 class PutExerciseCodeResponse(BaseModel):
     exercise_id: UUID

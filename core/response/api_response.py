@@ -10,6 +10,10 @@ class BaseResponse(BaseModel, Generic[T]):
     messageCode: str
     data: Optional[T] = None
 
+class PaginationResponse(BaseModel, Generic[T]):
+    data: list[T]
+    total: int
+
 
 class Ok(BaseResponse[T]):
     isSuccess: bool = True
