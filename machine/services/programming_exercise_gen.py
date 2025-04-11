@@ -4,7 +4,7 @@ from pydantic import BaseModel, ValidationError
 
 from pydantic import BaseModel, Field
 from core.settings import settings as env_settings
-from litellm import completion
+from litellm import acompletion
 
 class TestCaseSchema(BaseModel):
     """
@@ -104,7 +104,7 @@ class ProgrammingExerciseGenService:
         self.llm_model_name = llm_model_name or "gemini/gemini-2.0-flash"
         self.api_key = api_key or env_settings.GEMINI_API_KEY
 
-    def generate_programming_exercise(
+    async def generate_programming_exercise(
         self, module_title: str, objectives: list[str]
     ) -> ProgrammingExerciseSchema:
         """
@@ -136,7 +136,7 @@ class ProgrammingExerciseGenService:
         ]
 
         # Make the completion request with structured output
-        response = completion(
+        response = await acompletion(
             model=self.llm_model_name,
             messages=messages,
             api_key=self.api_key,
@@ -144,11 +144,10 @@ class ProgrammingExerciseGenService:
         )
         
         json_string = response.choices[0].message.content
-        print(json_string)
         parsed_json = json.loads(json_string)
         return ProgrammingExerciseSchema.model_validate(parsed_json)
 
-if __name__ == "__main__":
+async def main():
     # Sample inputs
     module_title = "Data Structures - Stacks"
     objectives = [
@@ -166,7 +165,7 @@ if __name__ == "__main__":
     print("\n--- Generating Programming Exercise ---\n")
 
     try:
-        result: ProgrammingExerciseSchema = service.generate_programming_exercise(
+        result: ProgrammingExerciseSchema = await service.generate_programming_exercise(
             module_title, objectives
         )
 
@@ -180,3 +179,6 @@ if __name__ == "__main__":
         print("❌ Unexpected Error:")
         print(str(e))
 
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(main())
