@@ -988,13 +988,16 @@ async def get_testcase(
         raise NotFoundException("Programming TestCase not found")
     return Ok(data=ProgrammingTestCaseResponse.model_validate(testcase))
 
-@router.get("/", response_model=Ok[list[ProgrammingTestCaseResponse]])
+@router.get("/{exercise_id}/testcases", response_model=Ok[list[ProgrammingTestCaseResponse]])
 async def get_testcases(
-    limit: int = Query(10, ge=1),
-    offset: int = Query(0, ge=0),
+    limit: Optional[int] = Query(10, ge=1),
+    offset: Optional[int] = Query(0, ge=0),
+    exercise_id: UUID = Path(...),
     controller: ctrl.ProgrammingTestCaseController = Depends(InternalProvider().get_programming_tc_controller)
 ):
-    testcases = await controller.get_many(limit=limit, offset=offset)
+    testcases = await controller.get_many(
+        limit=limit, offset=offset, where_=[ProgrammingTestCase.exercise_id == exercise_id, ProgrammingTestCase.is_public == True]
+    )
     return Ok(data=[ProgrammingTestCaseResponse.model_validate(tc) for tc in testcases])
 
 @router.put("/{exercise_id}/testcases/{testcase_id}", response_model=Ok[ProgrammingTestCaseResponse])
@@ -1092,3 +1095,4 @@ async def get_coding_submissions(
     )
 
     return Ok(data=[ProgrammingSubmissionItemSchema.model_validate(submission) for submission in submissions])
+

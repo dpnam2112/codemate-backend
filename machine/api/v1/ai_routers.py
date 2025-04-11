@@ -6,6 +6,7 @@ from typing import Dict, List, Any, Optional
 from fastapi import APIRouter, Depends, Body
 from core.response import Ok
 from core.exceptions import *
+from machine.controllers.learning_material_gen import LearningMaterialGenController
 from machine.models import *
 from machine.models import RecommendQuizQuestion
 from machine.controllers import *
@@ -14,7 +15,9 @@ from datetime import datetime, timedelta
 from fastapi.security import OAuth2PasswordBearer
 from uuid import UUID
 from core.utils.auth_utils import verify_token
-from ...schemas.requests.ai import GenerateLearningPathRequest,GenerateQuizRequest
+from machine.schemas.responses.ai import GenerateCodeExerciseResponse
+from machine.schemas.responses.exercise import CodeExerciseBriefResponse
+from ...schemas.requests.ai import GenerateCodeExerciseRequest, GenerateLearningPathRequest,GenerateQuizRequest
 from machine.schemas.requests.llm_code import *
 from machine.schemas.responses.llm_code import *
 from dotenv import load_dotenv
@@ -136,8 +139,7 @@ async def select_relevant_lessons(
     - Course Learning Outcomes: {json.dumps(course_learning_outcomes, indent=2)}
     - Timeline: Start Date: {timeline['start_date']}, End Date: {timeline['end_date']}
     - Available Lessons: {json.dumps(lessons_data, indent=2)}
-
-    ## Task Requirements
+## Task Requirements
     1. **Analyze the Goal in Context:**
        - Interpret the student's goal in the context of the course name and learning outcomes.
        - If the goal is vague or grade-based (e.g., "achieve at least B+"), assume it means achieving a subset of the course's learning outcomes sufficient for that grade (e.g., B+ might cover 70-80% of outcomes, while A+ covers 100%).
@@ -157,8 +159,7 @@ async def select_relevant_lessons(
     5. **Return Result:**
        - Return only the relevant lessons with their IDs, order, titles, and explanations.
 
-    ## Output Format
-    [
+    ## Output Format [
         {{
             "lesson_id": "Lesson ID",
             "order": 1,
@@ -1735,6 +1736,14 @@ async def generate_quiz(
     }
     
     return Ok(quiz_response, message="Quiz generated successfully")
+
+@router.post("/generate-code-exercise", response_model=Ok[CodeExerciseBriefResponse])
+async def generate_code_exercise(
+    request: GenerateCodeExerciseRequest,
+    learning_material_gen_controller: LearningMaterialGenController = Depends(InternalProvider().get_learning_material_gen_controller)
+):
+    new_exercise = await learning_material_gen_controller.generate_programming_exercise(module_id=request.module_id)
+    return Ok(data=CodeExerciseBriefResponse.model_validate(new_exercise))
     
 '''
 export interface Root {

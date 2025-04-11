@@ -15,6 +15,7 @@ from .feedback import FeedbackRepository
 from .coding_assistant import ConversationRepository, MessageRepository
 from .programming_language_config import ProgrammingLanguageConfigRepository
 from .programming_submission import ProgrammingSubmissionRepository
+from .programming_tc import ProgrammingTestCaseRepository
 
 __all__ = [
     "StudentRepository",

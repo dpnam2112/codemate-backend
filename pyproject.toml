@@ -65,6 +65,8 @@ frontend = "^0.0.3"
 tools = "^0.1.9"
 pdfminer = "^20191125"
 pdfminer-six = "^20250324"
+requests = "^2.32.3"
+litellm = "^1.65.6"
 
 
 [build-system]

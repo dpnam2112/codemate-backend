@@ -11,6 +11,7 @@ import machine.repositories as repo
 from core.db.session import DB_MANAGER, Dialect
 from core.settings import settings as env_settings
 from machine.repositories.programming_tc import ProgrammingTestCaseRepository
+import machine.services as services
 
 
 @singleton
@@ -202,4 +203,17 @@ class InternalProvider:
         return ctrl.ProgrammingSubmissionController(
             model_class=modl.ProgrammingSubmission,
             repository=self.programming_submission_repo(db_session=db_session)
+        )
+
+    def get_learning_material_gen_controller(
+        self, db_session=Depends(db_session_keeper.get_session)
+    ) -> ctrl.LearningMaterialGenController:
+        programming_exercise_service = services.ProgrammingExerciseGenService()
+
+        return ctrl.LearningMaterialGenController(
+            module_repo=self.modules_repository(db_session=db_session),
+            exercises_repo=self.exercises_repository(db_session=db_session),
+            pl_config_repo=self.pg_config_repo(db_session=db_session),
+            testcase_repo=self.programming_tc_repo(db_session=db_session),
+            programming_exercise_service=programming_exercise_service
         )
