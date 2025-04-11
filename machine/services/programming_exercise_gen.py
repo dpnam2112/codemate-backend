@@ -28,9 +28,10 @@ class ProgrammingExerciseSchema(BaseModel):
     Schema for a programming exercise.
     Contains problem description in HTML and a list of test cases.
     """
+    name: str = Field(description="Name of the exercise.")
     problem_description: str = Field(
         ...,
-        description="Content describing the programming problem. Do not include <html> or <body> tags.",
+        description="Content describing the programming problem. The description MUST NOT include <html> or <body> tag.",
         examples=["<h3><strong>Problem: Valid Parentheses Checker</strong></h3><p>Check if brackets are valid.</p>"]
     )
     test_cases: list[TestCaseSchema] = Field(
@@ -41,7 +42,7 @@ class ProgrammingExerciseSchema(BaseModel):
             {"input": "([)]", "expected_output": "False"}
         ]
     )
-    boilerplate_code: list["BoilerplateSchema"] = Field(
+    boilerplate_codes: list["BoilerplateSchema"] = Field(
         ...,
         description="List of boilerplate code for different programming languages."
     )
@@ -119,8 +120,20 @@ class ProgrammingExerciseGenService:
         for idx, obj in enumerate(objectives, start=1):
             prompt += f"{idx}. {obj}\n"
         prompt += (
-            "\nProvide the problem description in HTML format and include a list of test cases. "
+            "\nProvide the problem description using HTML tags and include a list of test cases. "
             "Each test case should have an 'input' and the corresponding 'expected_output'."
+        )
+
+        prompt += (
+            "RULES:\n"
+            "1. The problem description must not include <html> or <body> tags.\n"
+            "2. Only generate exercises that is relevant to the module title and objectives.\n"
+            "3. Your initial code (boilerplate code) MUST have a logic to read input from stdin and print output to stdout.\n"
+            "4. Your initial code MUST have TODO for student to fill out.\n"
+            "5. Your initial code MUST NOT reveal the solution of the problem.\n"
+            "6. When you design testcases, make sure to include edge cases.\n"
+            "7. When you design testcases, make sure that the testcases can be read from stdin.\n"
+            "8. When you design testcases, make sure that the expected output of the testcases can be printed to stdout.\n"
         )
 
         # Prepare messages for the chat completion
