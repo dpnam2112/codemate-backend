@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Body
 from core.response import Ok
 from core.exceptions import *
 from machine.models import *
+from machine.models import RecommendQuizQuestion
 from machine.controllers import *
 from machine.providers.internal import InternalProvider
 from datetime import datetime, timedelta
@@ -1667,7 +1668,9 @@ async def generate_quiz(
     # If we couldn't generate any questions, raise an error
     if not all_questions:
         # Clean up by deleting the created quiz
-        await recommend_quizzes_controller.recommend_quizzes_repository.delete(created_quiz.id, commit=True)
+        await recommend_quizzes_controller.recommend_quizzes_repository.delete(
+            where_=[RecommendQuizQuestion.id == created_quiz.id], commit=True
+        )
         raise ApplicationException(message="Failed to generate any quiz questions")
     
     # Update quiz with actual information
