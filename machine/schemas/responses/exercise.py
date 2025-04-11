@@ -93,3 +93,10 @@ class GetExercise(BaseModel):
     time_limit: Optional[int]
     attempts_allowed: int
     grading_method: GradingMethodType
+
+class CodeExerciseBriefResponse(BaseModel):
+    id: UUID
+    name: str
+
+    class Config:
+        from_attributes = True

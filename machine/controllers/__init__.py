@@ -16,6 +16,7 @@ from .conversation import ConversationController
 from .programming_language_config import ProgrammingLanguageConfigController
 from .programming_tc import ProgrammingTestCaseController
 from .programming_submission import ProgrammingSubmissionController
+from .learning_material_gen import LearningMaterialGenController
 
 __all__ = [
     "StudentController",

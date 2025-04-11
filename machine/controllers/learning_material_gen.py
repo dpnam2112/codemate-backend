@@ -30,22 +30,22 @@ class LearningMaterialGenController:
         self.testcase_repo = testcase_repo
     
     @Transactional()
-    async def get_or_generate_programming_exercise(self, module_id: UUID):
+    async def generate_programming_exercise(self, module_id: UUID):
         module = await self.module_repo.first(where_=[models.Modules.id == module_id])
         if not module:
             raise ValueError("Module not found.")
 
-        # 🔍 Check for existing generated coding exercise
-        existing_exercise = await self.exercises_repo.first(
-            where_=[
-                models.Exercises.id == module.id,
-                models.Exercises.source == "generated_by_ai",
-                models.Exercises.type == ExerciseType.code
-            ],
-        )
-
-        if existing_exercise:
-            return existing_exercise
+#        # 🔍 Check for existing generated coding exercise
+#        existing_exercise = await self.exercises_repo.first(
+#            where_=[
+#                models.Exercises.id == module.id,
+#                models.Exercises.source == "generated_by_ai",
+#                models.Exercises.type == ExerciseType.code
+#            ],
+#        )
+#
+#        if existing_exercise:
+#            return existing_exercise
 
         # 🧠 Generate new coding exercise using AI
         result = await self.programming_exercise_service.generate_programming_exercise(
@@ -122,7 +122,7 @@ async def main():
         module_id = UUID("9ddb52d7-5a82-4115-91c9-7255aaad2b04")
         
         # Generate programming exercise
-        programming_exercise = await controller.get_or_generate_programming_exercise(module_id)
+        programming_exercise = await controller.generate_programming_exercise(module_id)
         print(programming_exercise.id)
 
 if __name__ == "__main__":
