@@ -62,6 +62,12 @@ class AWS3Settings(BaseSettings):
     AWS3_SECRET_ACCESS_KEY: str 
     AWS3_REGION: str 
     AWS3_BUCKET_NAME: str
+
+class Judge0Settings(BaseSettings):
+    JUDGE0_URL: str = "https://judge0-ce.p.rapidapi.com"
+    RAPIDAPI_HOST: str = "judge0-ce.p.rapidapi.com"
+    RAPIDAPI_KEY: str
+
 class Settings(
     CoreSettings,
     TestSettings,
@@ -74,7 +80,8 @@ class Settings(
     Neo4jSettings,
     GoogleGenAISettings,
     OpenAISettings,
-    AWS3Settings
+    AWS3Settings,
+    Judge0Settings
 ): ...
 
 class DevelopmentSettings(Settings):

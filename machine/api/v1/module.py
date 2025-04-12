@@ -1,8 +1,10 @@
 from typing import List,Dict
+from core.repository.enum import ExerciseType
 from core.response import Ok
 from machine.models import *
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Path
 from machine.schemas.requests import *
+from machine.schemas.responses.exercise import CodeExerciseBriefResponse
 from machine.schemas.responses.recommend import *
 from machine.schemas.responses.quiz import *
 from machine.schemas.responses.document import *
@@ -688,3 +690,16 @@ async def get_document(
     )
 
     return Ok(data=response_data, message="Successfully fetched the document.")
+
+@router.get("/{module_id}/coding-exercises", response_model=Ok[List[CodeExerciseBriefResponse]])
+async def get_coding_exercises_brief(
+    module_id: UUID = Path(..., title="Module ID"),
+    exercises_controller: ExercisesController = Depends(InternalProvider().get_exercises_controller),
+):
+    exercises = await exercises_controller.get_many(
+        where_=[Exercises.module_id == module_id, Exercises.type == ExerciseType.code],
+    )
+
+    return Ok(
+        data=[CodeExerciseBriefResponse.model_validate(exercise) for exercise in exercises]
+    )

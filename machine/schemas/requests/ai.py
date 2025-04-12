@@ -28,3 +28,6 @@ class GenerateQuizRequest(BaseModel):
         default_factory=DifficultyDistribution,
         description="Distribution of questions by difficulty level"
     )
+
+class GenerateCodeExerciseRequest(BaseModel):
+    module_id: UUID

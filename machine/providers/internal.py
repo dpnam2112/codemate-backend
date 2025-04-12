@@ -10,6 +10,8 @@ from core.utils import singleton
 import machine.repositories as repo
 from core.db.session import DB_MANAGER, Dialect
 from core.settings import settings as env_settings
+from machine.repositories.programming_tc import ProgrammingTestCaseRepository
+import machine.services as services
 
 
 @singleton
@@ -61,6 +63,12 @@ class InternalProvider:
     conversation_repository = partial(repo.ConversationRepository, model=modl.Conversation)
 
     message_repository = partial(repo.MessageRepository, model=modl.Message)
+
+    pg_config_repo = partial(repo.ProgrammingLanguageConfigRepository, model=modl.ProgrammingLanguageConfig)
+
+    programming_tc_repo = partial(ProgrammingTestCaseRepository)
+
+    programming_submission_repo = partial(repo.ProgrammingSubmissionRepository, model=modl.ProgrammingSubmission)
     
     def get_student_controller(self, db_session=Depends(db_session_keeper.get_session)):
         return ctrl.StudentController(
@@ -105,6 +113,7 @@ class InternalProvider:
 
         return ctrl.ExercisesController(
             exercises_repository=self.exercises_repository(db_session=db_session),
+            submission_repo=self.programming_submission_repo(db_session=db_session),
             llm_client=llm_aclient
         )
         
@@ -180,3 +189,31 @@ class InternalProvider:
             model_class=modl.Conversation, repository=self.conversation_repository(db_session=db_session)
         )
 
+    def get_pg_config_controller(self, db_session=Depends(db_session_keeper.get_session)) -> ctrl.ProgrammingLanguageConfigController:
+        return ctrl.ProgrammingLanguageConfigController(
+            model_class=modl.ProgrammingLanguageConfig, repository=self.pg_config_repo(db_session=db_session)
+        )
+
+    def get_programming_tc_controller(self, db_session=Depends(db_session_keeper.get_session)):
+        return ctrl.ProgrammingTestCaseController(
+            repository=self.programming_tc_repo(db_session=db_session)
+        )
+
+    def get_programming_submission_controller(self, db_session=Depends(db_session_keeper.get_session)):
+        return ctrl.ProgrammingSubmissionController(
+            model_class=modl.ProgrammingSubmission,
+            repository=self.programming_submission_repo(db_session=db_session)
+        )
+
+    def get_learning_material_gen_controller(
+        self, db_session=Depends(db_session_keeper.get_session)
+    ) -> ctrl.LearningMaterialGenController:
+        programming_exercise_service = services.ProgrammingExerciseGenService()
+
+        return ctrl.LearningMaterialGenController(
+            module_repo=self.modules_repository(db_session=db_session),
+            exercises_repo=self.exercises_repository(db_session=db_session),
+            pl_config_repo=self.pg_config_repo(db_session=db_session),
+            testcase_repo=self.programming_tc_repo(db_session=db_session),
+            programming_exercise_service=programming_exercise_service
+        )

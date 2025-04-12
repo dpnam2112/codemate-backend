@@ -22,7 +22,7 @@ from pydantic import BaseModel
 
 @router.post("/")
 async def create_feedback(
-    request: Union[CreateFeedbackRequest, CreateFeedbackCourseRequest],
+    request: Union[CreateFeedbackRequest],
     token: str = Depends(oauth2_scheme),
     feedback_controller: FeedbackController = Depends(InternalProvider().get_feedback_controller),
     student_controller: StudentController = Depends(InternalProvider().get_student_controller),
@@ -40,23 +40,23 @@ async def create_feedback(
         raise BadRequestException(message="You are not allowed to create feedback.")
 
     user_type = "student" if student else "professor"
-
+    print(request.type, "...............................................................")
     feedback_attributes = {
-        "feedback_type": "course" if request.type == "course" else "system",  # Fixed here
+        "feedback_type": "course" if request.type == FeedbackType.course else FeedbackType.system,  # Fixed here
         "title": request.title,
         "category": request.category,
         "description": request.description,
         "rate": request.rate,
         "status": "pending",
         "student_id": user_id if user_type == "student" else None,
-        "professor_id": user_id if user_type == "professor" else None,
-        "course_id": request.course_id if request.type == "course" else None,
+        "professor_id": request.professorId if request.professorId else None,
+        "course_id": request.courseId if request.courseId else None,
     }
 
-    if isinstance(request, CreateFeedbackCourseRequest):
-        if not request.course_id:
-            raise BadRequestException(message="Course ID is required for course feedback.")
-        feedback_attributes["course_id"] = request.course_id
+    # if isinstance(request, CreateFeedbackCourseRequest):
+    #     if not request.course_id:
+    #         raise BadRequestException(message="Course ID is required for course feedback.")
+    #     feedback_attributes["course_id"] = request.course_id
 
     try:
         feedback = await feedback_controller.feedback_repository.create(

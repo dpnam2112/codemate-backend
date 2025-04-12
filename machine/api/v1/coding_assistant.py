@@ -1,21 +1,7 @@
-# Create coding session
-
-# Problem: I'm building a LLM-powered programming teaching assistant that supports the learners to
-# learn programming. in the UI there is a code editor (like leetcode, a problem statement, .etc)
-#
-# Two features that I want to implement:
-# - give hints
-# - fix codes
-# 
-# The assistant must not give the student a clear answer. Instead, guide them to achieve the final
-# answer. design a prompt for that. 
-# Design and implement FastAPI endpoints so that the client can call the AI agent.
-
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel
-from typing import Dict, List, Optional
+from typing import List, Optional
 import openai
-import json
 
 from core.response.api_response import Ok
 from core.settings import settings as env_settings

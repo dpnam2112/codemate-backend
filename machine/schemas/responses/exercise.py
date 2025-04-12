@@ -56,7 +56,7 @@ class ExerciseCodeResponse(BaseModel):
     questions: list[CodeModel]
     max_score: Optional[int]
     type: ExerciseType
-    course_id: UUID
+    course_id: Optional[UUID]
     time_open: Optional[datetime]
     time_close: Optional[datetime]
     time_limit: Optional[int]
@@ -68,6 +68,9 @@ class ExerciseCodeResponse(BaseModel):
     show_correct_answers: Optional[bool]
     penalty_per_attempt: Optional[float]
     pass_mark: Optional[float]
+
+    class Config:
+        from_attributes = True
     
 class PutExerciseCodeResponse(BaseModel):
     exercise_id: UUID
@@ -90,3 +93,10 @@ class GetExercise(BaseModel):
     time_limit: Optional[int]
     attempts_allowed: int
     grading_method: GradingMethodType
+
+class CodeExerciseBriefResponse(BaseModel):
+    id: UUID
+    name: str
+
+    class Config:
+        from_attributes = True

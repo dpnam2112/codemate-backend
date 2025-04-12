@@ -6,14 +6,18 @@ from typing import Dict, List, Any, Optional
 from fastapi import APIRouter, Depends, Body
 from core.response import Ok
 from core.exceptions import *
+from machine.controllers.learning_material_gen import LearningMaterialGenController
 from machine.models import *
+from machine.models import RecommendQuizQuestion
 from machine.controllers import *
 from machine.providers.internal import InternalProvider
 from datetime import datetime, timedelta
 from fastapi.security import OAuth2PasswordBearer
 from uuid import UUID
 from core.utils.auth_utils import verify_token
-from ...schemas.requests.ai import GenerateLearningPathRequest,GenerateQuizRequest
+from machine.schemas.responses.ai import GenerateCodeExerciseResponse
+from machine.schemas.responses.exercise import CodeExerciseBriefResponse
+from ...schemas.requests.ai import GenerateCodeExerciseRequest, GenerateLearningPathRequest,GenerateQuizRequest
 from machine.schemas.requests.llm_code import *
 from machine.schemas.responses.llm_code import *
 from dotenv import load_dotenv
@@ -923,34 +927,48 @@ async def regenerate_lesson_content(
         {**mod, "id": str(created_modules[i].id)} for i, mod in enumerate(updated_content["modules"])
     ]
     return updated_content
-
+@router.get("/monitor-study-progress/course/{course_id}/recommend_lesson/{recommend_lesson_id}")
 async def monitor_study_progress(
     recommend_lesson_id: UUID,
-    student_id: UUID,
     course_id: UUID,
-    recommend_lessons_controller: RecommendLessonsController,
-    learning_path_controller: LearningPathsController,
-    lessons_controller: LessonsController,
-    student_courses_controller: StudentCoursesController,
-) -> dict:
+    token: str = Depends(oauth2_scheme),
+    recommend_lessons_controller: RecommendLessonsController = Depends(InternalProvider().get_recommendlessons_controller),
+    learning_path_controller: LearningPathsController = Depends(InternalProvider().get_learningpaths_controller),
+    lessons_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
+    student_courses_controller: StudentCoursesController = Depends(InternalProvider().get_studentcourses_controller),
+    student_controller: StudentController = Depends(InternalProvider().get_student_controller)
+):  # Remove the -> dict annotation
+    # Verify token to get student_id
+    payload = verify_token(token)
+    student_id = payload.get("sub")
+    if not student_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    
+    # Get student record
+    student = await student_controller.student_repository.first(where_=[Student.id == student_id])
+    if not student:
+        raise NotFoundException(message="Your account is not allowed to access this feature.")
+    
+    # Get recommend_lesson
     recommend_lesson = await recommend_lessons_controller.recommend_lessons_repository.first(
         where_=[RecommendLessons.id == recommend_lesson_id]
     )
     if not recommend_lesson:
         raise NotFoundException(message="Recommended lesson not found.")
 
+    # Get learning path
     learning_path = await learning_path_controller.learning_paths_repository.first(
-        where_=[LearningPaths.student_id == student_id, LearningPaths.course_id == course_id],
+        where_=[LearningPaths.student_id == UUID(student_id), LearningPaths.course_id == course_id],
         order_={"desc": ["version"]}
     )
     if not learning_path:
         raise NotFoundException(message="Learning path not found.")
 
-    if recommend_lesson.progress < 80:
-        return Ok(data=None, message="Student has not met the required learning criteria to analyze their study results.")
+    # if recommend_lesson.progress < 80:
+    #     return Ok(data=None, message="Student has not met the required learning criteria to analyze their study results.")
 
     student_course = await student_courses_controller.student_courses_repository.first(
-        where_=[StudentCourses.student_id == student_id, StudentCourses.course_id == course_id]
+        where_=[StudentCourses.student_id == UUID(student_id), StudentCourses.course_id == course_id]
     )
     issues_summary = student_course.issues_summary if student_course and student_course.issues_summary else {}
 
@@ -963,7 +981,6 @@ async def monitor_study_progress(
     )
 
     if analysis_result["can_proceed"]:
-        
         await recommend_lessons_controller.recommend_lessons_repository.update(
             where_=[RecommendLessons.id == recommend_lesson_id],
             attributes={"status": "completed", "progress": 100},
@@ -975,7 +992,6 @@ async def monitor_study_progress(
         return Ok(data=analysis_result, message="Student needs to repeat the lesson due to identified issues.")
 
     return Ok(data=analysis_result, message="Student needs to review prior lessons before proceeding.")
-
 async def analyze_issues(
     recommend_lesson: RecommendLessons,
     issues_summary: dict,
@@ -1732,6 +1748,14 @@ async def generate_quiz(
     }
     
     return Ok(quiz_response, message="Quiz generated successfully")
+
+@router.post("/generate-code-exercise", response_model=Ok[CodeExerciseBriefResponse])
+async def generate_code_exercise(
+    request: GenerateCodeExerciseRequest,
+    learning_material_gen_controller: LearningMaterialGenController = Depends(InternalProvider().get_learning_material_gen_controller)
+):
+    new_exercise = await learning_material_gen_controller.generate_programming_exercise(module_id=request.module_id)
+    return Ok(data=CodeExerciseBriefResponse.model_validate(new_exercise))
     
 '''
 export interface Root {

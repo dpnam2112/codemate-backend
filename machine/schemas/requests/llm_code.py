@@ -10,4 +10,4 @@ class QuestionRequest(BaseModel):
 class CodeAnalysisRequest(BaseModel):
     """Model dữ liệu cho yêu cầu phân tích code."""
     code: str
-    language: str = "cpp"
+    language: int

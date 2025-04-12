@@ -9,3 +9,9 @@ class LPPlanningResponse(BaseModel):
     llm_response: LPPlanningWorkflowResponse
     message: str
 
+class GenerateCodeExerciseResponse(BaseModel):
+    id: UUID
+    name: str
+    
+    class Config:
+        from_attributes = True
