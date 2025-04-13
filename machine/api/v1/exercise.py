@@ -978,16 +978,6 @@ async def create_testcase(
     testcase = await controller.create(attributes=attributes)
     return Ok(data=ProgrammingTestCaseResponse.model_validate(testcase))
 
-@router.get("/{testcase_id}", response_model=Ok[ProgrammingTestCaseResponse])
-async def get_testcase(
-    testcase_id: UUID,
-    controller: ctrl.ProgrammingTestCaseController = Depends(InternalProvider().get_programming_tc_controller)
-):
-    testcase = await controller.repository.first(where_=[ProgrammingTestCase.id == testcase_id])
-    if not testcase:
-        raise NotFoundException("Programming TestCase not found")
-    return Ok(data=ProgrammingTestCaseResponse.model_validate(testcase))
-
 @router.get("/{exercise_id}/testcases", response_model=Ok[list[ProgrammingTestCaseResponse]])
 async def get_testcases(
     limit: Optional[int] = Query(10, ge=1),
