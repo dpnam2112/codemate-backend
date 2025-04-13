@@ -384,7 +384,7 @@ async def analyze_and_return_issues(
     except Exception as e:
         print(f"Error during AI analysis: {str(e)}")
         raise e
-def prepare_analysis_prompt(quiz_id, module, recommend_lesson, questions_results, current_summary):
+def prepare_analysis_prompt(quiz_id, module, recommend_lesson, questions_results, current_summary): # Task: add remove issues logic
     """
     Prepare the prompt for AI analysis
     """

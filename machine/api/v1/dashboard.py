@@ -115,7 +115,7 @@ async def get_activities(
     return Ok(data=activities_data, message="Successfully fetched the recent activities.")
 
 
-@router.post("/student-activities", response_model=Ok[bool])
+@router.post("/student-activities", response_model=Ok[bool]) # add logic recommend lesson 
 async def add_activity(
     request: AddActivityRequest,
     token: str = Depends(oauth2_scheme),
