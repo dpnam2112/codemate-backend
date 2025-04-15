@@ -18,6 +18,9 @@ from machine.repositories.programming_submission import ProgrammingSubmissionRep
 import machine.services.judge0_client as judge0_client
 from core.logger import syslog
 from tasks.update_submission_result import poll_judge0_submission_result
+from machine.services.code_exercise_assistant import CodeExerciseAssistantService
+from machine.repositories.programming_language_config import ProgrammingLanguageConfigRepository
+from machine.models import ProgrammingLanguageConfig
 
 class SubmissionWithStats(TypedDict):
     submission: ProgrammingSubmission
@@ -29,14 +32,18 @@ class ExercisesController(BaseController[Exercises]):
         self,
         exercises_repository: ExercisesRepository,
         submission_repo: ProgrammingSubmissionRepository,
-        llm_client: AsyncOpenAI
+        llm_client: AsyncOpenAI,
+        code_exercise_assistant_service: CodeExerciseAssistantService,
+        pg_config_repo: ProgrammingLanguageConfigRepository
     ):
         super().__init__(
             model_class=Exercises, repository=exercises_repository
         )
         self.exercises_repository = exercises_repository
         self.submission_repo = submission_repo
+        self.pg_config_repo = pg_config_repo
         self.llm_client = llm_client
+        self.code_exercise_assistant_service = code_exercise_assistant_service
 
     @Transactional()
     async def get_coding_assistant_conversation_messages(
@@ -203,13 +210,33 @@ class ExercisesController(BaseController[Exercises]):
         llm_messages = []
         # System prompt with educational guardrails and contextual information.
         system_prompt = (
-            "You are a coding assistant designed for educational purposes. "
-            "Your role is to help learners understand coding concepts and solve problems safely. "
-            "Do not provide instructions for harmful or unsafe actions. "
-            "Ensure your explanations are clear, accurate, and supportive. "
-            "Problem description: {problem_description}. "
-            "User's solution attempt: {user_solution}."
+            "You are an AI Coding Assistant designed for educational purposes. "
+            "Your primary goal is to **support students in learning how to code**, not just solve problems for them.\n\n"
+
+            "CONTEXT:\n"
+            "- Problem Description: {problem_description}\n"
+            "- User's Current Solution Attempt:\n{user_solution}\n\n"
+
+            "RULES:\n"
+            "1. Always explain concepts clearly and concisely.\n"
+            "2. Use beginner-friendly language unless the context suggests advanced users.\n"
+            "3. Guide the user through problem-solving steps, rather than giving full solutions outright.\n"
+            "4. If the user's solution has issues, point them out **gently** and explain why they are incorrect.\n"
+            "5. Never provide answers that are harmful, unsafe, or violate academic integrity policies.\n"
+            "6. Keep your tone encouraging and educational.\n"
+            "7. If you need to use code, keep it minimal and focus on the logic behind it.\n"
+
+            "REQUIREMENTS:\n"
+            "- Help the user reflect on their current approach.\n"
+            "- Recommend improvements or corrections when applicable.\n"
+            "- Offer small hints or suggestions rather than final answers unless explicitly asked.\n"
+            "- Avoid distractions, off-topic comments, or excessive elaboration.\n"
+
+            "Begin by analyzing the user's solution and assisting them with their current challenge."
         ).format(problem_description=problem_description, user_solution=user_solution)
+
+        print("user_solution =", user_solution)
+
         llm_messages.append({"role": "system", "content": system_prompt})
         # Append the conversation history.
         for msg in history:
@@ -434,6 +461,37 @@ class ExercisesController(BaseController[Exercises]):
 
         await session.flush()
         return all_results
+
+    async def get_or_generate_code_solution(
+        self,
+        exercise_id: UUID,
+        language_id: int
+    ) -> tuple[str, str]:
+        """
+        Get or generate a code solution for a given exercise and language.
+        In the future, we may want to cache the solution in the DB.
+
+        Args:
+            exercise_id (UUID): The ID of the exercise.
+            language_id (int): The ID of the language.
+        
+        Returns:
+            tuple[str, str]: A tuple containing the code solution and the explanation.
+        """
+        exercise = await self.repository.first(where_=[Exercises.id == exercise_id])
+        if not exercise:
+            raise NotFoundException(message="Exercise not found.")
+
+        language_config = await self.pg_config_repo.first(where_=[ProgrammingLanguageConfig.exercise_id == exercise_id, ProgrammingLanguageConfig.judge0_language_id == language_id])
+        
+        if not language_config:
+            raise NotFoundException(message="Language config not found.")
+
+        initial_code = language_config.boilerplate_code
+        problem_description = exercise.description
+
+        ai_solution = await self.code_exercise_assistant_service.generate_solution(initial_code, problem_description, language_id)
+        return ai_solution
 
 if __name__ == "__main__":
     import asyncio
