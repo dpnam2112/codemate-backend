@@ -12,6 +12,7 @@ from core.db.session import DB_MANAGER, Dialect
 from core.settings import settings as env_settings
 from machine.repositories.programming_tc import ProgrammingTestCaseRepository
 import machine.services as services
+from .services import ServiceProvider
 
 
 @singleton
@@ -111,10 +112,14 @@ class InternalProvider:
             base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
         )
 
+        code_exercise_assistant_service = ServiceProvider().get_code_exercise_assistant_service()
+
         return ctrl.ExercisesController(
             exercises_repository=self.exercises_repository(db_session=db_session),
             submission_repo=self.programming_submission_repo(db_session=db_session),
-            llm_client=llm_aclient
+            llm_client=llm_aclient,
+            code_exercise_assistant_service=code_exercise_assistant_service,
+            pg_config_repo=self.pg_config_repo(db_session=db_session)
         )
         
     def get_studentexercises_controller(self, db_session=Depends(db_session_keeper.get_session)):

@@ -1,5 +1,3 @@
-from os import wait
-from core.db.decorators import Transactional
 import machine.controllers as ctrl
 from fastapi import APIRouter, Depends, Path, Query
 from core.response import Ok
@@ -18,6 +16,7 @@ from fastapi.security import OAuth2PasswordBearer
 from core.utils.auth_utils import verify_token
 from starlette.responses import StreamingResponse
 from machine.schemas.programming_exercise import *
+from machine.schemas.code_solution import CodeSolutionResponse
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
@@ -1085,4 +1084,20 @@ async def get_coding_submissions(
     )
 
     return Ok(data=[ProgrammingSubmissionItemSchema.model_validate(submission) for submission in submissions])
+
+@router.post("/{exercise_id}/code-solution/{language_id}", response_model=Ok[CodeSolutionResponse])
+async def get_or_generate_code_solution(
+    exercise_id: UUID,
+    language_id: int,
+    exercise_controller: ExercisesController = Depends(InternalProvider().get_exercises_controller)
+):
+    solution_code, explanation = await exercise_controller.get_or_generate_code_solution(
+        exercise_id=exercise_id,
+        language_id=language_id
+    )
+
+    return Ok(data=CodeSolutionResponse(
+        solution=solution_code,
+        explanation=explanation
+    ))
 

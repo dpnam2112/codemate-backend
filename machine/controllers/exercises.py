@@ -18,6 +18,9 @@ from machine.repositories.programming_submission import ProgrammingSubmissionRep
 import machine.services.judge0_client as judge0_client
 from core.logger import syslog
 from tasks.update_submission_result import poll_judge0_submission_result
+from machine.services.code_exercise_assistant import CodeExerciseAssistantService
+from machine.repositories.programming_language_config import ProgrammingLanguageConfigRepository
+from machine.models import ProgrammingLanguageConfig
 
 class SubmissionWithStats(TypedDict):
     submission: ProgrammingSubmission
@@ -29,14 +32,18 @@ class ExercisesController(BaseController[Exercises]):
         self,
         exercises_repository: ExercisesRepository,
         submission_repo: ProgrammingSubmissionRepository,
-        llm_client: AsyncOpenAI
+        llm_client: AsyncOpenAI,
+        code_exercise_assistant_service: CodeExerciseAssistantService,
+        pg_config_repo: ProgrammingLanguageConfigRepository
     ):
         super().__init__(
             model_class=Exercises, repository=exercises_repository
         )
         self.exercises_repository = exercises_repository
         self.submission_repo = submission_repo
+        self.pg_config_repo = pg_config_repo
         self.llm_client = llm_client
+        self.code_exercise_assistant_service = code_exercise_assistant_service
 
     @Transactional()
     async def get_coding_assistant_conversation_messages(
@@ -454,6 +461,37 @@ class ExercisesController(BaseController[Exercises]):
 
         await session.flush()
         return all_results
+
+    async def get_or_generate_code_solution(
+        self,
+        exercise_id: UUID,
+        language_id: int
+    ) -> tuple[str, str]:
+        """
+        Get or generate a code solution for a given exercise and language.
+        In the future, we may want to cache the solution in the DB.
+
+        Args:
+            exercise_id (UUID): The ID of the exercise.
+            language_id (int): The ID of the language.
+        
+        Returns:
+            tuple[str, str]: A tuple containing the code solution and the explanation.
+        """
+        exercise = await self.repository.first(where_=[Exercises.id == exercise_id])
+        if not exercise:
+            raise NotFoundException(message="Exercise not found.")
+
+        language_config = await self.pg_config_repo.first(where_=[ProgrammingLanguageConfig.exercise_id == exercise_id, ProgrammingLanguageConfig.judge0_language_id == language_id])
+        
+        if not language_config:
+            raise NotFoundException(message="Language config not found.")
+
+        initial_code = language_config.boilerplate_code
+        problem_description = exercise.description
+
+        ai_solution = await self.code_exercise_assistant_service.generate_solution(initial_code, problem_description, language_id)
+        return ai_solution
 
 if __name__ == "__main__":
     import asyncio
