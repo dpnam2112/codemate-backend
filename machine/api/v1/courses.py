@@ -1103,3 +1103,26 @@ async def delete_course(
 
     return Ok(data=None, message="Successfully deleted the course."
 )
+    
+@router.get("/issues/{course_id}")
+async def get_course_issues(
+    course_id: UUID,
+    token: str = Depends(oauth2_scheme),
+    student_courses_controller: StudentCoursesController = Depends(InternalProvider().get_studentcourses_controller),
+):
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    
+    # Get the course
+    course = await student_courses_controller.student_courses_repository.first(where_=[StudentCourses.course_id == course_id])
+    if not course:
+        raise NotFoundException(message="Student does not enroll in this course.")
+    # Get the course issues
+    
+    response = {
+        "issues_summary" : course.issues_summary
+    }
+    
+    return Ok(data=response, message="Successfully fetched the course issues.")

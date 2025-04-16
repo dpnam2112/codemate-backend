@@ -717,7 +717,7 @@ async def regenerate_lesson_content(
     modules_controller: ModulesController,
     recommend_documents_controller: RecommendDocumentsController
 ) -> dict:
-    """Regenerate content for a recommended lesson based on analysis result."""
+    """Bổ sung nội dung cho một recommended lesson dựa trên analysis result mà không xóa modules cũ."""
     # Fetch existing data
     recommend_lesson = await recommend_lessons_controller.recommend_lessons_repository.first(
         where_=[RecommendLessons.id == recommend_lesson_id]
@@ -731,20 +731,13 @@ async def regenerate_lesson_content(
     if not lesson:
         raise NotFoundException(message="Lesson not found.")
 
-    # Step 1: Delete old modules and their recommend documents
-    old_modules = await modules_controller.modules_repository.get_many(
+    # Get existing modules to reference later
+    existing_modules = await modules_controller.modules_repository.get_many(
         where_=[Modules.recommend_lesson_id == recommend_lesson_id]
     )
-    for module in old_modules:
-        await recommend_documents_controller.recommend_documents_repository.delete(
-            where_=[RecommendDocuments.module_id == module.id]
-        )
-        await modules_controller.modules_repository.delete(
-            where_=[Modules.id == module.id]
-        )
-    await modules_controller.modules_repository.session.commit()
+    existing_module_titles = [module.title for module in existing_modules]
 
-    # Step 2: Generate new content
+    # Initialize the ChunkingManager
     chunking_manager = ChunkingManager(
         provider="gemini",
         gemini_model_name="gemini-2.0-flash-lite",
@@ -753,16 +746,18 @@ async def regenerate_lesson_content(
         max_output_tokens=8000
     )
 
+    # Prompt for creating supplementary modules focused on issues
     prompt = f"""
-    ## Lesson Content Regeneration Task
+    ## Supplementary Learning Content Generation Task
+
     ### Context
     - Lesson Title: "{lesson.title}"
-    - Current Recommended Content: "{recommend_lesson.recommended_content}"
+    - Current Recommended Content: "{recommend_lesson.recommended_content}"  
     - Current Explanation: "{recommend_lesson.explain}"
     - Start Date: "{recommend_lesson.start_date}"
     - End Date: "{recommend_lesson.end_date}"
-    - Duration Notes: "{recommend_lesson.duration_notes}"
-    - Analysis Result: {json.dumps(analysis_result, indent=2)}
+    - Existing Module Titles: {json.dumps(existing_module_titles)}
+    - Issues Analysis: {json.dumps(analysis_result.get('issues_analysis', {}), indent=2)}
 
     ### Prior Recommend Lessons Context (Only if Review Prior is Required)
     - Prior Recommend Lessons:
@@ -771,134 +766,117 @@ async def regenerate_lesson_content(
     }}
 
     ### Task Requirements
-    You are tasked with regenerating the content for a recommended lesson to optimize the student's learning experience based on the analysis result from their study progress. Follow these steps:
+    You are tasked with creating supplementary modules that specifically address the issues identified in the student's learning progress. Rather than replacing existing content, these new modules will complement it and help the student overcome their specific challenges.
 
-    1. **Analyze Current Content and Analysis Result:**
-       - Review the `Current Recommended Content` and `Current Explanation` to understand the original focus.
-       - Use the `Analysis Result` to identify specific struggles:
-         - `issues_analysis.significant_issues`: Focus on these issues (e.g., concept misunderstandings, code errors).
-         - `recommendations`: Address actions like "repeat" and "review_prior" if present.
-       - Determine why the original content failed to resolve these issues.
+    1. **Analyze Issues and Current Content:**
+       - Review the `issues_analysis` to identify the significant issues the student is struggling with
+       - Consider the existing module titles to avoid duplication
+       - Use the `recommendations` to inform your approach (e.g., if "review_prior" is recommended)
 
-    2. **Regenerate Content with Improvements:**
-       - **Recommended Content**: Rewrite to address the significant issues:
-         - Provide detailed explanations (5-7 sentences) targeting each significant issue from `issues_analysis`.
-         - Include 2-3 practical examples with code snippets (if applicable) tailored to the issues.
-         - If `recommendations` includes "review_prior" and prior data is provided, briefly reintroduce relevant concepts from `Prior Recommend Lessons` (e.g., 1-2 sentences linking back).
-         - Suggest actionable steps to overcome errors or gaps (e.g., debugging tips).
-       - **Explanation**: Update to:
-         - Justify why this lesson is critical to the learning path (tie to long-term goals).
-         - Explain how the new content resolves the issues from `issues_analysis` (5-7 sentences).
-         - Maintain coherence with prior and subsequent lessons.
+    2. **Create Targeted Supplementary Modules:**
+       - Generate 1-3 new modules that directly address the significant issues identified
+       - Each module title MUST start with phrases like "Addressing:", "Resolving:", "Overcoming:", or "Deep Dive:" followed by the specific issue
+       - Each module should focus on ONE specific challenge from the issues analysis
+       - If "review_prior" is in recommendations, include a module that connects prior knowledge to current issues
 
-    3. **Design Targeted Modules:**
-       - Generate 2-3 new modules, each focusing on one significant issue from `issues_analysis`.
-       - If "review_prior" is in `recommendations`, include a brief review of relevant prior content in the first module (1-2 paragraphs).
-       - Each module should include:
-         - `theoryContent`: 3+ paragraphs with 2+ examples.
-         - `practicalGuide`: 4-5 steps and 3+ common errors/solutions.
-         - 3+ references (academic and practical mix).
-
-    4. **Maintain Timeline:**
-       - Keep `start_date` ("{recommend_lesson.start_date}") and `end_date` ("{recommend_lesson.end_date}") unchanged.
-       - Adjust `duration_notes` if needed based on new content complexity.
-
-    5. **Optimize for Learning:**
-       - Use a supportive tone (e.g., "Let’s tackle this together").
-       - Incorporate scaffolding: Start with foundational concepts (if gaps exist) before advancing.
-       - Ensure content is engaging and actionable.
+    3. **Update Recommended Content and Explanation:**
+       - Create additional content that introduces these new modules and explains how they relate to the existing content
+       - Provide a clear path for the student to follow (e.g., "After reviewing the original modules, focus on these supplementary modules")
 
     ### Output Format
     {{
-        "recommended_content": "Updated content addressing the student's specific issues...",
-        "explain": "Explanation of how this content resolves the issues...",
-        "start_date": "{recommend_lesson.start_date}",
-        "end_date": "{recommend_lesson.end_date}",
-        "duration_notes": "Updated notes on timeline...",
-        "modules": [
+        "supplementary_content": "- Point 1\\n- Point 2\\n- Point 3 (Additional content introducing the supplementary modules and their purpose...)",
+        "supplementary_explanation": "- Explanation point 1\\n- Explanation point 2\\n- Explanation point 3 (Explanation of how these modules address the specific issues...)",
+        "supplementary_modules": [
             {{
-                "title": "Module Title",
-                "objectives": ["Objective 1", "Objective 2"],
+                "title": "Addressing: [Specific Issue]",
+                "objectives": ["Objective 1", "Objective 2", "Objective 3"],
                 "reading_material": {{
                     "theoryContent": [
                         {{
-                            "title": "Section Title",
+                            "title": "Understanding [Issue] Better",
                             "description": ["Para 1", "Para 2", "Para 3"],
                             "examples": [
                                 {{
-                                    "title": "Example 1",
+                                    "title": "Example: Common Mistake",
                                     "codeSnippet": "code here",
-                                    "explanation": "How this addresses the issue"
+                                    "explanation": "How this relates to the issue"
                                 }},
                                 {{
-                                    "title": "Example 2",
+                                    "title": "Example: Correct Approach",
                                     "codeSnippet": "code here",
-                                    "explanation": "Further clarification"
+                                    "explanation": "How to solve the issue"
                                 }}
                             ]
                         }}
                     ],
                     "practicalGuide": [
                         {{
-                            "steps": ["Step 1", "Step Now available for free at https://www.nostarch.com/sites/default/files/other/Alice_Excerpt.pdf", "Step 2", "Step 3", "Step 4"],
+                            "title": "Step-by-Step Solution Guide",
+                            "steps": ["Step 1", "Step 2", "Step 3", "Step 4", "Step 5"],
                             "commonErrors": ["Error 1 - solution", "Error 2 - solution", "Error 3 - solution"]
                         }}
                     ],
                     "references": [
                         {{
-                            "title": "Ref Title 1",
+                            "title": "Resource specifically targeting this issue",
                             "link": "https://example.com",
-                            "description": "Relevance to issue"
+                            "description": "How this helps with the specific issue"
                         }},
                         {{
-                            "title": "Ref Title 2",
+                            "title": "Practice exercises",
                             "link": "https://example.com",
-                            "description": "Practical support"
+                            "description": "Additional practice"
                         }},
                         {{
-                            "title": "Ref Title 3",
+                            "title": "Visual explanation",
                             "link": "https://example.com",
-                            "description": "Deep dive resource"
+                            "description": "Visual explanation of the concept"
                         }}
-                    ]
+                    ],
+                    "summaryAndReview": {{
+                        "keyPoints": ["Point 1", "Point 2", "Point 3", "Point 4", "Point 5"],
+                        "reviewQuestions": [
+                            {{
+                                "id": "Q1",
+                                "question": "Question targeting the specific issue",
+                                "answer": "Answer",
+                                "maxscore": 10,
+                                "score": null,
+                                "inputUser": null
+                            }}
+                        ]
+                    }}
                 }}
             }}
-            // Additional modules (2-3 total)
         ]
     }}
-
-    ### Important Rules
-    1. Return valid JSON matching the output format.
-    2. Do NOT modify `start_date` or `end_date`.
-    3. Address all significant issues from `issues_analysis`.
-    4. Use `Prior Recommend Lessons` only if "review_prior" is in `recommendations`.
-    5. Maintain logical progression and coherence with the learning path.
-    6. Use clear, student-friendly language.
     """
 
+    # Get response from LLM
     response = chunking_manager.call_llm_api(prompt, "You are an expert in educational content generation.")
-    updated_content = response if isinstance(response, dict) else json.loads(response)
+    supplementary_content = response if isinstance(response, dict) else json.loads(response)
 
-    # Step 3: Update recommend_lesson
+    # Update recommend_lesson with combined content
+    updated_recommended_content = f"{recommend_lesson.recommended_content}\n\n**SUPPLEMENTARY CONTENT**: {supplementary_content['supplementary_content']}"
+    updated_explanation = f"{recommend_lesson.explain}\n\n**ADDITIONAL GUIDANCE**: {supplementary_content['supplementary_explanation']}"
+
     await recommend_lessons_controller.recommend_lessons_repository.update(
         where_=[RecommendLessons.id == recommend_lesson_id],
         attributes={
-            "recommended_content": updated_content["recommended_content"],
-            "explain": updated_content["explain"],
-            "start_date": updated_content["start_date"],
-            "end_date": updated_content["end_date"],
-            "duration_notes": updated_content["duration_notes"],
-            "status": "new",
-            "progress": 0
+            "recommended_content": updated_recommended_content,
+            "explain": updated_explanation,
+            "status": "new",  # Reset status for student to work through again
+            "progress": recommend_lesson.progress  # Keep existing progress 
         },
         commit=True
     )
 
-    # Step 4: Create new modules and recommend documents
+    # Create just the new supplementary modules
     module_attributes_list = []
     recommend_documents_attributes_list = []
 
-    for module_data in updated_content["modules"]:
+    for module_data in supplementary_content["supplementary_modules"]:
         module_attr = {
             "recommend_lesson_id": recommend_lesson_id,
             "title": module_data["title"],
@@ -910,23 +888,56 @@ async def regenerate_lesson_content(
             "content": module_data["reading_material"]
         })
 
+    # Only create new modules, don't replace existing ones
     created_modules = await modules_controller.modules_repository.create_many(
         attributes_list=module_attributes_list,
         commit=True
     )
 
+    # Link new modules to their content
     for i, module in enumerate(created_modules):
         recommend_documents_attributes_list[i]["module_id"] = module.id
 
-    await recommend_documents_controller.recommend_documents_repository.create_many(
+    # Create new recommend documents
+    created_recommend_documents = await recommend_documents_controller.recommend_documents_repository.create_many(
         attributes_list=recommend_documents_attributes_list,
         commit=True
     )
-
-    updated_content["modules"] = [
-        {**mod, "id": str(created_modules[i].id)} for i, mod in enumerate(updated_content["modules"])
+    
+    created_recommend_documents_response = [
+        {
+            "id": str(doc.id),
+            "module_id": str(doc.module_id),
+            "content": doc.content if isinstance(doc.content, str) else json.dumps(doc.content)
+        }
+        for doc in created_recommend_documents
     ]
+
+    # Return all modules including existing ones
+    all_modules = await modules_controller.modules_repository.get_many(
+        where_=[Modules.recommend_lesson_id == recommend_lesson_id]
+    )
+
+    # Format the response with all modules (both existing and new)
+    updated_content = {
+        "recommended_content": updated_recommended_content,
+        "explain": updated_explanation, 
+        "start_date": str(recommend_lesson.start_date),
+        "end_date": str(recommend_lesson.end_date),
+        "duration_notes": recommend_lesson.duration_notes,
+        "modules": [
+            {
+                "id": str(module.id),
+                "title": module.title,
+                "objectives": module.objectives,
+                "is_supplementary": module.id in [m.id for m in created_modules]  # Flag to identify new modules
+            } for module in all_modules
+        ],
+        "recommend_documents": created_recommend_documents_response
+    }
+
     return updated_content
+
 @router.get("/monitor-study-progress/course/{course_id}/recommend_lesson/{recommend_lesson_id}")
 async def monitor_study_progress(
     recommend_lesson_id: UUID,
@@ -1060,6 +1071,8 @@ async def analyze_issues(
     is_first_lesson = len(prior_lessons) == 0
     
     # Construct AI prompt
+    ## 6. For analyze_issues in ai_routers.py
+
     prompt = f"""
     ## Issues Analysis Task
     - Lesson Title: "{lesson.title}"
@@ -1068,6 +1081,15 @@ async def analyze_issues(
     - Issues Summary (JSON): {json.dumps(issues_summary, indent=2)}
     - Is First Lesson in Learning Path: {is_first_lesson}
     - Prior Lessons in Learning Path: {json.dumps(prior_lessons_details, indent=2)}
+
+    ## FORMATTING REQUIREMENTS:
+    - Present ALL content in list format with bullet points or numbering
+    - Never use paragraphs - break content into structured lists
+    - Use line breaks between major points
+    - Keep individual points concise (1-2 sentences maximum)
+    - Use hierarchical structure for clarity
+    - Include bullet points (•) at the start of list items
+    - Use numbered lists (1., 2., etc.) for sequential steps
 
     ## Task Requirements
     Analyze the provided `issues_summary` to determine the student's next steps.
@@ -1088,21 +1110,24 @@ async def analyze_issues(
 
     Consider:
     1. **Severity of Issues**:
-       - Assess the frequency and type of issues (e.g., concept_misunderstanding, code_error).
-       - Identify if issues are significant (e.g., frequency >= 5 or total_issues_count >= 20).
+    - Present analysis as bulleted list points
+    - Break down frequency data into structured format
+
     2. **Impact on Long-term Goals**:
-       - Evaluate if these issues could hinder achieving the learning path objective.
+    - Structure impact assessment as bullet points
+    - List specific consequences with clear formatting
+
     3. **Relation to Prior Lessons**: {
     "" if is_first_lesson else """
-       - Check if issues link to specific prior lessons (via related_lessons).
-       - Suggest revisiting specific prior lessons by name if applicable.
+    - Present connections as structured list items
+    - Format lesson references with clear hierarchy
     """
     }
+
     4. **Recommendations**:
-       - Provide ONLY ONE or at most TWO of these recommendations: proceed, repeat, or review_prior.
-       - If recommending two actions, "proceed" and "repeat" CANNOT be recommended simultaneously.
-       - Provide detailed reasoning for each recommendation.
-       - Use LESSON NAMES (not IDs) in your recommendations for better readability.
+    - Format each recommendation as a structured list
+    - Present reasoning as bulleted points
+    - Structure lesson references with clear formatting
 
     ## Output Format
     {{
@@ -1114,9 +1139,9 @@ async def analyze_issues(
                 {{
                     "type": "issue type",
                     "frequency": number,
-                    "description": "issue description",
+                    "description": "• Issue point 1\\n• Issue point 2",
                     "severity": "low/medium/high",
-                    "impact_on_goals": "Explanation of impact"
+                    "impact_on_goals": "• Impact 1\\n• Impact 2\\n• Impact 3"
                 }}
             ],
             "total_issues_count": number,
@@ -1126,19 +1151,20 @@ async def analyze_issues(
         "recommendations": [
             {{
                 "action": "proceed/repeat/review_prior",
-                "reason": "Detailed reasoning",
-                "details": "Specific lesson NAMES to review (not IDs)"
+                "reason": "• Reason 1\\n• Reason 2\\n• Reason 3",
+                "details": "• Lesson detail 1\\n• Lesson detail 2"
             }}
         ]
     }}
-    
+
     IMPORTANT RULES:
     1. YOU MUST RETURN THE RESPONSE IN JSON FORMAT ABOVE.
     2. NEVER return IDs of lessons in recommendations - use LESSON TITLES instead.
     3. Give ONLY ONE or at most TWO recommendations.
     4. If giving two recommendations, "proceed" and "repeat" CANNOT both be included.
+    5. ALL TEXT MUST BE FORMATTED AS LISTS WITH BULLET POINTS, NOT PARAGRAPHS.
     """
-    
+        
     print(f"AI prompt: {prompt}")
 
     # Call AI for analysis
