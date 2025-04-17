@@ -29,66 +29,60 @@ async def poll_judge0_submission_result(submission_id_str: str):
             syslog.warning(f"No test results found for submission {submission_id}")
             return
 
-        pending_results = [tr for tr in test_results if tr.status == "Processing"]
-        if not pending_results:
-            syslog.info(f"Submission {submission_id} already processed")
-            return
-
+        pending_results = [tr for tr in test_results if tr.status in ("Processing", "In Queue")]
         tokens = [tr.judge0_token for tr in pending_results if tr.judge0_token]
-        if not tokens:
-            syslog.warning(f"No tokens available for submission {submission_id}")
-            return
 
-        test_cases = []
-        for tr in pending_results:
-            tc = await session.get(ProgrammingTestCase, tr.testcase_id)
-            test_cases.append({"input": tc.input, "expected": tc.expected_output})
+        still_processing = False  # Always initialized
 
-        judge0_results = await judge0_client.get_submission_results(tokens, test_cases)
+        if not pending_results:
+            syslog.info(f"No test cases still in progress for submission {submission_id}")
+        else:
+            # Get corresponding test cases for Judge0 call
+            test_cases = []
+            for tr in pending_results:
+                tc = await session.get(ProgrammingTestCase, tr.testcase_id)
+                test_cases.append({"input": tc.input, "expected": tc.expected_output})
 
-        submission_status = SubmissionStatus.COMPLETED
-        still_processing = False
+            # Poll Judge0 for result
+            judge0_results = await judge0_client.get_submission_results(tokens, test_cases)
 
-        for tr, res in zip(pending_results, judge0_results):
-            tr.status = res["status"]
-            tr.stdout = res["stdout"]
-            tr.stderr = res["stderr"]
-            tr.time = res.get("time")
-            tr.memory = res.get("memory")
+            for tr, res in zip(pending_results, judge0_results):
+                tr.status = res["status"]
+                tr.stdout = res["stdout"]
+                tr.stderr = res["stderr"]
+                tr.time = res.get("time")
+                tr.memory = res.get("memory")
 
-            if res["status"] in ["In Queue", "Processing"]:
-                still_processing = True
-                submission_status = SubmissionStatus.PENDING
-            elif res["status"] != "Accepted":
-                submission_status = SubmissionStatus.FAILED
+                if res["status"] in ["In Queue", "Processing"]:
+                    still_processing = True
 
-        if still_processing:
-            raise StillProcessingError(f"Submission {submission_id} still has pending results.")
-        
-        # Get submission and exercise details
+            if still_processing:
+                raise StillProcessingError(f"Submission {submission_id} still has pending results.")
+
+        # Determine submission status based on all test results
+        all_accepted = all(tr.status == "Accepted" for tr in test_results)
+        submission_status = SubmissionStatus.COMPLETED if all_accepted else SubmissionStatus.FAILED
+
+        # Evaluate and update submission
         submission = await session.get(ProgrammingSubmission, submission_id)
         if not submission:
             syslog.error(f"Submission {submission_id} not found")
             return
 
         try:
-            # Get exercise details
             exercise = await session.get(Exercises, submission.exercise_id)
             if not exercise:
                 syslog.error(f"Exercise not found for submission {submission_id}")
                 return
 
-            # Get problem description from exercise
             problem_description = exercise.description or "No description provided"
-            
-            # Get test results for evaluation
+
             eval_test_results = [{
                 "status": tr.status,
                 "stdout": tr.stdout,
                 "stderr": tr.stderr
             } for tr in test_results]
 
-            # Evaluate the submission
             assistant_service = CodeExerciseAssistantService()
             evaluation = await assistant_service.evaluate_submission(
                 code=submission.code,
@@ -98,16 +92,11 @@ async def poll_judge0_submission_result(submission_id_str: str):
             )
 
             if evaluation:
-                # Update the submission with evaluation
                 submission.llm_evaluation = evaluation.model_dump()
                 syslog.info(f"Evaluated submission {submission_id} with score {evaluation.score}")
         except Exception as e:
             syslog.error(f"Error evaluating submission {submission_id}: {str(e)}")
-            # Continue with status update even if evaluation fails
 
-        # Update submission status after evaluation (or if evaluation was skipped)
         submission.status = submission_status
         await session.commit()
         syslog.info(f"Updated submission {submission_id} status to {submission.status}")
-
-

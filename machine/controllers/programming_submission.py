@@ -1,7 +1,7 @@
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import desc, func, select
 from sqlalchemy.orm import noload
 from core.controller.base import BaseController
 from machine.models.coding_submission import ProgrammingSubmission, ProgrammingTestResult, SubmissionStatus
@@ -41,7 +41,11 @@ class ProgrammingSubmissionController(BaseController[ProgrammingSubmission]):
         session = self.repository.session
 
         # Fetch the submission by ID
-        stmt = select(ProgrammingSubmission).where(ProgrammingSubmission.id == submission_id)
+        stmt = (
+            select(ProgrammingSubmission).where(
+                ProgrammingSubmission.id == submission_id
+            ).order_by(desc(ProgrammingSubmission.created_at))
+        )
         stmt = stmt.options(noload(ProgrammingSubmission.test_results))
         result = await session.execute(stmt)
         submission = result.scalar_one_or_none()
