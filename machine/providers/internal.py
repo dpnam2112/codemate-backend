@@ -205,9 +205,13 @@ class InternalProvider:
         )
 
     def get_programming_submission_controller(self, db_session=Depends(db_session_keeper.get_session)):
+        code_exercise_assistant_service = ServiceProvider().get_code_exercise_assistant_service()
+        
         return ctrl.ProgrammingSubmissionController(
             model_class=modl.ProgrammingSubmission,
-            repository=self.programming_submission_repo(db_session=db_session)
+            repository=self.programming_submission_repo(db_session=db_session),
+            exercise_repository=self.exercises_repository(db_session=db_session),
+            code_exercise_assistant_service=code_exercise_assistant_service
         )
 
     def get_learning_material_gen_controller(

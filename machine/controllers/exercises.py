@@ -304,8 +304,6 @@ class ExercisesController(BaseController[Exercises]):
             "score": None,
         }
         submission = await self.submission_repo.create(attributes=submission_data, commit=True)
-        submission_status = SubmissionStatus.COMPLETED
-
         for i, tc in enumerate(test_case_objs):
             result_data = test_results[i]
             test_result = ProgrammingTestResult(
@@ -319,14 +317,7 @@ class ExercisesController(BaseController[Exercises]):
                 memory=None,
             )
 
-            if result_data["status"] in ["In Queue", "Processing"]:
-                submission_status = SubmissionStatus.PENDING
-            elif result_data["status"] != "Accepted":
-                submission_status = SubmissionStatus.FAILED
-
             session.add(test_result)
-
-        submission.status = submission_status
         await session.flush()
         poll_judge0_submission_result.send(str(submission.id))
         return submission

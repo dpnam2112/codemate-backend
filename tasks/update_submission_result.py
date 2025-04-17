@@ -4,7 +4,9 @@ from sqlalchemy import select
 from core.db.session import DB_MANAGER, Dialect
 from core.db.utils import session_context
 from machine.models.coding_submission import ProgrammingSubmission, ProgrammingTestResult, ProgrammingTestCase, SubmissionStatus
+from machine.models.exercises import Exercises
 import machine.services.judge0_client as judge0_client
+from machine.services.code_exercise_assistant import CodeExerciseAssistantService
 from core.logger import syslog
 from worker import broker
 
@@ -60,14 +62,52 @@ async def poll_judge0_submission_result(submission_id_str: str):
             elif res["status"] != "Accepted":
                 submission_status = SubmissionStatus.FAILED
 
-        # Update submission status
+        if still_processing:
+            raise StillProcessingError(f"Submission {submission_id} still has pending results.")
+        
+        # Get submission and exercise details
         submission = await session.get(ProgrammingSubmission, submission_id)
-        if submission:
-            submission.status = submission_status
+        if not submission:
+            syslog.error(f"Submission {submission_id} not found")
+            return
 
+        try:
+            # Get exercise details
+            exercise = await session.get(Exercises, submission.exercise_id)
+            if not exercise:
+                syslog.error(f"Exercise not found for submission {submission_id}")
+                return
+
+            # Get problem description from exercise
+            problem_description = exercise.description or "No description provided"
+            
+            # Get test results for evaluation
+            eval_test_results = [{
+                "status": tr.status,
+                "stdout": tr.stdout,
+                "stderr": tr.stderr
+            } for tr in test_results]
+
+            # Evaluate the submission
+            assistant_service = CodeExerciseAssistantService()
+            evaluation = await assistant_service.evaluate_submission(
+                code=submission.code,
+                problem_description=problem_description,
+                language_id=submission.judge0_language_id,
+                test_results=eval_test_results
+            )
+
+            if evaluation:
+                # Update the submission with evaluation
+                submission.llm_evaluation = evaluation.model_dump()
+                syslog.info(f"Evaluated submission {submission_id} with score {evaluation.score}")
+        except Exception as e:
+            syslog.error(f"Error evaluating submission {submission_id}: {str(e)}")
+            # Continue with status update even if evaluation fails
+
+        # Update submission status after evaluation (or if evaluation was skipped)
+        submission.status = submission_status
         await session.commit()
         syslog.info(f"Updated submission {submission_id} status to {submission.status}")
 
-        if still_processing:
-            raise StillProcessingError(f"Submission {submission_id} still has pending results.")
 
