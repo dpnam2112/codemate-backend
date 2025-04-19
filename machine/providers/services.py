@@ -6,4 +6,4 @@ class ServiceProvider:
     def __init__(self): pass
 
     def get_code_exercise_assistant_service(self):
-        return CodeExerciseAssistantService(model="gemini/gemini-2.0-flash")
+        return CodeExerciseAssistantService()

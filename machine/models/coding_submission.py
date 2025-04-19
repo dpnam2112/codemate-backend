@@ -29,7 +29,7 @@ processing lifecycle. The possible status_id values and their corresponding mean
 from typing import Optional
 from uuid import UUID, uuid4
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID, JSONB
 from sqlalchemy import String, Text, Float, Integer, Boolean, ForeignKey, UniqueConstraint
 from core.db import Base
 from core.db.mixins import TimestampMixin
@@ -98,6 +98,7 @@ class ProgrammingSubmission(Base, TimestampMixin):
     code: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[SubmissionStatus] = mapped_column(String, default="pending")
     score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    llm_evaluation: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     test_results: Mapped[list["ProgrammingTestResult"]] = relationship("ProgrammingTestResult", lazy="selectin")
 
 class ProgrammingTestResult(Base, TimestampMixin):
