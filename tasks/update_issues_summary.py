@@ -94,7 +94,7 @@ async def update_issues_summary(submission_id_str: str):
 
         # Get current issues summary
         current_summary = student_course.issues_summary or {"common_issues": []}
-        issues_summary = IssuesSummary.model_validate(current_summary)
+        issues_summary = IssuesSummary.model_validate_json(current_summary)
 
         # Get LLM analysis
         llm_cfg = LLMModelConfig(
@@ -108,7 +108,7 @@ async def update_issues_summary(submission_id_str: str):
             course_objectives=course.learning_outcomes,
             exercise_title=exercise.name,
             exercise_description=exercise.description,
-            current_issues=[issue.model_dump() for issue in issues_summary.common_issues]
+            current_issues=[issue.model_dump(mode="json") for issue in issues_summary.common_issues]
         )
 
         if not analysis:

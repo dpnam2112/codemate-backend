@@ -9,16 +9,28 @@ from core.settings import settings as env_settings
 from core.logger import syslog
 from machine.schemas.llm_issue_analysis import IssueAnalysisResponse
 import json
+import litellm
 
 class SolutionResponse(BaseModel):
+    """
+    Schema for programming solution.
+    """
     solution: str
     explanation: str
 
-class LLMEvaluation(BaseModel):
+class EvaluationCriteria(BaseModel):
+    name: str
     score: float
-    max_score: float = 10.0
+    comment: str
+
+class LLMEvaluation(BaseModel):
+    """
+    Schema for Submission evaluation.
+    """
+    score: float
+    max_score: float
     summary: str
-    criteria: List[dict]
+    criteria: List[EvaluationCriteria]
     improvement_suggestions: List[str]
 
 default_config = LLMModelConfig(model_name="gemini/gemini-2.0-flash", api_key=env_settings.GEMINI_API_KEY)
@@ -103,7 +115,7 @@ class CodeExerciseAssistantService:
             ],
             temperature=self.llm_cfg.temperature,
             max_tokens=self.llm_cfg.max_tokens,
-            api_key=self.api_key,
+            api_key=self.llm_cfg.api_key,
             response_format=SolutionResponse
         )
         
@@ -152,35 +164,31 @@ class CodeExerciseAssistantService:
         - Do not generate duplicate issues.
         """
 
-        try:
-            response = await acompletion(
-                model=self.llm_cfg.model_name,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are an expert programming instructor analyzing student code submissions. Identify learning issues based on the submission evaluation and context."
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt_template.format(
-                            course_title=course_title,
-                            course_objectives=course_objectives,
-                            exercise_title=exercise_title,
-                            exercise_description=exercise_description,
-                            code=code,
-                            current_issues=json.dumps(current_issues, indent=2)
-                        )
-                    }
-                ],
-                api_key=self.api_key,
-                response_format=IssueAnalysisResponse
-            )
-            
-            analysis = response.choices[0].message.content
-            return IssueAnalysisResponse.model_validate_json(analysis)
-        except Exception as e:
-            syslog.error(f"Error analyzing learning issues: {str(e)}")
-            return None
+        response = await acompletion(
+            model=self.llm_cfg.model_name,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are an expert programming instructor analyzing student code submissions. Identify learning issues based on the submission evaluation and context."
+                },
+                {
+                    "role": "user",
+                    "content": prompt_template.format(
+                        course_title=course_title,
+                        course_objectives=course_objectives,
+                        exercise_title=exercise_title,
+                        exercise_description=exercise_description,
+                        code=code,
+                        current_issues=json.dumps(current_issues, indent=2)
+                    )
+                }
+            ],
+            api_key=self.api_key,
+            response_format=IssueAnalysisResponse
+        )
+        
+        analysis = response.choices[0].message.content
+        return IssueAnalysisResponse.model_validate_json(analysis)
 
     async def evaluate_submission(
         self,
@@ -248,7 +256,7 @@ Format your response as a JSON object matching this schema:
         try:
             # Call the LLM with structured response
             response = await acompletion(
-                model=self.llm_model_name,
+                model=self.llm_cfg.model_name,
                 messages=[
                     {
                         "role": "system",
@@ -256,7 +264,7 @@ Format your response as a JSON object matching this schema:
                     },
                     {"role": "user", "content": prompt}
                 ],
-                api_key=self.api_key,
+                api_key=self.llm_cfg.api_key,
                 response_format=LLMEvaluation
             )
             

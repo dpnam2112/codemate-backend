@@ -103,5 +103,5 @@ async def poll_judge0_submission_result(submission_id_str: str):
         syslog.info(f"Updated submission {submission_id} status to {submission.status}")
 
         # Trigger issues summary update
-        update_issues_summary.send(str(submission_id))
+#        update_issues_summary.send(str(submission_id))
         syslog.info(f"Triggered issues summary update for submission {submission_id}")

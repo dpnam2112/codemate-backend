@@ -235,8 +235,6 @@ class ExercisesController(BaseController[Exercises]):
             "Begin by analyzing the user's solution and assisting them with their current challenge."
         ).format(problem_description=problem_description, user_solution=user_solution)
 
-        print("user_solution =", user_solution)
-
         llm_messages.append({"role": "system", "content": system_prompt})
         # Append the conversation history.
         for msg in history:
