@@ -9,6 +9,7 @@ import machine.services.judge0_client as judge0_client
 from machine.services.code_exercise_assistant import CodeExerciseAssistantService
 from core.logger import syslog
 from worker import broker
+from tasks.update_issues_summary import update_issues_summary
 
 
 class StillProcessingError(Exception):
@@ -100,3 +101,7 @@ async def poll_judge0_submission_result(submission_id_str: str):
         submission.status = submission_status
         await session.commit()
         syslog.info(f"Updated submission {submission_id} status to {submission.status}")
+
+        # Trigger issues summary update
+        update_issues_summary.send(str(submission_id))
+        syslog.info(f"Triggered issues summary update for submission {submission_id}")

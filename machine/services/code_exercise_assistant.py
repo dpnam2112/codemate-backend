@@ -1,17 +1,32 @@
-from typing import Optional, Tuple
+import re
+
+from typing import Optional, Tuple, List
 from litellm import acompletion
 from core.judge0 import get_language_name
 from pydantic import BaseModel
-from machine.schemas.programming_submission import LLMEvaluation
 from core.llm import LLMModelConfig
 from core.settings import settings as env_settings
 from core.logger import syslog
+from machine.schemas.llm_issue_analysis import IssueAnalysisResponse
+import json
 
 class SolutionResponse(BaseModel):
     solution: str
     explanation: str
 
+class LLMEvaluation(BaseModel):
+    score: float
+    max_score: float = 10.0
+    summary: str
+    criteria: List[dict]
+    improvement_suggestions: List[str]
+
 default_config = LLMModelConfig(model_name="gemini/gemini-2.0-flash", api_key=env_settings.GEMINI_API_KEY)
+
+def strip_code_blocks(text: str) -> str:
+    text = re.sub(r"```[\w+-]*\s*", "", text)  # handles ```python3, ```c++, etc.
+    text = re.sub(r"```", "", text)            # in case closing ``` is still there
+    return text.strip()
 
 class CodeExerciseAssistantService:
     def __init__(
@@ -19,6 +34,7 @@ class CodeExerciseAssistantService:
         llm_cfg: LLMModelConfig = default_config
     ):
         self.llm_cfg = llm_cfg
+        self.api_key = llm_cfg.api_key
 
     async def generate_solution(
         self,
@@ -39,31 +55,41 @@ class CodeExerciseAssistantService:
         """
         language_name = get_language_name(language_id)
 
-        # Construct the prompt
-        prompt = f"""You are an expert programming assistant. Please help solve this programming problem.
+        prompt = f"""You are a professional programming assistant helping students solve coding problems.
 
-Problem Description:
-{problem_description}
+        Below is the problem statement, the programming language to be used, and the initial code scaffold. Your task is to complete the solution and explain your approach.
 
-Initial Code:
-```{language_name.lower()}
-{initial_code}
-```
+        ---
 
-Please provide:
-1. A complete solution that satisfies the requirements
-2. A brief explanation of the solution approach
+        **Your Task:**
+        1. Complete the code so it solves the problem.
+        2. Provide a brief explanation of your approach.
+        3. Provide a brief explanation of your approach. Add helpful inline comments that explain the logic step-by-step, so that students can easily follow and learn from the code.
 
-Requirements:
-- Write the solution in {language_name}
-- Maintain the same function signature and input/output types
-- Include comments for clarity
-- Ensure the code is production-ready and follows best practices 
-- Keep the explanation concise but informative
+        **Guidelines:**
+        - Keep the same function signature and input/output types.
+        - Add clear and helpful comments in the code.
+        - Follow best practices and ensure the code is clean and production-ready.
+        - Keep the explanation short but informative.
+        - DO NOT use code blocks (e.g., do *not* start with ```python3, ```java, ``cpp, .etc).
+        - Assume you're writing inside a regular code editor without syntax highlighting.
+        - Follow language-specific conventions. For example, in Java, the solution should include a `Main` class if required.
+        - Use only {language_name}.
+        - Include educational comments that explain why certain steps are taken, not just what is being done.
 
-Solution:"""
+        ---
 
-        
+        **Problem Description:**
+        {problem_description}
+
+        **Programming Language:** {language_name}
+
+        **Initial Code:**
+        ```{language_name.lower()}
+        {initial_code}
+        ```
+
+        **Solution:**"""
 
         # Call the LLM with structured response
         response = await acompletion(
@@ -77,15 +103,84 @@ Solution:"""
             ],
             temperature=self.llm_cfg.temperature,
             max_tokens=self.llm_cfg.max_tokens,
-            api_key=self.llm_cfg.api_key,
+            api_key=self.api_key,
             response_format=SolutionResponse
         )
         
         # Parse the structured response
         result = response.choices[0].message.content
         parsed_result = SolutionResponse.model_validate_json(result)
+        cleaned_solution = strip_code_blocks(parsed_result.solution)
         
-        return parsed_result.solution, parsed_result.explanation
+        return cleaned_solution, parsed_result.explanation
+
+    async def analyze_learning_issues(
+        self,
+        code: str,
+        course_title: str,
+        course_objectives: str,
+        exercise_title: str,
+        exercise_description: str,
+        current_issues: List[dict]
+    ) -> Optional[IssueAnalysisResponse]:
+        """Analyze learning issues from a code submission."""
+        prompt_template = """
+        As an expert programming instructor, analyze this student's code submission and identify learning issues.
+
+        Course Context:
+        - Title: {course_title}
+        - Objectives: {course_objectives}
+
+        Exercise Context:
+        - Title: {exercise_title}
+        - Description: {exercise_description}
+
+        Student's Code:
+        ```{code}```
+
+        Current Learning Issues:
+        {current_issues}
+
+        Please analyze the code and identify any new learning issues. For each issue found:
+        1. Specify the issue type (from IssueType enum)
+        2. Provide a clear description of the issue
+
+        Guidelines:
+        - Focus on issues relevant to the course objectives
+        - Consider both technical and conceptual learning gaps
+        - Only generate issues if there are actual problems in the code
+        - Do not generate duplicate issues.
+        """
+
+        try:
+            response = await acompletion(
+                model=self.llm_cfg.model_name,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are an expert programming instructor analyzing student code submissions. Identify learning issues based on the submission evaluation and context."
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt_template.format(
+                            course_title=course_title,
+                            course_objectives=course_objectives,
+                            exercise_title=exercise_title,
+                            exercise_description=exercise_description,
+                            code=code,
+                            current_issues=json.dumps(current_issues, indent=2)
+                        )
+                    }
+                ],
+                api_key=self.api_key,
+                response_format=IssueAnalysisResponse
+            )
+            
+            analysis = response.choices[0].message.content
+            return IssueAnalysisResponse.model_validate_json(analysis)
+        except Exception as e:
+            syslog.error(f"Error analyzing learning issues: {str(e)}")
+            return None
 
     async def evaluate_submission(
         self,
@@ -153,7 +248,7 @@ Format your response as a JSON object matching this schema:
         try:
             # Call the LLM with structured response
             response = await acompletion(
-                model=self.llm_cfg.model_name,
+                model=self.llm_model_name,
                 messages=[
                     {
                         "role": "system",
@@ -161,8 +256,7 @@ Format your response as a JSON object matching this schema:
                     },
                     {"role": "user", "content": prompt}
                 ],
-                temperature=self.llm_cfg.temperature,
-                max_tokens=self.llm_cfg.max_tokens,
+                api_key=self.api_key,
                 response_format=LLMEvaluation
             )
             
