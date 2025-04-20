@@ -1008,16 +1008,6 @@ async def analyze_issues(
 ) -> dict:
     """
     Analyze the issues_summary using AI to determine next steps for the student.
-    
-    Args:
-        recommend_lesson: The recommended lesson object
-        issues_summary: JSON data from StudentCourses.issues_summary
-        learning_path: The latest learning path for the student
-        recommend_lessons_controller: Controller for recommend_lessons
-        lessons_controller: Controller for lessons
-    
-    Returns:
-        Dict with AI-driven analysis results and recommendations
     """
     result = {
         "can_proceed": True,
@@ -1066,98 +1056,111 @@ async def analyze_issues(
     # Determine if current lesson is the first one
     is_first_lesson = len(prior_lessons) == 0
     
-    # Construct AI prompt
-    ## 6. For analyze_issues in ai_routers.py
+    # Build the prompt in parts to avoid f-string complexities
+    prompt_parts = []
     
-    prompt = f"""
-## Issues Analysis Task
-- Lesson Title: "{lesson.title}"
-- Recommended Lesson ID: "{recommend_lesson.id}"
-- Student Goal: "{learning_path.objective}"
-- Issues Summary (JSON): {json.dumps(issues_summary, indent=2)}
-- Is First Lesson in Learning Path: {is_first_lesson}
-- Prior Lessons in Learning Path: {json.dumps(prior_lessons_details, indent=2)}
-
-## FORMATTING REQUIREMENTS:
-- Present ALL content in list format with bullet points or numbering
-- Never use paragraphs - break content into structured lists
-- Use line breaks between major points
-- Keep individual points concise (1-2 sentences maximum)
-- Use hierarchical structure for clarity
-- Include bullet points (•) at the start of list items
-- Use numbered lists (1., 2., etc.) for sequential steps
-
-## Task Requirements
-Analyze the provided `issues_summary` to determine the student's next steps.
-
-{
-    "For first lesson analysis:" if is_first_lesson else "For subsequent lesson analysis:"
-}
-
-{
-    "1. Focus ONLY on issues related to the current lesson (this is the first lesson in the path).\n2. Look in the common_issues array for issues where related_lessons contains the current recommended lesson ID." 
-    if is_first_lesson 
-    else 
-    "1. Analyze issues related to BOTH the current lesson AND any prior lessons.\n2. Look in the common_issues array for issues where related_lessons contains either the current or prior recommended lesson IDs."
-}
-
-Consider:
-1. **Severity of Issues**:
-- Present analysis as bulleted list points
-- Break down frequency data into structured format
-
-2. **Impact on Long-term Goals**:
-- Structure impact assessment as bullet points
-- List specific consequences with clear formatting
-
-3. **Relation to Prior Lessons**: {
-    "" if is_first_lesson 
-    else 
-    "- Present connections as structured list items\n- Format lesson references with clear hierarchy"
-}
-
-4. **Recommendations**:
-- Format each recommendation as a structured list
-- Present reasoning as bulleted points
-- Structure lesson references with clear formatting
-
-## Output Format
-{{
-    "can_proceed": true/false,
-    "needs_repeat": true/false,
-    "needs_review_prior": true/false,
-    "issues_analysis": {{
-        "significant_issues": [
-            {{
-                "type": "issue type",
-                "frequency": number,
-                "description": "• Issue point 1\\n• Issue point 2",
-                "severity": "low/medium/high",
-                "impact_on_goals": "• Impact 1\\n• Impact 2\\n• Impact 3"
-            }}
-        ],
-        "total_issues_count": number,
-        "increasing_issues": ["issue1", "issue2"],
-        "most_frequent_type": "type"
-    }},
-    "recommendations": [
-        {{
-            "action": "proceed/repeat/review_prior",
-            "reason": "• Reason 1\\n• Reason 2\\n• Reason 3",
-            "details": "• Lesson detail 1\\n• Lesson detail 2"
-        }}
-    ]
-}}
-
-IMPORTANT RULES:
-1. YOU MUST RETURN THE RESPONSE IN JSON FORMAT ABOVE.
-2. NEVER return IDs of lessons in recommendations - use LESSON TITLES instead.
-3. Give ONLY ONE or at most TWO recommendations.
-4. If giving two recommendations, "proceed" and "repeat" CANNOT both be included.
-5. ALL TEXT MUST BE FORMATTED AS LISTS WITH BULLET POINTS, NOT PARAGRAPHS.
-"""
-    print(f"AI prompt: {prompt}")
-
+    # Header section
+    prompt_parts.append("## Issues Analysis Task")
+    prompt_parts.append(f"- Lesson Title: \"{lesson.title}\"")
+    prompt_parts.append(f"- Recommended Lesson ID: \"{recommend_lesson.id}\"")
+    prompt_parts.append(f"- Student Goal: \"{learning_path.objective}\"")
+    prompt_parts.append(f"- Issues Summary (JSON): {json.dumps(issues_summary, indent=2)}")
+    prompt_parts.append(f"- Is First Lesson in Learning Path: {is_first_lesson}")
+    prompt_parts.append(f"- Prior Lessons in Learning Path: {json.dumps(prior_lessons_details, indent=2)}")
+    prompt_parts.append("")
+    
+    # Formatting section
+    prompt_parts.append("## FORMATTING REQUIREMENTS:")
+    prompt_parts.append("- Present ALL content in list format with bullet points or numbering")
+    prompt_parts.append("- Never use paragraphs - break content into structured lists")
+    prompt_parts.append("- Use line breaks between major points")
+    prompt_parts.append("- Keep individual points concise (1-2 sentences maximum)")
+    prompt_parts.append("- Use hierarchical structure for clarity")
+    prompt_parts.append("- Include bullet points (•) at the start of list items")
+    prompt_parts.append("- Use numbered lists (1., 2., etc.) for sequential steps")
+    prompt_parts.append("")
+    
+    # Task requirements section
+    prompt_parts.append("## Task Requirements")
+    prompt_parts.append("Analyze the provided `issues_summary` to determine the student's next steps.")
+    prompt_parts.append("")
+    
+    # First or subsequent lesson analysis
+    if is_first_lesson:
+        prompt_parts.append("For first lesson analysis:")
+        prompt_parts.append("1. Focus ONLY on issues related to the current lesson (this is the first lesson in the path).")
+        prompt_parts.append("2. Look in the common_issues array for issues where related_lessons contains the current recommended lesson ID.")
+    else:
+        prompt_parts.append("For subsequent lesson analysis:")
+        prompt_parts.append("1. Analyze issues related to BOTH the current lesson AND any prior lessons.")
+        prompt_parts.append("2. Look in the common_issues array for issues where related_lessons contains either the current or prior recommended lesson IDs.")
+    prompt_parts.append("")
+    
+    # Consider section
+    prompt_parts.append("Consider:")
+    prompt_parts.append("1. **Severity of Issues**:")
+    prompt_parts.append("- Present analysis as bulleted list points")
+    prompt_parts.append("- Break down frequency data into structured format")
+    prompt_parts.append("")
+    
+    prompt_parts.append("2. **Impact on Long-term Goals**:")
+    prompt_parts.append("- Structure impact assessment as bullet points")
+    prompt_parts.append("- List specific consequences with clear formatting")
+    prompt_parts.append("")
+    
+    prompt_parts.append("3. **Relation to Prior Lessons**:")
+    if not is_first_lesson:
+        prompt_parts.append("- Present connections as structured list items")
+        prompt_parts.append("- Format lesson references with clear hierarchy")
+    prompt_parts.append("")
+    
+    prompt_parts.append("4. **Recommendations**:")
+    prompt_parts.append("- Format each recommendation as a structured list")
+    prompt_parts.append("- Present reasoning as bulleted points")
+    prompt_parts.append("- Structure lesson references with clear formatting")
+    prompt_parts.append("")
+    
+    # Output format section
+    prompt_parts.append("## Output Format")
+    prompt_parts.append("{")
+    prompt_parts.append("    \"can_proceed\": true/false,")
+    prompt_parts.append("    \"needs_repeat\": true/false,")
+    prompt_parts.append("    \"needs_review_prior\": true/false,")
+    prompt_parts.append("    \"issues_analysis\": {")
+    prompt_parts.append("        \"significant_issues\": [")
+    prompt_parts.append("            {")
+    prompt_parts.append("                \"type\": \"issue type\",")
+    prompt_parts.append("                \"frequency\": number,")
+    prompt_parts.append("                \"description\": \"• Issue point 1\\n• Issue point 2\",")
+    prompt_parts.append("                \"severity\": \"low/medium/high\",")
+    prompt_parts.append("                \"impact_on_goals\": \"• Impact 1\\n• Impact 2\\n• Impact 3\"")
+    prompt_parts.append("            }")
+    prompt_parts.append("        ],")
+    prompt_parts.append("        \"total_issues_count\": number,")
+    prompt_parts.append("        \"increasing_issues\": [\"issue1\", \"issue2\"],")
+    prompt_parts.append("        \"most_frequent_type\": \"type\"")
+    prompt_parts.append("    },")
+    prompt_parts.append("    \"recommendations\": [")
+    prompt_parts.append("        {")
+    prompt_parts.append("            \"action\": \"proceed/repeat/review_prior\",")
+    prompt_parts.append("            \"reason\": \"• Reason 1\\n• Reason 2\\n• Reason 3\",")
+    prompt_parts.append("            \"details\": \"• Lesson detail 1\\n• Lesson detail 2\"")
+    prompt_parts.append("        }")
+    prompt_parts.append("    ]")
+    prompt_parts.append("}")
+    prompt_parts.append("")
+    
+    # Important rules section
+    prompt_parts.append("IMPORTANT RULES:")
+    prompt_parts.append("1. YOU MUST RETURN THE RESPONSE IN JSON FORMAT ABOVE.")
+    prompt_parts.append("2. NEVER return IDs of lessons in recommendations - use LESSON TITLES instead.")
+    prompt_parts.append("3. Give ONLY ONE or at most TWO recommendations.")
+    prompt_parts.append("4. If giving two recommendations, \"proceed\" and \"repeat\" CANNOT both be included.")
+    prompt_parts.append("5. ALL TEXT MUST BE FORMATTED AS LISTS WITH BULLET POINTS, NOT PARAGRAPHS.")
+    
+    # Join all parts with newlines
+    prompt = "\n".join(prompt_parts)
+    
     # Call AI for analysis
     try:
         response = chunking_manager.call_llm_api(
@@ -1181,7 +1184,6 @@ IMPORTANT RULES:
     result.update(analysis_result)
 
     return result
-
 class RegenerateLessonRequest(BaseModel):
     recommend_lesson_id: UUID
     analysis_result: dict  # Kết quả từ monitor_study_progress_endpoint
