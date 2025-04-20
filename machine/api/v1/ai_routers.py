@@ -1068,94 +1068,94 @@ async def analyze_issues(
     
     # Construct AI prompt
     ## 6. For analyze_issues in ai_routers.py
-
+    
     prompt = f"""
-    ## Issues Analysis Task
-    - Lesson Title: "{lesson.title}"
-    - Recommended Lesson ID: "{recommend_lesson.id}"
-    - Student Goal: "{learning_path.objective}"
-    - Issues Summary (JSON): {json.dumps(issues_summary, indent=2)}
-    - Is First Lesson in Learning Path: {is_first_lesson}
-    - Prior Lessons in Learning Path: {json.dumps(prior_lessons_details, indent=2)}
+## Issues Analysis Task
+- Lesson Title: "{lesson.title}"
+- Recommended Lesson ID: "{recommend_lesson.id}"
+- Student Goal: "{learning_path.objective}"
+- Issues Summary (JSON): {json.dumps(issues_summary, indent=2)}
+- Is First Lesson in Learning Path: {is_first_lesson}
+- Prior Lessons in Learning Path: {json.dumps(prior_lessons_details, indent=2)}
 
-    ## FORMATTING REQUIREMENTS:
-    - Present ALL content in list format with bullet points or numbering
-    - Never use paragraphs - break content into structured lists
-    - Use line breaks between major points
-    - Keep individual points concise (1-2 sentences maximum)
-    - Use hierarchical structure for clarity
-    - Include bullet points (•) at the start of list items
-    - Use numbered lists (1., 2., etc.) for sequential steps
+## FORMATTING REQUIREMENTS:
+- Present ALL content in list format with bullet points or numbering
+- Never use paragraphs - break content into structured lists
+- Use line breaks between major points
+- Keep individual points concise (1-2 sentences maximum)
+- Use hierarchical structure for clarity
+- Include bullet points (•) at the start of list items
+- Use numbered lists (1., 2., etc.) for sequential steps
 
-    ## Task Requirements
-    Analyze the provided `issues_summary` to determine the student's next steps.
+## Task Requirements
+Analyze the provided `issues_summary` to determine the student's next steps.
 
-    {"For first lesson analysis:" if is_first_lesson else "For subsequent lesson analysis:"}
+{
+    "For first lesson analysis:" if is_first_lesson else "For subsequent lesson analysis:"
+}
 
-    {
+{
     "1. Focus ONLY on issues related to the current lesson (this is the first lesson in the path).\n2. Look in the common_issues array for issues where related_lessons contains the current recommended lesson ID." 
     if is_first_lesson 
     else 
     "1. Analyze issues related to BOTH the current lesson AND any prior lessons.\n2. Look in the common_issues array for issues where related_lessons contains either the current or prior recommended lesson IDs."
-    }
+}
 
-    Consider:
-    1. **Severity of Issues**:
-    - Present analysis as bulleted list points
-    - Break down frequency data into structured format
+Consider:
+1. **Severity of Issues**:
+- Present analysis as bulleted list points
+- Break down frequency data into structured format
 
-    2. **Impact on Long-term Goals**:
-    - Structure impact assessment as bullet points
-    - List specific consequences with clear formatting
+2. **Impact on Long-term Goals**:
+- Structure impact assessment as bullet points
+- List specific consequences with clear formatting
 
-    3. **Relation to Prior Lessons**: {
-    "" if is_first_lesson else """
-    - Present connections as structured list items
-    - Format lesson references with clear hierarchy
-    """
-    }
+3. **Relation to Prior Lessons**: {
+    "" if is_first_lesson 
+    else 
+    "- Present connections as structured list items\n- Format lesson references with clear hierarchy"
+}
 
-    4. **Recommendations**:
-    - Format each recommendation as a structured list
-    - Present reasoning as bulleted points
-    - Structure lesson references with clear formatting
+4. **Recommendations**:
+- Format each recommendation as a structured list
+- Present reasoning as bulleted points
+- Structure lesson references with clear formatting
 
-    ## Output Format
-    {{
-        "can_proceed": true/false,
-        "needs_repeat": true/false,
-        "needs_review_prior": true/false,
-        "issues_analysis": {{
-            "significant_issues": [
-                {{
-                    "type": "issue type",
-                    "frequency": number,
-                    "description": "• Issue point 1\\n• Issue point 2",
-                    "severity": "low/medium/high",
-                    "impact_on_goals": "• Impact 1\\n• Impact 2\\n• Impact 3"
-                }}
-            ],
-            "total_issues_count": number,
-            "increasing_issues": ["issue1", "issue2"],
-            "most_frequent_type": "type"
-        }},
-        "recommendations": [
+## Output Format
+{{
+    "can_proceed": true/false,
+    "needs_repeat": true/false,
+    "needs_review_prior": true/false,
+    "issues_analysis": {{
+        "significant_issues": [
             {{
-                "action": "proceed/repeat/review_prior",
-                "reason": "• Reason 1\\n• Reason 2\\n• Reason 3",
-                "details": "• Lesson detail 1\\n• Lesson detail 2"
+                "type": "issue type",
+                "frequency": number,
+                "description": "• Issue point 1\\n• Issue point 2",
+                "severity": "low/medium/high",
+                "impact_on_goals": "• Impact 1\\n• Impact 2\\n• Impact 3"
             }}
-        ]
-    }}
+        ],
+        "total_issues_count": number,
+        "increasing_issues": ["issue1", "issue2"],
+        "most_frequent_type": "type"
+    }},
+    "recommendations": [
+        {{
+            "action": "proceed/repeat/review_prior",
+            "reason": "• Reason 1\\n• Reason 2\\n• Reason 3",
+            "details": "• Lesson detail 1\\n• Lesson detail 2"
+        }}
+    ]
+}}
 
-    IMPORTANT RULES:
-    1. YOU MUST RETURN THE RESPONSE IN JSON FORMAT ABOVE.
-    2. NEVER return IDs of lessons in recommendations - use LESSON TITLES instead.
-    3. Give ONLY ONE or at most TWO recommendations.
-    4. If giving two recommendations, "proceed" and "repeat" CANNOT both be included.
-    5. ALL TEXT MUST BE FORMATTED AS LISTS WITH BULLET POINTS, NOT PARAGRAPHS.
-    """
-        
+IMPORTANT RULES:
+1. YOU MUST RETURN THE RESPONSE IN JSON FORMAT ABOVE.
+2. NEVER return IDs of lessons in recommendations - use LESSON TITLES instead.
+3. Give ONLY ONE or at most TWO recommendations.
+4. If giving two recommendations, "proceed" and "repeat" CANNOT both be included.
+5. ALL TEXT MUST BE FORMATTED AS LISTS WITH BULLET POINTS, NOT PARAGRAPHS.
+"""
     print(f"AI prompt: {prompt}")
 
     # Call AI for analysis
