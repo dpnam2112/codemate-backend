@@ -199,6 +199,16 @@ class ProgrammingExerciseGenService:
             "4. Your initial code MUST have TODO for student to fill out.\n"
             "5. Your initial code MUST NOT reveal the solution of the problem.\n"
             "6. Testcase design are not needed.\n"
+            "7. The problem must be inspired by real-world or practical use cases that students might encounter in daily life or in the workplace."
+            "8. Avoid abstract puzzles unless they directly apply to real-world scenarios."
+            "9. Prefer domains such as finance, scheduling, data processing, health, logistics, social media, or sensor systems."
+            """10. Example problem ideas:
+               - Parsing a bank statement to detect duplicate transactions
+               - Analyzing social media messages to detect trending topics
+               - Scheduling tasks to minimize overlap
+               - Validating a CSV file of sensor readings
+               - Detecting misuse of discount codes in an e-commerce checkout system"""
+
         )
 
         # Prepare messages for the chat completion
