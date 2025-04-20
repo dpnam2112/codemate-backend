@@ -60,8 +60,6 @@ openai = "^1.66.3"
 docx = "^0.2.4"
 python-docx = "^1.1.2"
 python-pptx = "^1.0.2"
-fitz = "^0.0.1.dev2"
-frontend = "^0.0.3"
 tools = "^0.1.9"
 pdfminer = "^20191125"
 pdfminer-six = "^20250324"
@@ -69,6 +67,7 @@ requests = "^2.32.3"
 litellm = "^1.65.6"
 pymupdf = "^1.25.5"
 psycopg2-binary = "^2.9.10"
+pypdf2 = "^3.0.1"
 
 
 [build-system]
