@@ -1090,18 +1090,13 @@ async def analyze_issues(
     ## Task Requirements
     Analyze the provided `issues_summary` to determine the student's next steps.
 
-    {
-    "For first lesson analysis:" if is_first_lesson else "For subsequent lesson analysis:"
-    }
+    {"For first lesson analysis:" if is_first_lesson else "For subsequent lesson analysis:"}
 
     {
-    """
-    1. Focus ONLY on issues related to the current lesson (this is the first lesson in the path).
-    2. Look in the common_issues array for issues where related_lessons contains the current recommended lesson ID.
-    """ if is_first_lesson else """
-    1. Analyze issues related to BOTH the current lesson AND any prior lessons.
-    2. Look in the common_issues array for issues where related_lessons contains either the current or prior recommended lesson IDs.
-    """
+    "1. Focus ONLY on issues related to the current lesson (this is the first lesson in the path).\n2. Look in the common_issues array for issues where related_lessons contains the current recommended lesson ID." 
+    if is_first_lesson 
+    else 
+    "1. Analyze issues related to BOTH the current lesson AND any prior lessons.\n2. Look in the common_issues array for issues where related_lessons contains either the current or prior recommended lesson IDs."
     }
 
     Consider:
