@@ -27,10 +27,6 @@ load_dotenv()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 router = APIRouter(prefix="/ai", tags=["ai"])
 
-load_dotenv()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
-router = APIRouter(prefix="/ai", tags=["ai"])
-
 async def analyze_goal_and_timeline(
     goal: str,
     course_start_date: datetime,
@@ -1259,37 +1255,6 @@ async def regenerate_lesson_content_endpoint(
         recommend_documents_controller=recommend_documents_controller
     )
     return Ok(data=updated_content, message="Lesson content regenerated successfully.")
-
-@router.get("/regenerate-lesson-content/{recommend_lesson_id}") #haven't tested
-async def regenerate_lesson_content_endpoint(
-    recommend_lesson_id: UUID,
-    token: str = Depends(oauth2_scheme),
-    recommend_lessons_controller: RecommendLessonsController = Depends(InternalProvider().get_recommendlessons_controller),
-    lessons_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
-    student_courses_controller: StudentCoursesController = Depends(InternalProvider().get_studentcourses_controller),
-    modules_controller: ModulesController = Depends(InternalProvider().get_modules_controller),
-    learning_path_controller: LearningPathsController = Depends(InternalProvider().get_learningpaths_controller),
-):
-    """Regenerate content for a recommended lesson based on issues."""
-    payload = verify_token(token)
-    student_id = payload.get("sub")
-    if not student_id:
-        raise BadRequestException(message="Invalid token.")
-
-    student_course = await student_courses_controller.student_courses_repository.first(
-        where_=[StudentCourses.student_id == student_id]
-    )
-    if not student_course:
-        raise NotFoundException(message="Student course data not found.")
-
-    updated_content = await regenerate_lesson_content(
-        recommend_lesson_id,
-        student_course.issues_summary,
-        lessons_controller,
-        recommend_lessons_controller
-    )
-    return Ok(data=updated_content, message="Lesson content regenerated successfully.")
- 
 
 @router.get("/generate-student-goals/{course_id}")
 async def generate_student_goals(
