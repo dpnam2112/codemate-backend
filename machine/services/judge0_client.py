@@ -1,4 +1,6 @@
 #!snippets/judge0_api.py
+import base64
+
 from typing import Any
 import httpx
 from core.settings import settings as env_settings
@@ -92,6 +94,7 @@ async def get_submission_results(
                 },
                 params={"tokens": tokens_str, "base64_encoded": False},
             )
+            print(result_response.text)
             result_response.raise_for_status()
             result_data = result_response.json()
         except httpx.HTTPError as exc:

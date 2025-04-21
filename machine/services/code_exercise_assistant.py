@@ -154,7 +154,7 @@ class CodeExerciseAssistantService:
         {current_issues}
 
         Please analyze the code and identify any new learning issues. For each issue found:
-        1. Specify the issue type (from IssueType enum)
+        1. Specify the issue type. e.g: knowledge_gap, concept_misunderstanding, .etc
         2. Provide a clear description of the issue
 
         Guidelines:

@@ -1,1 +1,2 @@
 from .update_submission_result import poll_judge0_submission_result
+from .update_issues_summary import update_issues_summary_task
