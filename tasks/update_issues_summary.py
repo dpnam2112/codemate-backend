@@ -5,7 +5,6 @@ from core.db.session import DB_MANAGER, Dialect
 from core.db.utils import session_context
 from core.llm.model_config import LLMModelConfig
 from machine.models.coding_submission import ProgrammingSubmission
-from machine.models.modules import Modules
 from machine.models.student_courses import StudentCourses, LearningIssue, IssuesSummary
 from machine.models.exercises import Exercises
 from machine.models.courses import Courses
@@ -52,10 +51,8 @@ async def resolve_course_and_student_course(session, exercise: Exercises, user_i
 
     return None, None
 
-
-
 @actor(max_retries=3, min_backoff=10, max_backoff=60, broker=broker)
-async def update_issues_summary(submission_id_str: str):
+async def update_issues_summary_task(submission_id_str: str):
     submission_id = UUID(submission_id_str)
     async with session_context(DB_MANAGER[Dialect.POSTGRES]) as session:
         # Fetch all required data in a single query
@@ -117,8 +114,7 @@ async def update_issues_summary(submission_id_str: str):
 
         # If LLM found no issues, clear the issues list
         if not analysis.issues:
-            issues_summary.common_issues = []
-            syslog.info(f"No issues found by LLM, clearing issues list for student {submission.user_id}")
+            pass
         else:
             existing_issues = {issue.type: issue for issue in issues_summary.common_issues}
             

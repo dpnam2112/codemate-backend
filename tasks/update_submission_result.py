@@ -9,13 +9,13 @@ import machine.services.judge0_client as judge0_client
 from machine.services.code_exercise_assistant import CodeExerciseAssistantService
 from core.logger import syslog
 from worker import broker
-from tasks.update_issues_summary import update_issues_summary
+from tasks.update_issues_summary import update_issues_summary_task
 
 
 class StillProcessingError(Exception):
     pass
 
-@actor(max_retries=3, min_backoff=10, max_backoff=60, broker=broker)
+@actor(max_retries=5, min_backoff=10, max_backoff=60, broker=broker)
 async def poll_judge0_submission_result(submission_id_str: str):
     submission_id = UUID(submission_id_str)
     async with session_context(DB_MANAGER[Dialect.POSTGRES]) as session:
@@ -103,5 +103,5 @@ async def poll_judge0_submission_result(submission_id_str: str):
         syslog.info(f"Updated submission {submission_id} status to {submission.status}")
 
         # Trigger issues summary update
-#        update_issues_summary.send(str(submission_id))
+        update_issues_summary_task.send(str(submission_id))
         syslog.info(f"Triggered issues summary update for submission {submission_id}")

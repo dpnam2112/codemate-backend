@@ -28,4 +28,4 @@ broker = RedisBroker(
 )
 dramatiq.set_broker(broker)
 
-import tasks.update_submission_result
+from tasks import *

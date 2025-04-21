@@ -100,6 +100,10 @@ class ProgrammingSubmissionStatSchema(BaseModel):
     status: str
     passed_testcases: int
     total_testcases: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
 
 class ProgrammingSubmissionBriefSchema(BaseModel):
     id: UUID

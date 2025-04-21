@@ -919,6 +919,7 @@ async def ask_coding_assistant_stream(
         coding_exercise_id=coding_exercise_id,
         content=body.content,
         user_solution=body.user_solution,
+        language_id=body.language_id
     )
     # Stream the response using text/event-stream media type.
     return StreamingResponse(generator, media_type="text/event-stream")
@@ -1101,3 +1102,12 @@ async def get_or_generate_code_solution(
         explanation=explanation
     ))
 
+
+@router.delete("/{exercise_id}/ai-generated")
+async def delete_ai_generated_code_exercise(
+    exercise_id: UUID,
+    exercise_controller: ExercisesController = Depends(InternalProvider().get_exercises_controller)
+):
+    deleted_exercises = await exercise_controller.delete(where_=[Exercises.id == exercise_id])
+    deleted = deleted_exercises[0] if deleted_exercises else None
+    return Ok(data={ "id": deleted.id if deleted else None  })
