@@ -87,7 +87,7 @@ class CodeExerciseAssistantService:
         - Assume you're writing inside a regular code editor without syntax highlighting.
         - Follow language-specific conventions. For example, in Java, the solution should include a `Main` class if required.
         - Use only {language_name}.
-        - Include educational comments that explain why certain steps are taken, not just what is being done.
+        - You MUST ADD educational and detailed comments that explain why certain steps are taken, not just what is being done. Explain clearly so that students can easily understand your solution.
 
         ---
 
@@ -137,31 +137,43 @@ class CodeExerciseAssistantService:
     ) -> Optional[IssueAnalysisResponse]:
         """Analyze learning issues from a code submission."""
         prompt_template = """
-        As an expert programming instructor, analyze this student's code submission and identify learning issues.
+        You are an expert programming instructor tasked with analyzing a student's code submission to uncover conceptual or learning-related issues.
 
-        Course Context:
-        - Title: {course_title}
-        - Objectives: {course_objectives}
+        ### Course Information
+        - **Course Title**: {course_title}
+        - **Learning Objectives**: {course_objectives}
 
-        Exercise Context:
-        - Title: {exercise_title}
-        - Description: {exercise_description}
+        ### Exercise Details
+        - **Exercise Title**: {exercise_title}
+        - **Exercise Description**: {exercise_description}
 
-        Student's Code:
+        ### Student Submission
         ```{code}```
 
-        Current Learning Issues:
+        ### Known Learning Issues (if any)
         {current_issues}
 
-        Please analyze the code and identify any new learning issues. For each issue found:
-        1. Specify the issue type. e.g: knowledge_gap, concept_misunderstanding, .etc
-        2. Provide a clear description of the issue
+        ---
 
-        Guidelines:
-        - Focus on issues relevant to the course objectives
-        - Consider both technical and conceptual learning gaps
-        - Only generate issues if there are actual problems in the code
-        - Do not generate duplicate issues.
+        ### Your Task
+
+        Carefully review the student’s code and identify **new learning issues** that may indicate gaps in understanding. For each issue found, provide:
+
+        1. **Issue Type**: Choose from categories such as `knowledge_gap`, `concept_misunderstanding`, `incomplete_application`, `logical_confusion`, or `syntax_dependency`.
+        2. **Issue Description**: Clearly explain the problem and how it reflects a misunderstanding of specific programming concepts or course material.
+
+        ---
+
+        ### Evaluation Guidelines
+        Follow these principles strictly when analyzing the student's code:
+          - Review the existing learning issues. If in your analysis, students still have the same learning issues, just return EXACTLY those learning issues (both type and description) and your new analysis.
+          - Focus on Conceptual Understanding: Judge how well the student understands the underlying concepts, such as loops, functions, data structures, algorithmic thinking, or language-specific paradigms.
+          - Limit your analysis to what is **relevant to the course objectives**. If a concept is not taught or expected at this stage, do not raise it as an issue.
+          - Only flag issues that are **demonstrably present** in the code. Avoid hypothetical or speculative problems.
+          - Do not evaluate correctness, performance, or elegance of the code. Your job is to assess **learning**, not output.
+          If the student uses an unconventional but valid approach, do not assume misunderstanding unless it clearly violates the intent of the exercise or shows conceptual flaws.
+          - Frame your explanation in a way that would help the student grow—avoid harsh language. Emphasize **learning opportunities** over critique.
+          - Limit to Learning-Relevant Issues: Do not comment on naming conventions, formatting, or best practices unless they explicitly reveal conceptual misunderstanding (e.g., misunderstanding function scope due to naming reuse).
         """
 
         response = await acompletion(

@@ -321,9 +321,9 @@ class ExercisesController(BaseController[Exercises]):
                 status=result_data["status"],
                 stdout=result_data["stdout"],
                 stderr=result_data["stderr"],
-                judge0_token=result_data["token"],
-                time=None,
-                memory=None,
+                time=float(result_data["time"]),
+                memory=float(result_data["memory"]),
+                judge0_token=result_data["token"]
             )
 
             session.add(test_result)

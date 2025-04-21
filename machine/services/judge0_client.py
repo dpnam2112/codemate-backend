@@ -37,6 +37,10 @@ async def evaluate_test_cases(
     """
     results: list[dict[str, Any]] = []
 
+#    source_code_bytes = source_code.encode('utf-8')
+#    encoded_bytes = base64.b64encode(source_code_bytes)
+#    b64_source_code = encoded_bytes.decode("utf-8")
+
     submissions_payload = [
         {
             "source_code": source_code,
@@ -112,6 +116,8 @@ async def get_submission_results(
                 "token": result.get("token"),
                 "input": test_cases[i]["input"],
                 "expected": test_cases[i]["expected"],
+                "time": result.get("time"),
+                "memory": result.get("memory"),
                 "stdout": result.get("stdout"),
                 "stderr": result.get("stderr"),
                 "status": result.get("status", {}).get("description"),

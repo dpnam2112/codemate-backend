@@ -112,7 +112,6 @@ async def update_issues_summary_task(submission_id_str: str):
             syslog.error(f"Failed to analyze learning issues for submission {submission_id}")
             return
 
-        # If LLM found no issues, clear the issues list
         if not analysis.issues:
             pass
         else:
