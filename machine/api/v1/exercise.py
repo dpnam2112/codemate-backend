@@ -919,6 +919,7 @@ async def ask_coding_assistant_stream(
         coding_exercise_id=coding_exercise_id,
         content=body.content,
         user_solution=body.user_solution,
+        language_id=body.language_id
     )
     # Stream the response using text/event-stream media type.
     return StreamingResponse(generator, media_type="text/event-stream")

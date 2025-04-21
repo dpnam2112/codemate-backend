@@ -3,12 +3,13 @@ from typing import Optional, Sequence, TypedDict
 from uuid import UUID
 
 from openai import AsyncOpenAI, OpenAI
-from sqlalchemy import func, select
+from sqlalchemy import desc, func, select
 from sqlalchemy.orm import noload, selectinload, with_loader_criteria
 from core.controller import BaseController
 from core.db.session import DB_MANAGER, DBSessionKeeper, Dialect
 from core.db.utils import session_context
 from core.exceptions.base import NotFoundException
+from core.judge0 import get_language_name
 from machine.models import Exercises
 from machine.models.coding_assistant import CodingConversation, Conversation, Message
 from machine.models.coding_submission import ProgrammingSubmission, ProgrammingTestCase, ProgrammingTestResult, SubmissionStatus
@@ -170,6 +171,7 @@ class ExercisesController(BaseController[Exercises]):
         coding_exercise_id: UUID,
         content: str,
         user_solution: str,
+        language_id: int,
         history_length=10
     ):
         """
@@ -206,6 +208,8 @@ class ExercisesController(BaseController[Exercises]):
         # Keep only the last HISTORY_LENGTH messages.
         history = messages[-history_length:] if len(messages) > history_length else messages
 
+        chosen_language_name = get_language_name(language_id)
+
         # Build the messages payload for the LLM.
         llm_messages = []
         # System prompt with educational guardrails and contextual information.
@@ -215,6 +219,7 @@ class ExercisesController(BaseController[Exercises]):
 
             "CONTEXT:\n"
             "- Problem Description: {problem_description}\n"
+            "- Chosen programming language: {chosen_language_name}\n"
             "- User's Current Solution Attempt:\n{user_solution}\n\n"
 
             "RULES:\n"
@@ -233,7 +238,9 @@ class ExercisesController(BaseController[Exercises]):
             "- Avoid distractions, off-topic comments, or excessive elaboration.\n"
 
             "Begin by analyzing the user's solution and assisting them with their current challenge."
-        ).format(problem_description=problem_description, user_solution=user_solution)
+        ).format(problem_description=problem_description, user_solution=user_solution, chosen_language_name=chosen_language_name)
+
+        print(system_prompt)
 
         llm_messages.append({"role": "system", "content": system_prompt})
         # Append the conversation history.
@@ -363,6 +370,8 @@ class ExercisesController(BaseController[Exercises]):
             filters.append(ProgrammingSubmission.exercise_id == exercise_id)
         if filters:
             stmt = stmt.where(and_(*filters))
+
+        stmt = stmt.order_by(desc(ProgrammingSubmission.created_at))
 
         result = await session.execute(stmt)
         submissions = result.scalars().all()
