@@ -16,6 +16,7 @@ class StudentCourses(Base):
     percentage_done = Column(Integer, default=0, nullable=True) 
     # Percentage done of the course
     issues_summary = Column(JSONB, nullable=True)
+    achievements = Column(JSONB, nullable=True)
     # Summary of issues found in the course
 
     course = relationship("Courses", back_populates="student_courses")

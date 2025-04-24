@@ -2,6 +2,7 @@ import json
 import os
 import logging
 import re
+import asyncio
 from typing import Dict, List, Any, Optional
 from fastapi import APIRouter, Depends, Body
 from core.response import Ok
@@ -948,7 +949,7 @@ async def monitor_study_progress(
     lessons_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
     student_courses_controller: StudentCoursesController = Depends(InternalProvider().get_studentcourses_controller),
     student_controller: StudentController = Depends(InternalProvider().get_student_controller)
-):  # Remove the -> dict annotation
+):
     # Verify token to get student_id
     payload = verify_token(token)
     student_id = payload.get("sub")
@@ -975,34 +976,178 @@ async def monitor_study_progress(
     if not learning_path:
         raise NotFoundException(message="Learning path not found.")
 
-    # if recommend_lesson.progress < 80:
-    #     return Ok(data=None, message="Student has not met the required learning criteria to analyze their study results.")
-
     student_course = await student_courses_controller.student_courses_repository.first(
         where_=[StudentCourses.student_id == UUID(student_id), StudentCourses.course_id == course_id]
     )
+    
+    # Extract both issues and achievements data
     issues_summary = student_course.issues_summary if student_course and student_course.issues_summary else {}
+    achievements = student_course.achievements if student_course and hasattr(student_course, 'achievements') else {}
 
-    analysis_result = await analyze_issues(
+    # Analyze both issues and achievements
+    issues_analysis = await analyze_issues(
         recommend_lesson,
         issues_summary,
         learning_path,
         recommend_lessons_controller,
         lessons_controller
     )
-
-    if analysis_result["can_proceed"]:
+    
+    achievements_analysis = await analyze_achievements(
+        recommend_lesson,
+        achievements,
+        learning_path,
+        recommend_lessons_controller,
+        lessons_controller
+    )
+    
+    # Combine both analyses into a single result
+    result = {
+        **issues_analysis,  # Include issues analysis
+        "achievements_analysis": achievements_analysis  # Add achievements analysis
+    }
+    
+    # Update lesson status if the issues analysis indicates the student can proceed
+    if issues_analysis["can_proceed"]:
         await recommend_lessons_controller.recommend_lessons_repository.update(
             where_=[RecommendLessons.id == recommend_lesson_id],
             attributes={"status": "completed", "progress": 100},
             commit=True
         )
-        return Ok(data=analysis_result, message="Lesson completed successfully. Student can proceed to the next lesson.")
+        return Ok(data=result, message="Lesson completed successfully. Student can proceed to the next lesson.")
         
-    if analysis_result["needs_repeat"]:
-        return Ok(data=analysis_result, message="Student needs to repeat the lesson due to identified issues.")
+    if issues_analysis["needs_repeat"]:
+        return Ok(data=result, message="Student needs to repeat the lesson due to identified issues.")
 
-    return Ok(data=analysis_result, message="Student needs to review prior lessons before proceeding.")
+    return Ok(data=result, message="Student needs to review prior lessons before proceeding.")
+async def analyze_achievements(
+    recommend_lesson: RecommendLessons,
+    achievements: dict,
+    learning_path: LearningPaths,
+    recommend_lessons_controller: RecommendLessonsController,
+    lessons_controller: LessonsController
+) -> dict:
+    """
+    Analyze the achievements data using AI to determine student progress and strengths.
+    
+    Args:
+        recommend_lesson: The recommended lesson object
+        achievements: JSON data from StudentCourses.achievements
+        learning_path: The latest learning path for the student
+        recommend_lessons_controller: Controller for recommend_lessons
+        lessons_controller: Controller for lessons
+    
+    Returns:
+        Dict with AI-driven analysis of achievements
+    """
+    result = {
+        "total_achievements": 0,
+        "recent_achievements": [],
+        "mastered_concepts": [],
+        "achievement_categories": {
+            "quiz_completion": 0,
+            "high_performance": 0,
+            "concept_mastery": 0
+        },
+        "achievement_levels": {
+            "basic": 0,
+            "intermediate": 0,
+            "advanced": 0
+        },
+        "learning_trajectory": "stable",  # Options: "improving", "stable", "struggling"
+        "strengths": [],
+        "recent_progress": []
+    }
+    
+    # If no achievements or empty, return early
+    if not achievements or "earned_achievements" not in achievements or not achievements["earned_achievements"]:
+        result["message"] = "No achievements found."
+        return result
+        
+    # Extract earned achievements
+    earned_achievements = achievements["earned_achievements"]
+    result["total_achievements"] = len(earned_achievements)
+    
+    # Sort achievements by date (most recent first)
+    sorted_achievements = sorted(
+        earned_achievements, 
+        key=lambda x: x.get("earned_date", ""),
+        reverse=True
+    )
+    
+    # Get recent achievements (last 5)
+    result["recent_achievements"] = sorted_achievements[:5]
+    
+    # Count by category and level
+    for achievement in earned_achievements:
+        # Count by type
+        achievement_type = achievement.get("type", "")
+        if achievement_type in result["achievement_categories"]:
+            result["achievement_categories"][achievement_type] += 1
+            
+        # Count by difficulty
+        difficulty = achievement.get("difficulty", "")
+        if difficulty in result["achievement_levels"]:
+            result["achievement_levels"][difficulty] += 1
+            
+        # Extract mastered concepts (from concept_mastery type)
+        if achievement_type == "concept_mastery":
+            # Add to mastered concepts if not already included
+            for topic in achievement.get("related_topics", []):
+                if topic not in result["mastered_concepts"]:
+                    result["mastered_concepts"].append(topic)
+    
+    # Determine learning trajectory based on achievement dates and types
+    # This is a simplified analysis - more complex logic could be implemented
+    recent_dates = [
+        datetime.fromisoformat(achievement.get("earned_date").replace('Z', '+00:00'))
+        for achievement in sorted_achievements[:10]
+        if achievement.get("earned_date")
+    ]
+    
+    if len(recent_dates) >= 3:
+        # Check if achievements are becoming more frequent
+        date_diffs = [
+            (recent_dates[i] - recent_dates[i+1]).total_seconds()
+            for i in range(len(recent_dates)-1)
+        ]
+        
+        avg_time_between = sum(date_diffs) / len(date_diffs)
+        
+        # Check if higher difficulty achievements are more recent
+        recent_high_difficulty = any(
+            achievement.get("difficulty") in ["intermediate", "advanced"]
+            for achievement in sorted_achievements[:3]
+        )
+        
+        if recent_high_difficulty and avg_time_between < 60*60*24*3:  # Less than 3 days between achievements
+            result["learning_trajectory"] = "improving"
+        elif not recent_high_difficulty and any(
+            "quiz_completion" in achievement.get("type", "") and 
+            any(score in achievement.get("description", "") for score in ["<50%", "(30%", "(40%"])
+            for achievement in sorted_achievements[:3]
+        ):
+            result["learning_trajectory"] = "struggling"
+    
+    # Extract strengths based on mastered concepts and high performance
+    strength_topics = set()
+    for achievement in earned_achievements:
+        if achievement.get("type") in ["concept_mastery", "high_performance"]:
+            strength_topics.update(achievement.get("related_topics", []))
+    
+    result["strengths"] = list(strength_topics)[:5]  # Top 5 strengths
+    
+    # Extract recent progress from the last few achievements
+    result["recent_progress"] = [
+        {
+            "type": achievement.get("type", ""),
+            "description": achievement.get("description", ""),
+            "date": achievement.get("earned_date", "")
+        }
+        for achievement in sorted_achievements[:3]
+    ]
+    
+    return result
 async def analyze_issues(
     recommend_lesson: RecommendLessons,
     issues_summary: dict,
@@ -1584,26 +1729,22 @@ async def generate_quiz(
     # Initialize questions list
     all_questions = []
     
-    # Generate questions in batches by difficulty
+    # Define difficulties with their counts
     difficulties = [
         {"name": "easy", "count": request.difficulty_distribution.easy},
         {"name": "medium", "count": request.difficulty_distribution.medium},
         {"name": "hard", "count": request.difficulty_distribution.hard}
     ]
     
-    total_points = 0
-    question_count = 0
-    
-    # Generate questions for each difficulty level
-    for difficulty in difficulties:
-        if difficulty["count"] <= 0:
-            continue
-            
-        # Skip if no questions needed for this difficulty
-        difficulty_name = difficulty["name"]
-        questions_needed = difficulty["count"]
+    # Create a function to generate questions for a specific difficulty
+    async def generate_questions_for_difficulty(difficulty_data):
+        difficulty_name = difficulty_data["name"]
+        questions_needed = difficulty_data["count"]
         
-        # Build prompt for this difficulty only
+        if questions_needed <= 0:
+            return []
+            
+        # Build prompt for this difficulty level
         prompt = f"""
         ## Quiz Generation Task for {difficulty_name.upper()} Questions Only
         
@@ -1660,17 +1801,18 @@ async def generate_quiz(
             question_request = QuestionRequest(
                 content=prompt,
                 temperature=0.3,
-                max_tokens=8192  
+                max_tokens=8192
             )
             
             response = llm.invoke(question_request.content)
             
             if not response:
                 print(f"Failed to generate {difficulty_name} questions")
-                continue
+                return []
                 
             # Extract JSON from response
             response_text = response.content
+            questions_list = []
             
             try:
                 if "```json" in response_text:
@@ -1686,7 +1828,7 @@ async def generate_quiz(
                     else:
                         difficulty_data = json.loads(response_text)
                 
-                # Add questions to our list
+                # Process questions
                 if "questions" in difficulty_data and isinstance(difficulty_data["questions"], list):
                     # Validate each question before adding
                     for q in difficulty_data["questions"]:
@@ -1694,17 +1836,29 @@ async def generate_quiz(
                         if all(key in q for key in ["question_text", "question_type", "options", "correct_answer", "difficulty", "explanation", "points"]):
                             # Force difficulty to match the current batch
                             q["difficulty"] = difficulty_name
-                            all_questions.append(q)
-                            total_points += q["points"]
-                            question_count += 1
+                            questions_list.append(q)
                 
             except (json.JSONDecodeError, Exception) as e:
                 print(f"Error parsing {difficulty_name} questions: {str(e)}")
-                # Continue with other difficulties even if one fails
+                return []
+                
+            return questions_list
                 
         except Exception as e:
             print(f"Error generating {difficulty_name} questions: {str(e)}")
-            # Continue with other difficulties
+            return []
+    
+    # Run question generation for each difficulty level in parallel
+    difficulty_tasks = [generate_questions_for_difficulty(diff) for diff in difficulties]
+    difficulty_results = await asyncio.gather(*difficulty_tasks)
+    
+    # Combine all questions from different difficulty levels
+    for result in difficulty_results:
+        all_questions.extend(result)
+    
+    # Calculate total points and question count
+    total_points = sum(q["points"] for q in all_questions)
+    question_count = len(all_questions)
     
     # If we couldn't generate any questions, raise an error
     if not all_questions:

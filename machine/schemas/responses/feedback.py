@@ -40,3 +40,15 @@ class GetFeedbackListResponse(BaseModel):
     student_id: str
     student_name: str
     student_email: str
+
+class FeedbackSummaryResponse(BaseModel):
+    id: str
+    student_id: str
+    student_name: str
+    title: str
+    description: str
+    category: str
+    rate: int
+    created_at: str
+    course_id: str
+    course_name: str

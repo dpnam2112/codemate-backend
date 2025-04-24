@@ -35,3 +35,12 @@ class GetDashboardProfessorResponse(BaseModel):
     upcoming_events: Optional[List[Events]]
     
     
+class StudentActivityResponse(BaseModel):
+    activity_id: UUID
+    student_id: UUID
+    student_name: str
+    activity_type: str
+    activity_description: str
+    activity_timestamp: str
+    course_id: Optional[UUID]
+    course_name: Optional[str]
