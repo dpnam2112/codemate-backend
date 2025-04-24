@@ -7,3 +7,4 @@ class MessageCreateSchema(BaseModel):
 class InvokeCodingAssistantSchema(BaseModel):
     content: str
     user_solution: str
+    language_id: int

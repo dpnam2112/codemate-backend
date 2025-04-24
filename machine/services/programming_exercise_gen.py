@@ -1,10 +1,62 @@
-import json
+import litellm
+
 from typing import Optional
 from pydantic import BaseModel, ValidationError
 
 from pydantic import BaseModel, Field
 from core.settings import settings as env_settings
 from litellm import acompletion
+
+TESTCASE_DESIGN_PROMPT = """
+You are a **TEST ENGINEER** tasked with creating comprehensive test cases for the following coding problem:
+
+{}
+
+I want you to reason through this step by step, showing your chain of thought before you list any test cases. Follow this format:
+
+=== PHASE 1: PROBLEM ANALYSIS ===
+1. **Restate the Problem**  
+   - Summarize the task in your own words.  
+2. **Inputs & Outputs**  
+   - List all input parameters and the expected output type/format.  
+3. **Constraints & Assumptions**  
+   - Note problem constraints (e.g., value ranges, data sizes) and any assumptions you make.  
+4. **Initial Edge‑Case Brainstorm**  
+   - Quickly jot down potential tricky or boundary scenarios you foresee.
+
+=== PHASE 2: TEST CASE DESIGN ===  
+_For each category below, first explain your reasoning, then provide the cases._
+
+1. **Basic Functionality**  
+   - *Reasoning:* Why these checks cover the core behavior.  
+   - *Test Cases:*  
+     - **Input:** …  
+     - **Expected Output:** …  
+     - **Explanation:** Why this matters.
+
+2. **Edge Cases**  
+   - *Reasoning:* Identify boundary or unusual valid inputs.  
+   - *Test Cases:*  
+     - **Input:** …  
+     - **Expected Output:** …  
+     - **Explanation:** …
+
+3. **Invalid / Error Inputs**  
+   - *Reasoning:* What invalid inputs should be handled gracefully?  
+   - *Test Cases:*  
+     - **Input:** …  
+     - **Expected Output:** Exception or error message  
+     - **Explanation:** …
+
+4. **Performance / Stress Tests**  
+   - *Reasoning:* How to verify efficiency at scale.  
+   - *Test Cases:*  
+     - **Input:** Large or worst‑case dataset…  
+     - **Expected Output:** Result within acceptable time/memory  
+     - **Explanation:** …
+
+Once you’ve walked through your reasoning, generate the full set of test cases.  
+"""
 
 class TestCaseSchema(BaseModel):
     """
@@ -21,6 +73,21 @@ class TestCaseSchema(BaseModel):
         ...,
         description="Expected output string from the program (to stdout).",
         examples=["True"]
+    )
+
+class TestCaseListSchema(BaseModel):
+    testcases: list[TestCaseSchema]
+
+class ProblemInformationSchema(BaseModel):
+    name: str = Field(description="Name of the exercise.")
+    problem_description: str = Field(
+        ...,
+        description="Content describing the programming problem. The description MUST NOT include <html> or <body> tag.",
+        examples=["<h3><strong>Problem: Valid Parentheses Checker</strong></h3><p>Check if brackets are valid.</p>"]
+    )
+    boilerplate_codes: list["BoilerplateSchema"] = Field(
+        ...,
+        description="List of boilerplate code for different programming languages."
     )
 
 class ProgrammingExerciseSchema(BaseModel):
@@ -131,9 +198,17 @@ class ProgrammingExerciseGenService:
             "3. Your initial code (boilerplate code) MUST have a logic to read input from stdin and print output to stdout.\n"
             "4. Your initial code MUST have TODO for student to fill out.\n"
             "5. Your initial code MUST NOT reveal the solution of the problem.\n"
-            "6. When you design testcases, make sure to include edge cases.\n"
-            "7. When you design testcases, make sure that the testcases can be read from stdin.\n"
-            "8. When you design testcases, make sure that the expected output of the testcases can be printed to stdout.\n"
+            "6. Testcase design are not needed.\n"
+            "7. The problem must be inspired by real-world or practical use cases that students might encounter in daily life or in the workplace."
+            "8. Avoid abstract puzzles unless they directly apply to real-world scenarios."
+            "9. Prefer domains such as finance, scheduling, data processing, health, logistics, social media, or sensor systems."
+            """10. Example problem ideas:
+               - Parsing a bank statement to detect duplicate transactions
+               - Analyzing social media messages to detect trending topics
+               - Scheduling tasks to minimize overlap
+               - Validating a CSV file of sensor readings
+               - Detecting misuse of discount codes in an e-commerce checkout system"""
+
         )
 
         # Prepare messages for the chat completion
@@ -153,12 +228,38 @@ class ProgrammingExerciseGenService:
             model=self.llm_model_name,
             messages=messages,
             api_key=self.api_key,
-            response_format=ProgrammingExerciseSchema,
+            response_format=ProblemInformationSchema,
         )
-        
+
         json_string = response.choices[0].message.content
-        parsed_json = json.loads(json_string)
-        return ProgrammingExerciseSchema.model_validate(parsed_json)
+        problem = ProblemInformationSchema.model_validate_json(json_string)
+
+        # Prepare messages for the chat completion
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "You are an AI assistant."
+                ),
+            },
+            {"role": "user", "content": TESTCASE_DESIGN_PROMPT.format(problem.problem_description)}
+        ]
+        response = await acompletion(
+            model=self.llm_model_name,
+            messages=messages,
+            api_key=self.api_key,
+            response_format=TestCaseListSchema,
+        )
+
+        json_string = response.choices[0].message.content
+        testcase_list = TestCaseListSchema.model_validate_json(json_string)
+
+        return ProgrammingExerciseSchema(
+            name=problem.name,
+            problem_description=problem.problem_description,
+            test_cases=testcase_list.testcases,
+            boilerplate_codes=problem.boilerplate_codes
+        )
 
 async def main():
     # Sample inputs
