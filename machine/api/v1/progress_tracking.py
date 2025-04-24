@@ -1,5 +1,4 @@
 import os
-from data.constant import *
 from fastapi import APIRouter, Depends, Request, HTTPException
 from dotenv import load_dotenv
 from fastapi.security import OAuth2PasswordBearer

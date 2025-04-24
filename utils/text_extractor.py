@@ -1,21 +1,23 @@
 import traceback
 from docx import Document
 from pptx import Presentation
-import fitz 
+import PyPDF2  # Using PyPDF2 instead of PyMuPDF/fitz
 from pdfminer.high_level import extract_text 
 
 class TextExtractor:
     @staticmethod
     def extract_pdf(file_path: str) -> str:
         try:
-            doc = fitz.open(file_path)
+            # Using PyPDF2 instead of fitz
+            pdf_reader = PyPDF2.PdfReader(file_path)
             result = []
-            for page in doc:
-                text = page.get_text("text")
+            for page_num in range(len(pdf_reader.pages)):
+                page = pdf_reader.pages[page_num]
+                text = page.extract_text()
                 result.append(text)
             return "\n".join(result)
         except Exception as e:
-            print(f"Error using PyMuPDF: {e}")
+            print(f"Error using PyPDF2: {e}")
             try:
                 print("Falling back to pdfminer...")
                 text = extract_text(file_path)

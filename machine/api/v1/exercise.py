@@ -1,5 +1,3 @@
-from os import wait
-from core.db.decorators import Transactional
 import machine.controllers as ctrl
 from fastapi import APIRouter, Depends, Path, Query
 from core.response import Ok
@@ -18,6 +16,7 @@ from fastapi.security import OAuth2PasswordBearer
 from core.utils.auth_utils import verify_token
 from starlette.responses import StreamingResponse
 from machine.schemas.programming_exercise import *
+from machine.schemas.code_solution import CodeSolutionResponse
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
@@ -920,6 +919,7 @@ async def ask_coding_assistant_stream(
         coding_exercise_id=coding_exercise_id,
         content=body.content,
         user_solution=body.user_solution,
+        language_id=body.language_id
     )
     # Stream the response using text/event-stream media type.
     return StreamingResponse(generator, media_type="text/event-stream")
@@ -976,16 +976,6 @@ async def create_testcase(
     attributes = body.model_dump()
     attributes["exercise_id"] = exercise_id
     testcase = await controller.create(attributes=attributes)
-    return Ok(data=ProgrammingTestCaseResponse.model_validate(testcase))
-
-@router.get("/{testcase_id}", response_model=Ok[ProgrammingTestCaseResponse])
-async def get_testcase(
-    testcase_id: UUID,
-    controller: ctrl.ProgrammingTestCaseController = Depends(InternalProvider().get_programming_tc_controller)
-):
-    testcase = await controller.repository.first(where_=[ProgrammingTestCase.id == testcase_id])
-    if not testcase:
-        raise NotFoundException("Programming TestCase not found")
     return Ok(data=ProgrammingTestCaseResponse.model_validate(testcase))
 
 @router.get("/{exercise_id}/testcases", response_model=Ok[list[ProgrammingTestCaseResponse]])
@@ -1096,3 +1086,28 @@ async def get_coding_submissions(
 
     return Ok(data=[ProgrammingSubmissionItemSchema.model_validate(submission) for submission in submissions])
 
+@router.post("/{exercise_id}/code-solution/{language_id}", response_model=Ok[CodeSolutionResponse])
+async def get_or_generate_code_solution(
+    exercise_id: UUID,
+    language_id: int,
+    exercise_controller: ExercisesController = Depends(InternalProvider().get_exercises_controller)
+):
+    solution_code, explanation = await exercise_controller.get_or_generate_code_solution(
+        exercise_id=exercise_id,
+        language_id=language_id
+    )
+
+    return Ok(data=CodeSolutionResponse(
+        solution=solution_code,
+        explanation=explanation
+    ))
+
+
+@router.delete("/{exercise_id}/ai-generated")
+async def delete_ai_generated_code_exercise(
+    exercise_id: UUID,
+    exercise_controller: ExercisesController = Depends(InternalProvider().get_exercises_controller)
+):
+    deleted_exercises = await exercise_controller.delete(where_=[Exercises.id == exercise_id])
+    deleted = deleted_exercises[0] if deleted_exercises else None
+    return Ok(data={ "id": deleted.id if deleted else None  })
