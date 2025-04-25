@@ -1216,7 +1216,20 @@ async def analyze_issues(
     is_first_lesson = len(prior_lessons) == 0
     
     # Construct AI prompt
-    ## 6. For analyze_issues in ai_routers.py
+    first_lesson_analysis = """
+    1. Focus ONLY on issues related to the current lesson (this is the first lesson in the path).
+    2. Look in the common_issues array for issues where related_lessons contains the current recommended lesson ID.
+    """
+    
+    subsequent_lesson_analysis = """
+    1. Analyze issues related to BOTH the current lesson AND any prior lessons.
+    2. Look in the common_issues array for issues where related_lessons contains either the current or prior recommended lesson IDs.
+    """
+    
+    relation_to_prior = "" if is_first_lesson else """
+    - Present connections as structured list items
+    - Format lesson references with clear hierarchy
+    """
 
     prompt = f"""
     ## Issues Analysis Task
@@ -1239,19 +1252,9 @@ async def analyze_issues(
     ## Task Requirements
     Analyze the provided `issues_summary` to determine the student's next steps.
 
-    {
-    "For first lesson analysis:" if is_first_lesson else "For subsequent lesson analysis:"
-    }
+    {"For first lesson analysis:" if is_first_lesson else "For subsequent lesson analysis:"}
 
-    {
-    """
-    1. Focus ONLY on issues related to the current lesson (this is the first lesson in the path).
-    2. Look in the common_issues array for issues where related_lessons contains the current recommended lesson ID.
-    """ if is_first_lesson else """
-    1. Analyze issues related to BOTH the current lesson AND any prior lessons.
-    2. Look in the common_issues array for issues where related_lessons contains either the current or prior recommended lesson IDs.
-    """
-    }
+    {first_lesson_analysis if is_first_lesson else subsequent_lesson_analysis}
 
     Consider:
     1. **Severity of Issues**:
@@ -1262,12 +1265,7 @@ async def analyze_issues(
     - Structure impact assessment as bullet points
     - List specific consequences with clear formatting
 
-    3. **Relation to Prior Lessons**: {
-    "" if is_first_lesson else """
-    - Present connections as structured list items
-    - Format lesson references with clear hierarchy
-    """
-    }
+    3. **Relation to Prior Lessons**: {relation_to_prior}
 
     4. **Recommendations**:
     - Format each recommendation as a structured list
