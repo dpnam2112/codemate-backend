@@ -14,7 +14,12 @@ class LearningIssue(BaseModel):
 class QuizQuestionResult(BaseModel):
     question_id: UUID
     is_correct: bool
-
+class Achievement(BaseModel):
+    type: str
+    description: str
+    earned_date: datetime
+    related_topics: List[str] = []
+    difficulty: str
 class QuizScoreResponse(BaseModel):
     quiz_id: UUID
     total_questions: int
@@ -22,4 +27,5 @@ class QuizScoreResponse(BaseModel):
     score: float 
     results: List[QuizQuestionResult]  
     identified_issues: Optional[List[LearningIssue]] = None
+    new_achievements: Optional[List[Achievement]] = None
   

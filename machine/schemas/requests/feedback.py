@@ -14,3 +14,6 @@ class CreateFeedbackRequest(BaseModel):
     
 class UpdateFeedbackRequest(BaseModel):
     status: FeedbackStatusType
+class FeedbackDashboardRequest(BaseModel):
+    course_id: Optional[str] = None
+    limit: Optional[int] = 5
