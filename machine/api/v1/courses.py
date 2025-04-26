@@ -1,4 +1,5 @@
 import math
+from openai import NotFoundError
 from sqlalchemy import and_
 from machine.models import *
 from core.response import Ok
@@ -182,7 +183,10 @@ async def get_student_courses(
     total_page = math.ceil(len(courses) / page_size)
     content = []
     for course in courses:
-        learning_path = await learning_paths_controller.get_learning_path(user_id=user_id, course_id=course.id)
+        try:
+            learning_path = await learning_paths_controller.get_learning_path(user_id=user_id, course_id=course.id)
+        except NotFoundException:
+            learning_path = None
         course_response = GetCoursesResponse(
             id=course.id,
             name=course.name,
@@ -405,7 +409,11 @@ async def get_course_for_student(
         join_=join_conditions,
     )
     get_course = course[0] if course else None
-    learning_path = await learning_paths_controller.get_learning_path(user_id=studentId, course_id=courseId)
+    try:
+        learning_path = await learning_paths_controller.get_learning_path(user_id=studentId, course_id=courseId)
+    except NotFoundException:
+        learning_path = None
+    
     if not course:
         course_response = GetCourseDetailResponse(
             course_id=courseId,
@@ -496,7 +504,10 @@ async def get_course_for_student(
         join_=join_conditions,
     )
     get_course = course[0] if course else None
-    learning_path = await learning_paths_controller.get_learning_path(user_id=user_id, course_id=courseId)
+    try:
+        learning_path = await learning_paths_controller.get_learning_path(user_id=user_id, course_id=courseId)
+    except NotFoundException:
+        learning_path = None
     if not course:
         course_response = GetCourseDetailResponse(
             course_id=courseId,
