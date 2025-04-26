@@ -33,7 +33,7 @@ class LiteLLMWrapper(DeepEvalBaseLLM):
         max_tries=10,
         jitter=backoff.full_jitter,
         base=2,
-        factor=2
+        factor=1
     )
     async def a_generate(
         self,

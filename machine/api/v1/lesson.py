@@ -64,15 +64,15 @@ async def create_new_lesson(
         order_={'desc': ['order']}  # Note the lowercase 'desc'
     )
 
-    # Set the order to be one more than the last lesson's order, or 1 if no lessons exist
-    next_order = last_lesson.order + 1 if last_lesson else 1
+#    # Set the order to be one more than the last lesson's order, or 1 if no lessons exist
+#    next_order = last_lesson.order + 1 if last_lesson else 1
 
     lesson_data = {
         "id": str(uuid.uuid4()),
         "title": title,
         "description": description,
         "course_id": course_id,
-        "order": next_order,
+#        "order": next_order,
         "learning_outcomes": learning_outcomes,
     }
     

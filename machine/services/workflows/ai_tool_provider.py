@@ -40,15 +40,7 @@ class AIToolProvider:
                 max_tokens=None,
                 timeout=None,
                 max_retries=2,
-                api_key=settings.GOOGLE_GENAI_API_KEY
-            )
-        elif modelname == LLMModelName.GPT_4O_MINI:
-            llm = ChatOpenAI(
-                model="gpt-4o-mini",
-                temperature=0.5,
-                timeout=None,
-                max_retries=2,
-                api_key=settings.OPENAI_API_KEY
+                api_key=settings.GEMINI_API_KEY
             )
 
         return llm

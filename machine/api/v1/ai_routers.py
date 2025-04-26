@@ -23,6 +23,7 @@ from machine.schemas.responses.llm_code import *
 from dotenv import load_dotenv
 from utils.chunk_manager import ChunkingManager
 from machine.services.workflows.ai_tool_provider import AIToolProvider, LLMModelName
+from core.settings import settings as env_settings
 load_dotenv()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 router = APIRouter(prefix="/ai", tags=["ai"])
@@ -1516,7 +1517,7 @@ async def generate_quiz(
     }
     
     # Get API key from environment variables
-    gemini_api_key = os.getenv("GOOGLE_GENAI_API_KEY")
+    gemini_api_key = env_settings.GEMINI_API_KEY
     
     # Use AIToolProvider to create the LLM model
     ai_tool_provider = AIToolProvider()
