@@ -1,0 +1,1096 @@
+{
+  "learning_paths": [
+    {
+      "id": "05a7f98f-8af9-4118-b314-365e571ec23b",
+      "student": {
+        "id": "49de2631-bd30-496b-8c44-11fb25f1f4e4",
+        "email": "nguyentruongtuananh03@gmail.com"
+      },
+      "course": {
+        "id": "97670e34-966e-461d-957e-3d48fbef6034",
+        "name": "Data Structures and Algorithms",
+        "description": null
+      },
+      "metadata": {
+        "version": 9,
+        "start_date": "2025-03-26T00:00:00",
+        "end_date": "2025-04-02T00:00:00",
+        "objective": "Accurately implement basic list operations (insertion, deletion, traversal) using arrays and linked lists within one week."
+      },
+      "recommended_lessons": [
+        {
+          "id": "2a648fc0-5759-478f-8fa1-448030b9c751",
+          "order": 1,
+          "lesson": {
+            "id": "304c57fc-e6a0-4fea-8389-7085713f238c",
+            "title": "Lists",
+            "description": "This lesson introduces list data structures, their types, and their applications in programming. Students will explore different types of lists, including arrays (static lists) and linked lists (dynamic lists), and understand their advantages and limitations."
+          },
+          "explanation": "This lesson is critical because it directly introduces the core data structures (arrays and linked lists) needed to achieve the student's goal. It provides the foundation for understanding how to implement basic list operations. By focusing on the differences in how these operations are performed and the associated time complexities, the student will be able to compare the performance of different list implementations. This understanding is crucial for selecting the most appropriate data structure for a given task, which is a fundamental skill in computer science.",
+          "modules": [
+            {
+              "id": "9ddb52d7-5a82-4115-91c9-7255aaad2b04",
+              "title": "Module 1: Introduction to Lists and Array Implementation",
+              "objectives": [
+                "Understand the fundamental concept of a list as an abstract data type.",
+                "Explain the array implementation of lists, including its advantages and disadvantages.",
+                "Implement basic list operations (insertion, deletion, traversal) using arrays in a chosen programming language."
+              ]
+            },
+            {
+              "id": "eb992271-b798-488e-88cd-0ef10bc916a5",
+              "title": "Module 2: Linked List Implementation",
+              "objectives": [
+                "Understand the concept of linked lists and their node structure.",
+                "Explain the advantages and disadvantages of linked lists compared to arrays.",
+                "Implement basic list operations (insertion, deletion, traversal) using linked lists in a chosen programming language."
+              ]
+            },
+            {
+              "id": "7393f80f-8912-44cb-95b6-399ae85586dc",
+              "title": "Module 3: Comparing Array and Linked List Implementations and Time Complexity",
+              "objectives": [
+                "Compare and contrast array and linked list implementations in terms of memory usage, insertion, deletion, and access operations.",
+                "Analyze the time complexity (Big O notation) of common list operations for both array and linked list implementations.",
+                "Understand the trade-offs involved in choosing between array and linked list implementations for specific use cases."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "dd29ae79-4300-43b3-b0e6-9b42b94a12a0",
+          "order": 2,
+          "lesson": {
+            "id": "269ab4ca-aacc-47e5-af83-bc164014d9a9",
+            "title": "Course introduction, Recursion and Complexity of Algorithms",
+            "description": "This lesson provides an introduction to the Data Structures and Algorithms (DSA) course, outlining its objectives, structure, and the fundamental role of algorithms and data structures in computer science."
+          },
+          "explanation": "This lesson provides essential background knowledge for evaluating the efficiency of list operations. Understanding Big O notation is critical for assessing the performance of insertion, deletion, and traversal operations in both array and linked list implementations. By understanding the time and space complexity, the student can make informed decisions about which implementation is best suited for their needs. This lesson reinforces the ability to analyze and evaluate the efficiency of list operations relative to the goal.",
+          "modules": [
+            {
+              "id": "4fceb975-efa9-4c5b-9a1e-b7afa407340b",
+              "title": "Algorithm Complexity and Big O Notation",
+              "objectives": [
+                "Understand the concept of algorithm complexity.",
+                "Learn about Big O notation and its significance.",
+                "Analyze the time and space complexity of algorithms.",
+                "Apply complexity analysis to simple algorithms."
+              ]
+            },
+            {
+              "id": "0452a4b8-cd87-41f3-ad05-88a30c7bbdad",
+              "title": "Complexity Analysis of List Operations",
+              "objectives": [
+                "Analyze the time and space complexity of basic list operations.",
+                "Compare the complexity of array-based and linked list implementations.",
+                "Understand the impact of complexity on performance.",
+                "Apply complexity analysis to predict the performance of list operations."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "56e5e62c-59d0-4267-a887-6e2bb16bf64e",
+      "student": {
+        "id": "49de2631-bd30-496b-8c44-11fb25f1f4e4",
+        "email": "nguyentruongtuananh03@gmail.com"
+      },
+      "course": {
+        "id": "97670e34-966e-461d-957e-3d48fbef6034",
+        "name": "Data Structures and Algorithms",
+        "description": null
+      },
+      "metadata": {
+        "version": 10,
+        "start_date": "2025-03-26T00:00:00",
+        "end_date": "2025-04-05T00:00:00",
+        "objective": "I want to learn more about stack"
+      },
+      "recommended_lessons": [
+        {
+          "id": "89537b90-a238-4ae9-a903-07b1853fa3e1",
+          "order": 1,
+          "lesson": {
+            "id": "304c57fc-e6a0-4fea-8389-7085713f238c",
+            "title": "Lists",
+            "description": "This lesson introduces list data structures, their types, and their applications in programming. Students will explore different types of lists, including arrays (static lists) and linked lists (dynamic lists), and understand their advantages and limitations."
+          },
+          "explanation": "This lesson is critical because lists serve as the underlying data structure for implementing stacks. A stack is fundamentally built upon the concept of storing and retrieving elements in a specific order (LIFO - Last In, First Out). Understanding lists is crucial for grasping the mechanics of how elements are stored and managed within a stack. It allows you to understand the core principles of data storage and access, essential for building and using stacks effectively. The ability to manipulate lists forms the foundation for stack operations like push and pop.",
+          "modules": [
+            {
+              "id": "3284856c-17b4-497d-9c30-5ab276e4a3ee",
+              "title": "Module 1: Introduction to Lists and Basic Operations",
+              "objectives": [
+                "Understand the concept of a list as a fundamental data structure.",
+                "Learn how to create, access, and modify lists.",
+                "Explore the operations of insertion, deletion, and searching within lists.",
+                "Analyze the time complexity of basic list operations."
+              ]
+            },
+            {
+              "id": "47eeeb4a-121c-45f6-8cc9-72925a9f61af",
+              "title": "Module 2: List Implementation and Time Complexity Analysis",
+              "objectives": [
+                "Implement lists from scratch using arrays and linked lists.",
+                "Analyze the time complexity of list operations (insertion, deletion, access, search).",
+                "Understand the impact of implementation choices on performance.",
+                "Compare and contrast array-based and linked list implementations."
+              ]
+            },
+            {
+              "id": "1eced1fa-da55-4447-9c3a-26e4db18739c",
+              "title": "Module 3: Applications of Lists and List-Based Data Structures",
+              "objectives": [
+                "Explore how lists can be used to simulate other data structures (stacks, queues).",
+                "Understand the advantages and disadvantages of using lists in these simulations.",
+                "Learn practical examples of list applications in real-world scenarios.",
+                "Apply the knowledge of list operations to solve algorithmic problems."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "5d759bde-6d59-47d1-9dca-becb4f8b2756",
+          "order": 2,
+          "lesson": {
+            "id": "3dc26b52-8cdb-4975-a35e-44f339cd4eb2",
+            "title": "Advanced BST",
+            "description": "This lesson delves into advanced concepts of Binary Search Trees (BST), focusing on self-balancing trees and optimized searching and insertion techniques. Students will explore the limitations of standard BSTs, such as skewed trees leading to inefficient operations, and learn about balanced BSTs like AVL trees, Red-Black trees, and Splay trees, which ensure optimal performance."
+          },
+          "explanation": "While not directly about stacks, understanding sorting algorithms provides a crucial foundation for analyzing algorithm efficiency, which is important when evaluating stack-based solutions. This lesson helps in understanding how the choice of algorithm can impact performance, which is key in designing and implementing efficient stack operations. The knowledge of different sorting algorithms will allow you to understand how stack operations are impacted by external factors. This lesson also provides a good opportunity to think about the efficiency of different approaches. It prepares you to evaluate the efficiency of stack-based solutions, as you will be able to understand the time and space complexities.",
+          "modules": [
+            {
+              "id": "833db527-e14d-4aaa-aadd-86a40f58ea32",
+              "title": "Stacks and Sorting Algorithms: An Introduction",
+              "objectives": [
+                "Understand the fundamental concept of a stack data structure.",
+                "Explore how stacks can be used in sorting algorithms.",
+                "Identify scenarios where stacks offer advantages in sorting processes."
+              ]
+            },
+            {
+              "id": "d43ee6eb-02be-428c-b227-49b5c2e8c9e7",
+              "title": "Stacks in Merge Sort and QuickSort",
+              "objectives": [
+                "Understand the role of stacks in recursive sorting algorithms.",
+                "Analyze how stacks manage function calls in Merge Sort and QuickSort.",
+                "Compare and contrast the use of stacks in these two algorithms."
+              ]
+            },
+            {
+              "id": "f5aaed47-8659-48ae-9d43-d8ce4c8c9877",
+              "title": "Iterative Sorting and Stack Optimization",
+              "objectives": [
+                "Explore iterative implementations of sorting algorithms.",
+                "Understand how stacks can be used to optimize sorting algorithms.",
+                "Analyze the trade-offs between recursive and iterative approaches."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "6a865b1b-407c-4cfb-88da-e4408a7f6904",
+          "order": 3,
+          "lesson": {
+            "id": "269ab4ca-aacc-47e5-af83-bc164014d9a9",
+            "title": "Course introduction, Recursion and Complexity of Algorithms",
+            "description": "This lesson provides an introduction to the Data Structures and Algorithms (DSA) course, outlining its objectives, structure, and the fundamental role of algorithms and data structures in computer science."
+          },
+          "explanation": "This lesson is essential because algorithm complexity analysis is critical for designing efficient stack implementations. Understanding how to measure the time and space requirements of algorithms allows you to evaluate different stack implementations and choose the most suitable one for a given task. Recursion often utilizes a stack implicitly, so this lesson helps build a conceptual understanding of stack behavior. This understanding is fundamental for working with stacks. This lesson also helps to understand how the stack works behind the scenes with recursive functions.",
+          "modules": [
+            {
+              "id": "14e0612b-42c0-4ecf-8b59-06ceabda2ddc",
+              "title": "Stack Fundamentals and Algorithm Complexity",
+              "objectives": [
+                "Understand the Last-In, First-Out (LIFO) principle of stacks.",
+                "Learn basic stack operations: push, pop, peek, and isEmpty.",
+                "Analyze the time and space complexity of stack operations.",
+                "Introduce Big O, Big Omega, and Big Theta notations.",
+                "Relate algorithm complexity to stack performance."
+              ]
+            },
+            {
+              "id": "1175f821-6ede-481f-bd70-36df4c9ba4a4",
+              "title": "Recursion and the Call Stack",
+              "objectives": [
+                "Understand the concept of recursion.",
+                "Explain the relationship between recursion and the call stack.",
+                "Analyze the time and space complexity of recursive functions.",
+                "Identify common issues related to recursion (e.g., stack overflow).",
+                "Apply stacks to solve problems involving recursion."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ab3ec51b-bd0e-45b5-ba0d-a808c62e1f9d",
+      "student": {
+        "id": "49de2631-bd30-496b-8c44-11fb25f1f4e4",
+        "email": "nguyentruongtuananh03@gmail.com"
+      },
+      "course": {
+        "id": "97670e34-966e-461d-957e-3d48fbef6034",
+        "name": "Data Structures and Algorithms",
+        "description": null
+      },
+      "metadata": {
+        "version": 11,
+        "start_date": "2025-03-26T00:00:00",
+        "end_date": "2025-04-02T00:00:00",
+        "objective": "Explain time and space complexity using Big-O notation for basic algorithms (e.g., searching, sorting) within one week."
+      },
+      "recommended_lessons": [
+        {
+          "id": "62a363e6-c77b-4ace-b2c8-e0e49e767c10",
+          "order": 1,
+          "lesson": {
+            "id": "269ab4ca-aacc-47e5-af83-bc164014d9a9",
+            "title": "Course introduction, Recursion and Complexity of Algorithms",
+            "description": "This lesson provides an introduction to the Data Structures and Algorithms (DSA) course, outlining its objectives, structure, and the fundamental role of algorithms and data structures in computer science."
+          },
+          "explanation": "This lesson is the foundation for understanding algorithm complexity. It introduces Big-O notation, the primary tool for measuring algorithm efficiency. Without grasping this notation, the student cannot effectively explain time and space complexity. The lesson directly addresses the core goal of using Big-O for analysis. Mastering the concepts presented here is crucial for analyzing various algorithms, including searching and sorting, which are part of the learning objective. The lesson's examples provide a practical application of Big-O notation, making complex concepts easier to grasp. This understanding is essential for the one-week timeline.",
+          "modules": [
+            {
+              "id": "00802f0e-0dfc-4ef0-ae94-f8c4b303d018",
+              "title": "Introduction to Big-O Notation",
+              "objectives": [
+                "Define Big-O notation and its purpose.",
+                "Understand the concept of time and space complexity.",
+                "Identify the relationship between input size and algorithm performance."
+              ]
+            },
+            {
+              "id": "39b914f8-e648-4969-8625-69688ef49615",
+              "title": "Time and Space Complexity Analysis",
+              "objectives": [
+                "Differentiate between time and space complexity.",
+                "Analyze the time and space complexity of common algorithms.",
+                "Understand the impact of recursion on complexity."
+              ]
+            },
+            {
+              "id": "28cb3cfc-2bb7-4217-bada-1ae06dd5d68f",
+              "title": "Big-O for Common Algorithms",
+              "objectives": [
+                "Identify the Big-O complexities of common algorithms (searching, sorting).",
+                "Analyze the complexity of recursive functions.",
+                "Understand the impact of different data structures on complexity."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bc7936de-bb7d-4761-8ba8-c6cc73439e6c",
+      "student": {
+        "id": "49de2631-bd30-496b-8c44-11fb25f1f4e4",
+        "email": "nguyentruongtuananh03@gmail.com"
+      },
+      "course": {
+        "id": "97670e34-966e-461d-957e-3d48fbef6034",
+        "name": "Data Structures and Algorithms",
+        "description": null
+      },
+      "metadata": {
+        "version": 12,
+        "start_date": "2025-03-26T00:00:00",
+        "end_date": "2025-04-05T00:00:00",
+        "objective": "Master linked list operations"
+      },
+      "recommended_lessons": [
+        {
+          "id": "9ce2dff2-ecdd-4940-a00f-4bbff8313668",
+          "order": 1,
+          "lesson": {
+            "id": "304c57fc-e6a0-4fea-8389-7085713f238c",
+            "title": "Lists",
+            "description": "This lesson introduces list data structures, their types, and their applications in programming. Students will explore different types of lists, including arrays (static lists) and linked lists (dynamic lists), and understand their advantages and limitations."
+          },
+          "explanation": "This lesson is critical because it lays the groundwork for understanding linked lists. It introduces the basic building blocks (nodes) and the core concepts of list manipulation, which are essential for mastering linked list operations. Understanding the differences between lists and arrays provides a crucial context for appreciating the benefits of linked lists. Familiarity with these concepts will make it easier to grasp complex linked list operations. This lesson provides the foundational knowledge needed to move to more advanced topics, such as insertion, deletion, and traversal. Without this, other lessons will be difficult to understand.",
+          "modules": [
+            {
+              "id": "8f0fdc96-367d-491f-84e9-54cdde5b3b3c",
+              "title": "Introduction to Linked Lists",
+              "objectives": [
+                "Define linked lists and their fundamental properties.",
+                "Differentiate between linked lists and arrays.",
+                "Understand the concept of nodes and their role in linked lists.",
+                "Explain the advantages and disadvantages of linked lists."
+              ]
+            },
+            {
+              "id": "cf3e82bc-2a9a-4049-9357-1aea546656ef",
+              "title": "Linked List Operations: Insertion, Deletion, and Traversal",
+              "objectives": [
+                "Describe the insertion process in linked lists (at the beginning, end, and middle).",
+                "Explain the deletion process in linked lists.",
+                "Implement traversal algorithms for linked lists.",
+                "Analyze the time complexity of linked list operations."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "a74a9b94-825c-4b39-9eea-3091dcbcb2dd",
+          "order": 2,
+          "lesson": {
+            "id": "269ab4ca-aacc-47e5-af83-bc164014d9a9",
+            "title": "Course introduction, Recursion and Complexity of Algorithms",
+            "description": "This lesson provides an introduction to the Data Structures and Algorithms (DSA) course, outlining its objectives, structure, and the fundamental role of algorithms and data structures in computer science."
+          },
+          "explanation": "Recursion is a powerful technique for solving linked list problems, especially those involving traversal and manipulation. Understanding recursion is essential for implementing many linked list operations efficiently. Complexity analysis (Big O) is crucial for evaluating the performance of linked list operations. This lesson provides the tools to understand the efficiency of different linked list implementations and to choose the best approach for a given task. It is also critical to understand course overviews to understand course expectations and requirements. Understanding the complexity of algorithms is an essential skill for any data structure and algorithm developer. Without a good understanding of recursion and complexity analysis, it's impossible to efficiently implement linked list operations.",
+          "modules": [
+            {
+              "id": "6b164f4c-df5e-4b41-a362-30af6419c7da",
+              "title": "Introduction to Recursion and Linked Lists",
+              "objectives": [
+                "Understand the fundamental concepts of recursion.",
+                "Learn the basic structure and operations of linked lists.",
+                "Explore the relationship between recursion and linked list manipulation.",
+                "Grasp the concept of time and space complexity for recursive functions.",
+                "Understand the basic course overview."
+              ]
+            },
+            {
+              "id": "6fa3cf4e-53d1-4b08-b03f-6167127eec71",
+              "title": "Recursive Linked List Operations",
+              "objectives": [
+                "Implement recursive functions for linked list traversal.",
+                "Implement recursive functions for insertion and deletion.",
+                "Analyze the time and space complexity of recursive linked list operations.",
+                "Understand the call stack's role in recursion.",
+                "Compare recursive and iterative approaches for linked list manipulation."
+              ]
+            },
+            {
+              "id": "5874d93a-bcf5-41b5-b11d-d3481aa9227d",
+              "title": "Complexity Analysis and Advanced Recursion",
+              "objectives": [
+                "Analyze the time and space complexity of recursive linked list operations.",
+                "Understand Big O notation.",
+                "Implement advanced recursive operations, such as reversing a linked list.",
+                "Compare the performance of different approaches.",
+                "Apply recursion to solve complex linked list problems."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "63c72440-6f74-475f-8245-a50b8f43faaa",
+          "order": 3,
+          "lesson": {
+            "id": "3e95f5e3-6621-4a96-b8d6-b8bcb2071b36",
+            "title": "Sorting",
+            "description": "This lesson covers sorting algorithms, which are fundamental for organizing and managing data efficiently. Students will explore different types of sorting techniques, including comparison-based sorting algorithms such as Bubble Sort, Selection Sort, Insertion Sort, Merge Sort, Quick Sort, and Heap Sort, as well as non-comparison-based sorting algorithms like Counting Sort and Radix Sort."
+          },
+          "explanation": "While not directly about linked lists, sorting algorithms are often implemented with linked lists. This lesson reinforces your understanding of algorithm design and complexity analysis. It helps you to apply your understanding of linked lists in a practical context. It allows you to understand how and why linked lists can be used in more complex scenarios. Grasping sorting algorithms provides a broader understanding of data structure applications. This reinforces algorithm analysis skills.",
+          "modules": [
+            {
+              "id": "0de51678-0b28-4211-97ca-efb160b80b46",
+              "title": "Sorting Algorithms with Linked Lists: Insertion Sort and Merge Sort",
+              "objectives": [
+                "Understand the principles of Insertion Sort and Merge Sort.",
+                "Implement Insertion Sort and Merge Sort using linked lists.",
+                "Analyze the time and space complexity of both algorithms in the context of linked lists.",
+                "Compare and contrast the performance of Insertion Sort and Merge Sort for linked lists.",
+                "Identify scenarios where each algorithm is most suitable."
+              ]
+            },
+            {
+              "id": "a52a6fa6-7e9e-494f-a294-4e53ac3b4387",
+              "title": "Sorting Algorithms with Linked Lists: QuickSort and Comparison",
+              "objectives": [
+                "Understand the QuickSort algorithm and its implementation with linked lists.",
+                "Analyze the advantages and disadvantages of QuickSort for linked lists.",
+                "Compare the performance of QuickSort, Insertion Sort, and Merge Sort in the context of linked lists.",
+                "Understand the impact of pivot selection on QuickSort's performance.",
+                "Choose the most appropriate sorting algorithm for various linked list scenarios."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "d14911b6-80bc-4d95-bed2-7fd6cefcd663",
+      "student": {
+        "id": "f0c87e53-edd3-4b13-8563-2346585fbe76",
+        "email": "anh.nguyenbk70@hcmut.edu.vn"
+      },
+      "course": {
+        "id": "97670e34-966e-461d-957e-3d48fbef6034",
+        "name": "Data Structures and Algorithms",
+        "description": null
+      },
+      "metadata": {
+        "version": 5,
+        "start_date": "2025-03-26T00:00:00",
+        "end_date": "2025-03-28T00:00:00",
+        "objective": "i only want study about sorting"
+      },
+      "recommended_lessons": [
+        {
+          "id": "32d51b68-f6ee-458c-9887-b88e86f78694",
+          "order": null,
+          "lesson": {
+            "id": "304c57fc-e6a0-4fea-8389-7085713f238c",
+            "title": "Lists",
+            "description": "This lesson introduces list data structures, their types, and their applications in programming. Students will explore different types of lists, including arrays (static lists) and linked lists (dynamic lists), and understand their advantages and limitations."
+          },
+          "explanation": "Sorting algorithms work on data stored in data structures. Understanding how lists store and organize data is crucial for comprehending how sorting algorithms manipulate that data. Lists, especially linked lists, are foundational for implementing more complex sorting techniques later. Understanding the time and space complexity of list operations will also set the stage for analyzing the efficiency of sorting algorithms.",
+          "modules": []
+        },
+        {
+          "id": "c955c99a-544a-4382-926c-796067999ea8",
+          "order": null,
+          "lesson": {
+            "id": "3e95f5e3-6621-4a96-b8d6-b8bcb2071b36",
+            "title": "Sorting",
+            "description": "This lesson covers sorting algorithms, which are fundamental for organizing and managing data efficiently. Students will explore different types of sorting techniques, including comparison-based sorting algorithms such as Bubble Sort, Selection Sort, Insertion Sort, Merge Sort, Quick Sort, and Heap Sort, as well as non-comparison-based sorting algorithms like Counting Sort and Radix Sort."
+          },
+          "explanation": "This lesson directly addresses the student's goal. Understanding these sorting algorithms is crucial for organizing and managing data efficiently, which is a fundamental concept in data structures and algorithms.",
+          "modules": []
+        },
+        {
+          "id": "41c5de93-cb24-4e3d-bbff-00e816124989",
+          "order": null,
+          "lesson": {
+            "id": "f987c521-39bc-4bac-bbab-d8c5b6096ab7",
+            "title": "Tree concepts and Binary Tree",
+            "description": "This lesson introduces tree data structures, a hierarchical way of organizing and storing data. Students will learn the fundamental concepts of trees, including nodes, edges, root, parent-child relationships, depth, height, and traversal methods."
+          },
+          "explanation": "Binary Search Trees introduce the concept of ordered data, which is a core principle of sorting. Understanding BSTs allows the student to understand the sorted data which is key to sorting algorthms.",
+          "modules": []
+        },
+        {
+          "id": "ae4875df-8f50-4513-8225-e4845a4f7ebb",
+          "order": null,
+          "lesson": {
+            "id": "1bfd8ded-fa98-48cf-be66-d6b291033f10",
+            "title": "Multiway Tree",
+            "description": "This lesson explores multiway trees, a type of tree data structure where each node can have more than two children, making them useful for hierarchical data organization in various applications. Students will learn the fundamental concepts of multiway trees, including general trees, m-ary trees, B-trees, and B+ trees, which are widely used in databases and file systems."
+          },
+          "explanation": "While this lesson primarily focuses on Multiway Trees, understanding these concepts is important for broader knowledge of data structures and how they relate to efficient data retrieval and sorting. This provides context for more optimized sorting techniques. Although not directly about sorting algorithms, the lesson provides valuable context for understanding how data can be structured for efficient processing, which is relevant to sorting.",
+          "modules": []
+        },
+        {
+          "id": "7e71df27-a2a4-4b05-bbf2-5ff24b8e26f7",
+          "order": null,
+          "lesson": {
+            "id": "3dc26b52-8cdb-4975-a35e-44f339cd4eb2",
+            "title": "Advanced BST",
+            "description": "This lesson delves into advanced concepts of Binary Search Trees (BST), focusing on self-balancing trees and optimized searching and insertion techniques. Students will explore the limitations of standard BSTs, such as skewed trees leading to inefficient operations, and learn about balanced BSTs like AVL trees, Red-Black trees, and Splay trees, which ensure optimal performance."
+          },
+          "explanation": "Understanding BSTs is important as a stepping stone. Sorting algorithms often leverage search tree concepts for efficiency. Although this lesson primarily covers advanced BSTs, the core BST principles are relevant to understanding how search and sorting can be optimized.",
+          "modules": []
+        },
+        {
+          "id": "70106241-43b8-4e37-8b3d-f651cfa57da1",
+          "order": null,
+          "lesson": {
+            "id": "269ab4ca-aacc-47e5-af83-bc164014d9a9",
+            "title": "Course introduction, Recursion and Complexity of Algorithms",
+            "description": "This lesson provides an introduction to the Data Structures and Algorithms (DSA) course, outlining its objectives, structure, and the fundamental role of algorithms and data structures in computer science."
+          },
+          "explanation": "Understanding Big-O notation is essential for comparing the efficiency of different sorting algorithms. This lesson provides the necessary foundation to analyze and evaluate the performance of various sorting techniques that will be covered later in the course. It is important to know how to measure the efficiency of your algorithms. You need to know the basics before jumping into the specifics of sorting.",
+          "modules": []
+        },
+        {
+          "id": "93f147c3-caa7-4dbe-9a01-6d4ae394bc0e",
+          "order": null,
+          "lesson": {
+            "id": "fba89e4a-c89a-499d-9429-985c0d001a69",
+            "title": "Graph representation and elementary algorithms",
+            "description": "This lesson introduces graph data structures, which are used to represent relationships between objects in various real-world applications such as networks, social connections, and transportation systems. Students will learn different ways to represent graphs, including adjacency lists, adjacency matrices, and edge lists, and understand their advantages and trade-offs."
+          },
+          "explanation": "Understanding complexity is vital for evaluating the efficiency of different sorting algorithms. Analyzing graph algorithms provides a foundation for comprehending how to measure and compare the performance of sorting methods.",
+          "modules": []
+        }
+      ]
+    },
+    {
+      "id": "e81140de-29fc-4886-b3a1-448b6825c9da",
+      "student": {
+        "id": "f0c87e53-edd3-4b13-8563-2346585fbe76",
+        "email": "anh.nguyenbk70@hcmut.edu.vn"
+      },
+      "course": {
+        "id": "97670e34-966e-461d-957e-3d48fbef6034",
+        "name": "Data Structures and Algorithms",
+        "description": null
+      },
+      "metadata": {
+        "version": 3,
+        "start_date": "2025-03-26T00:00:00",
+        "end_date": "2025-03-27T00:00:00",
+        "objective": "i only want study about lists\n"
+      },
+      "recommended_lessons": [
+        {
+          "id": "39993ec3-6b0c-44c5-bee0-32a8a74dd0c4",
+          "order": null,
+          "lesson": {
+            "id": "1bfd8ded-fa98-48cf-be66-d6b291033f10",
+            "title": "Multiway Tree",
+            "description": "This lesson explores multiway trees, a type of tree data structure where each node can have more than two children, making them useful for hierarchical data organization in various applications. Students will learn the fundamental concepts of multiway trees, including general trees, m-ary trees, B-trees, and B+ trees, which are widely used in databases and file systems."
+          },
+          "explanation": "While the student's goal is to study lists, the concepts of multiway trees, especially B-Trees, provide a valuable perspective. B-Trees are a hierarchical data structure, but they are often used for data storage that can be conceptualized as a list. Understanding the core concepts of B-Trees, such as node structure, insertion, deletion, and search operations, will help the student better understand how data can be organized in a list-like fashion, and how to optimize those operations.",
+          "modules": []
+        },
+        {
+          "id": "c633fe8c-fed5-4513-b94a-b22b9b1ae16b",
+          "order": null,
+          "lesson": {
+            "id": "3e95f5e3-6621-4a96-b8d6-b8bcb2071b36",
+            "title": "Sorting",
+            "description": "This lesson covers sorting algorithms, which are fundamental for organizing and managing data efficiently. Students will explore different types of sorting techniques, including comparison-based sorting algorithms such as Bubble Sort, Selection Sort, Insertion Sort, Merge Sort, Quick Sort, and Heap Sort, as well as non-comparison-based sorting algorithms like Counting Sort and Radix Sort."
+          },
+          "explanation": "While sorting might not directly relate to lists, understanding how data can be ordered is crucial for understanding how list elements are organized and accessed. The selection and insertion sorts provide a good starting point for comprehending these concepts. This lesson provides the building blocks for understanding data organization, which is fundamental to list operations.",
+          "modules": []
+        },
+        {
+          "id": "6a63fb3d-a7e6-4837-b66e-3234bdc73a1f",
+          "order": null,
+          "lesson": {
+            "id": "f987c521-39bc-4bac-bbab-d8c5b6096ab7",
+            "title": "Tree concepts and Binary Tree",
+            "description": "This lesson introduces tree data structures, a hierarchical way of organizing and storing data. Students will learn the fundamental concepts of trees, including nodes, edges, root, parent-child relationships, depth, height, and traversal methods."
+          },
+          "explanation": "Although the student's goal is to study lists, understanding tree data structures, and specifically binary trees, is crucial because lists are often used as the underlying data structure for implementing trees. Binary trees also lay the groundwork for understanding more complex data structures and algorithms. Moreover, understanding the difference between a tree and a list can provide a better grasp of the more complex data structures.",
+          "modules": []
+        },
+        {
+          "id": "3f3f43a2-4e6d-446b-b40c-4ab272f8dd86",
+          "order": null,
+          "lesson": {
+            "id": "304c57fc-e6a0-4fea-8389-7085713f238c",
+            "title": "Lists",
+            "description": "This lesson introduces list data structures, their types, and their applications in programming. Students will explore different types of lists, including arrays (static lists) and linked lists (dynamic lists), and understand their advantages and limitations."
+          },
+          "explanation": "This lesson directly addresses the student's goal of studying lists. The content provides the necessary foundation for understanding different list implementations and their respective trade-offs, which is crucial for data structures and algorithms.",
+          "modules": []
+        },
+        {
+          "id": "64973b4a-4535-49dc-9ba9-2cb44f5be93b",
+          "order": null,
+          "lesson": {
+            "id": "269ab4ca-aacc-47e5-af83-bc164014d9a9",
+            "title": "Course introduction, Recursion and Complexity of Algorithms",
+            "description": "This lesson provides an introduction to the Data Structures and Algorithms (DSA) course, outlining its objectives, structure, and the fundamental role of algorithms and data structures in computer science."
+          },
+          "explanation": "Although this lesson primarily covers introductory concepts, it includes essential definitions of data structures, abstract data types, and provides a basic introduction to lists, which is Anh's primary interest. Understanding these fundamentals is crucial before delving into the specifics of list implementations and operations.",
+          "modules": []
+        }
+      ]
+    },
+    {
+      "id": "0f367eef-47c6-474b-9575-d98f7b372a1b",
+      "student": {
+        "id": "f0c87e53-edd3-4b13-8563-2346585fbe76",
+        "email": "anh.nguyenbk70@hcmut.edu.vn"
+      },
+      "course": {
+        "id": "97670e34-966e-461d-957e-3d48fbef6034",
+        "name": "Data Structures and Algorithms",
+        "description": null
+      },
+      "metadata": {
+        "version": 4,
+        "start_date": "2025-03-26T00:00:00",
+        "end_date": "2025-04-05T00:00:00",
+        "objective": "Implement and compare the performance of Merge Sort and Quick Sort for different input sizes within two weeks."
+      },
+      "recommended_lessons": [
+        {
+          "id": "405145f1-7939-4acb-8a03-f8b729855b08",
+          "order": null,
+          "lesson": {
+            "id": "fba89e4a-c89a-499d-9429-985c0d001a69",
+            "title": "Graph representation and elementary algorithms",
+            "description": "This lesson introduces graph data structures, which are used to represent relationships between objects in various real-world applications such as networks, social connections, and transportation systems. Students will learn different ways to represent graphs, including adjacency lists, adjacency matrices, and edge lists, and understand their advantages and trade-offs."
+          },
+          "explanation": "Understanding graph representation and traversal algorithms helps build a foundation in algorithmic thinking, which is essential for analyzing the performance of sorting algorithms like Merge Sort and Quick Sort. Analyzing time and space complexity using Big O notation is directly transferable.",
+          "modules": []
+        },
+        {
+          "id": "48daf003-43a8-43de-85ca-2161d72dfcc4",
+          "order": null,
+          "lesson": {
+            "id": "304c57fc-e6a0-4fea-8389-7085713f238c",
+            "title": "Lists",
+            "description": "This lesson introduces list data structures, their types, and their applications in programming. Students will explore different types of lists, including arrays (static lists) and linked lists (dynamic lists), and understand their advantages and limitations."
+          },
+          "explanation": "Lists are fundamental building blocks for understanding more complex data structures and algorithms.  Understanding list operations, and the differences between array and linked list implementations is crucial for efficient algorithm design and analysis.  Understanding stacks and queues can help understand how sorting algorithms use auxiliary data structures.",
+          "modules": []
+        },
+        {
+          "id": "534a6b3e-8faa-4131-83fe-4769ece32232",
+          "order": null,
+          "lesson": {
+            "id": "1bfd8ded-fa98-48cf-be66-d6b291033f10",
+            "title": "Multiway Tree",
+            "description": "This lesson explores multiway trees, a type of tree data structure where each node can have more than two children, making them useful for hierarchical data organization in various applications. Students will learn the fundamental concepts of multiway trees, including general trees, m-ary trees, B-trees, and B+ trees, which are widely used in databases and file systems."
+          },
+          "explanation": "Understanding multiway trees, especially B-trees, provides a broader perspective on tree structures and how they are used to optimize data storage and retrieval, especially in the context of disk-based data. This knowledge complements the understanding of BSTs and will help the student understand the advantages of different data structures, which is important when comparing the performance of different sorting algorithms.",
+          "modules": []
+        },
+        {
+          "id": "abbec49f-04a7-4f6c-8268-86248ae6be43",
+          "order": null,
+          "lesson": {
+            "id": "3dc26b52-8cdb-4975-a35e-44f339cd4eb2",
+            "title": "Advanced BST",
+            "description": "This lesson delves into advanced concepts of Binary Search Trees (BST), focusing on self-balancing trees and optimized searching and insertion techniques. Students will explore the limitations of standard BSTs, such as skewed trees leading to inefficient operations, and learn about balanced BSTs like AVL trees, Red-Black trees, and Splay trees, which ensure optimal performance."
+          },
+          "explanation": "While not directly related to Merge Sort or Quick Sort, a strong understanding of BSTs and their balancing techniques (like AVL trees) is fundamental to understanding how efficient search and sorting algorithms are designed and can be useful for the student's understanding of the efficiency considerations in sorting algorithms. It also introduces the core concepts of tree structures, which can aid in understanding the divide and conquer strategies used in sorting.",
+          "modules": []
+        },
+        {
+          "id": "b0cf29b8-c6f6-4fb4-8b49-93363ed077c7",
+          "order": null,
+          "lesson": {
+            "id": "3e95f5e3-6621-4a96-b8d6-b8bcb2071b36",
+            "title": "Sorting",
+            "description": "This lesson covers sorting algorithms, which are fundamental for organizing and managing data efficiently. Students will explore different types of sorting techniques, including comparison-based sorting algorithms such as Bubble Sort, Selection Sort, Insertion Sort, Merge Sort, Quick Sort, and Heap Sort, as well as non-comparison-based sorting algorithms like Counting Sort and Radix Sort."
+          },
+          "explanation": "This lesson provides the foundation for understanding and implementing Merge Sort and Quick Sort, which is the student's primary goal. The concepts of divide-and-conquer, time complexity, and implementation are crucial for the student to achieve the goal of comparing the performance of these algorithms.",
+          "modules": []
+        },
+        {
+          "id": "2583f08e-0cba-4cce-ac9e-42d597899b97",
+          "order": null,
+          "lesson": {
+            "id": "269ab4ca-aacc-47e5-af83-bc164014d9a9",
+            "title": "Course introduction, Recursion and Complexity of Algorithms",
+            "description": "This lesson provides an introduction to the Data Structures and Algorithms (DSA) course, outlining its objectives, structure, and the fundamental role of algorithms and data structures in computer science."
+          },
+          "explanation": "Recursion will be used in implementing Merge Sort and Quick Sort. Understanding Big-O notation is crucial for analyzing and comparing the performance of these sorting algorithms for different input sizes.",
+          "modules": []
+        },
+        {
+          "id": "f9ba061b-0f55-473d-9103-3648714809a6",
+          "order": null,
+          "lesson": {
+            "id": "f987c521-39bc-4bac-bbab-d8c5b6096ab7",
+            "title": "Tree concepts and Binary Tree",
+            "description": "This lesson introduces tree data structures, a hierarchical way of organizing and storing data. Students will learn the fundamental concepts of trees, including nodes, edges, root, parent-child relationships, depth, height, and traversal methods."
+          },
+          "explanation": "Binary trees and their traversals provide a foundational understanding of hierarchical data structures and recursion, which are essential for understanding algorithms like Merge Sort (which can use a divide-and-conquer approach that resembles tree traversal) and for analyzing algorithm efficiency. The concepts of height and balance relate to the efficiency of algorithms.",
+          "modules": []
+        }
+      ]
+    },
+    {
+      "id": "071af013-4a53-4efe-9ef6-13b7c29153df",
+      "student": {
+        "id": "f0c87e53-edd3-4b13-8563-2346585fbe76",
+        "email": "anh.nguyenbk70@hcmut.edu.vn"
+      },
+      "course": {
+        "id": "97670e34-966e-461d-957e-3d48fbef6034",
+        "name": "Data Structures and Algorithms",
+        "description": null
+      },
+      "metadata": {
+        "version": 1,
+        "start_date": "2025-03-26T00:00:00",
+        "end_date": "2025-04-05T00:00:00",
+        "objective": "Implement basic array and linked list operations (insertion, deletion, traversal) in Python within two weeks."
+      },
+      "recommended_lessons": [
+        {
+          "id": "44d8c3ec-d55b-4587-9f9a-ecff2225c337",
+          "order": null,
+          "lesson": {
+            "id": "f987c521-39bc-4bac-bbab-d8c5b6096ab7",
+            "title": "Tree concepts and Binary Tree",
+            "description": "This lesson introduces tree data structures, a hierarchical way of organizing and storing data. Students will learn the fundamental concepts of trees, including nodes, edges, root, parent-child relationships, depth, height, and traversal methods."
+          },
+          "explanation": "While this lesson doesn't directly address arrays or linked lists, the concepts of trees, especially binary trees, are fundamental to data structures and algorithms. Understanding tree traversal (preorder, inorder, postorder) will build a foundation for understanding how to traverse array and linked list structures. Binary Tree concepts also provide the foundation for Binary Search Trees which is an important concept in data structures.",
+          "modules": []
+        },
+        {
+          "id": "4ca3e585-5d12-44df-8303-1cfae725977d",
+          "order": null,
+          "lesson": {
+            "id": "3dc26b52-8cdb-4975-a35e-44f339cd4eb2",
+            "title": "Advanced BST",
+            "description": "This lesson delves into advanced concepts of Binary Search Trees (BST), focusing on self-balancing trees and optimized searching and insertion techniques. Students will explore the limitations of standard BSTs, such as skewed trees leading to inefficient operations, and learn about balanced BSTs like AVL trees, Red-Black trees, and Splay trees, which ensure optimal performance."
+          },
+          "explanation": "While this lesson does not directly address arrays or linked lists, it is important for understanding the concepts of self-balancing trees and their importance to maintain the efficiency of basic operations. This will provide a solid foundation for understanding more basic data structures.",
+          "modules": []
+        },
+        {
+          "id": "fa1d73e3-854e-4f35-a2da-faad5de58c6c",
+          "order": null,
+          "lesson": {
+            "id": "269ab4ca-aacc-47e5-af83-bc164014d9a9",
+            "title": "Course introduction, Recursion and Complexity of Algorithms",
+            "description": "This lesson provides an introduction to the Data Structures and Algorithms (DSA) course, outlining its objectives, structure, and the fundamental role of algorithms and data structures in computer science."
+          },
+          "explanation": "Recursion is a fundamental concept used in many algorithms, including those for linked list operations. Understanding Big-O notation is essential for analyzing the efficiency of array and linked list operations (insertion, deletion, traversal). This lesson prepares the student to understand the performance implications of different implementation choices.",
+          "modules": []
+        },
+        {
+          "id": "2757446b-8f3e-4401-94b8-fb094b68b151",
+          "order": null,
+          "lesson": {
+            "id": "1bfd8ded-fa98-48cf-be66-d6b291033f10",
+            "title": "Multiway Tree",
+            "description": "This lesson explores multiway trees, a type of tree data structure where each node can have more than two children, making them useful for hierarchical data organization in various applications. Students will learn the fundamental concepts of multiway trees, including general trees, m-ary trees, B-trees, and B+ trees, which are widely used in databases and file systems."
+          },
+          "explanation": "This lesson provides a high-level overview of multiway trees, B-trees, and B+ trees. Understanding these structures is key to grasping the concepts of data structures and algorithms. While the lesson doesn't directly relate to the student's primary goal, it is important to build a broad foundation of knowledge.",
+          "modules": []
+        },
+        {
+          "id": "6167f91f-0c88-4d84-8eeb-3cd0da480cd9",
+          "order": null,
+          "lesson": {
+            "id": "304c57fc-e6a0-4fea-8389-7085713f238c",
+            "title": "Lists",
+            "description": "This lesson introduces list data structures, their types, and their applications in programming. Students will explore different types of lists, including arrays (static lists) and linked lists (dynamic lists), and understand their advantages and limitations."
+          },
+          "explanation": "This lesson directly addresses the student's goal by introducing the fundamental data structures (arrays and linked lists) and the core operations (insertion, deletion, traversal) required for the project. Understanding the differences between array and linked list implementations is essential for choosing the right data structure for different scenarios.",
+          "modules": []
+        },
+        {
+          "id": "2ba33cc7-79e5-48c0-95cd-7292176cd9d0",
+          "order": null,
+          "lesson": {
+            "id": "3e95f5e3-6621-4a96-b8d6-b8bcb2071b36",
+            "title": "Sorting",
+            "description": "This lesson covers sorting algorithms, which are fundamental for organizing and managing data efficiently. Students will explore different types of sorting techniques, including comparison-based sorting algorithms such as Bubble Sort, Selection Sort, Insertion Sort, Merge Sort, Quick Sort, and Heap Sort, as well as non-comparison-based sorting algorithms like Counting Sort and Radix Sort."
+          },
+          "explanation": "While the student's primary goal is not directly related to sorting, understanding sorting concepts helps build a strong foundation in data organization and manipulation, which is fundamental to array and list operations. The core concepts of comparing and swapping elements directly relate to insertion and deletion operations in arrays and linked lists.",
+          "modules": []
+        }
+      ]
+    },
+    {
+      "id": "3132d0ea-cbe7-4a51-86cc-d939776d913c",
+      "student": {
+        "id": "f0c87e53-edd3-4b13-8563-2346585fbe76",
+        "email": "anh.nguyenbk70@hcmut.edu.vn"
+      },
+      "course": {
+        "id": "97670e34-966e-461d-957e-3d48fbef6034",
+        "name": "Data Structures and Algorithms",
+        "description": null
+      },
+      "metadata": {
+        "version": 6,
+        "start_date": "2025-03-26T00:00:00",
+        "end_date": "2025-04-05T00:00:00",
+        "objective": "Implement and explain two basic sorting algorithms (Bubble Sort, Insertion Sort) in Python within two weeks."
+      },
+      "recommended_lessons": [
+        {
+          "id": "49dcdee9-91ab-4e9e-bc2d-b755822eacbd",
+          "order": null,
+          "lesson": {
+            "id": "1bfd8ded-fa98-48cf-be66-d6b291033f10",
+            "title": "Multiway Tree",
+            "description": "This lesson explores multiway trees, a type of tree data structure where each node can have more than two children, making them useful for hierarchical data organization in various applications. Students will learn the fundamental concepts of multiway trees, including general trees, m-ary trees, B-trees, and B+ trees, which are widely used in databases and file systems."
+          },
+          "explanation": "This lesson provides a broader understanding of hierarchical data structures beyond binary trees. While not directly relevant to the student's goal, it introduces concepts that are frequently used in database systems, which can be useful for understanding sorting algorithms in the context of larger datasets.",
+          "modules": []
+        },
+        {
+          "id": "f340123f-8f80-43ce-abae-1b8d6c085a74",
+          "order": null,
+          "lesson": {
+            "id": "269ab4ca-aacc-47e5-af83-bc164014d9a9",
+            "title": "Course introduction, Recursion and Complexity of Algorithms",
+            "description": "This lesson provides an introduction to the Data Structures and Algorithms (DSA) course, outlining its objectives, structure, and the fundamental role of algorithms and data structures in computer science."
+          },
+          "explanation": "This lesson provides the necessary foundation for understanding algorithm efficiency. Sorting algorithms rely heavily on these concepts, particularly Big-O notation, to evaluate their performance. Recursion is also a valuable tool to understand many sorting algorithms, like quicksort and mergesort, and will help Anh understand how to implement them.",
+          "modules": []
+        },
+        {
+          "id": "4b78ee55-c729-42f0-a728-87f10bf5de44",
+          "order": null,
+          "lesson": {
+            "id": "f987c521-39bc-4bac-bbab-d8c5b6096ab7",
+            "title": "Tree concepts and Binary Tree",
+            "description": "This lesson introduces tree data structures, a hierarchical way of organizing and storing data. Students will learn the fundamental concepts of trees, including nodes, edges, root, parent-child relationships, depth, height, and traversal methods."
+          },
+          "explanation": "Trees, especially binary search trees, are fundamental data structures. While not directly related to sorting, they help build an understanding of data organization and search efficiency, which are critical for understanding how sorting algorithms work with different datasets. This knowledge will help the student understand how data organization affects algorithm performance.",
+          "modules": []
+        },
+        {
+          "id": "23313d13-c2de-464a-81a1-e48fdab725ed",
+          "order": null,
+          "lesson": {
+            "id": "304c57fc-e6a0-4fea-8389-7085713f238c",
+            "title": "Lists",
+            "description": "This lesson introduces list data structures, their types, and their applications in programming. Students will explore different types of lists, including arrays (static lists) and linked lists (dynamic lists), and understand their advantages and limitations."
+          },
+          "explanation": "A solid understanding of lists is crucial because sorting algorithms operate on lists of data.  Understanding the underlying data structure will help in implementing and explaining the sorting algorithms in Python. This lesson lays the groundwork for understanding how data is stored and manipulated, which is fundamental to sorting.",
+          "modules": []
+        },
+        {
+          "id": "4476c94e-448f-4ea7-bb69-f9f865f3b3db",
+          "order": null,
+          "lesson": {
+            "id": "3e95f5e3-6621-4a96-b8d6-b8bcb2071b36",
+            "title": "Sorting",
+            "description": "This lesson covers sorting algorithms, which are fundamental for organizing and managing data efficiently. Students will explore different types of sorting techniques, including comparison-based sorting algorithms such as Bubble Sort, Selection Sort, Insertion Sort, Merge Sort, Quick Sort, and Heap Sort, as well as non-comparison-based sorting algorithms like Counting Sort and Radix Sort."
+          },
+          "explanation": "This lesson directly addresses the student's goal by introducing sorting algorithms, including the two specifically requested (Bubble Sort and Insertion Sort). Understanding the fundamental concepts and implementation details presented here is crucial for achieving the learning objective.",
+          "modules": []
+        },
+        {
+          "id": "8e79dc7c-4ec6-4e38-a1cf-bcfb03f7ddba",
+          "order": null,
+          "lesson": {
+            "id": "fba89e4a-c89a-499d-9429-985c0d001a69",
+            "title": "Graph representation and elementary algorithms",
+            "description": "This lesson introduces graph data structures, which are used to represent relationships between objects in various real-world applications such as networks, social connections, and transportation systems. Students will learn different ways to represent graphs, including adjacency lists, adjacency matrices, and edge lists, and understand their advantages and trade-offs."
+          },
+          "explanation": "Although this lesson does not directly cover sorting algorithms, understanding graph representations, traversal algorithms, and their complexities lays a crucial foundation for analyzing the efficiency of sorting algorithms later in the course. This knowledge will help the student understand how data organization affects algorithm performance.",
+          "modules": []
+        },
+        {
+          "id": "2a0650c3-8e3a-490f-95c3-92362f515a0d",
+          "order": null,
+          "lesson": {
+            "id": "3dc26b52-8cdb-4975-a35e-44f339cd4eb2",
+            "title": "Advanced BST",
+            "description": "This lesson delves into advanced concepts of Binary Search Trees (BST), focusing on self-balancing trees and optimized searching and insertion techniques. Students will explore the limitations of standard BSTs, such as skewed trees leading to inefficient operations, and learn about balanced BSTs like AVL trees, Red-Black trees, and Splay trees, which ensure optimal performance."
+          },
+          "explanation": "Understanding self-balancing trees is important because these structures are designed to maintain a balance, ensuring that search, insertion, and deletion operations have a logarithmic time complexity (O(log n)). This efficiency is crucial when dealing with larger datasets, as it prevents the performance degradation that can occur in unbalanced trees. This foundation is relevant to understanding the efficiency of sorting algorithms as well.",
+          "modules": []
+        }
+      ]
+    },
+    {
+      "id": "04d21a2a-07d0-4f18-aee2-3d675f535d11",
+      "student": {
+        "id": "49de2631-bd30-496b-8c44-11fb25f1f4e4",
+        "email": "nguyentruongtuananh03@gmail.com"
+      },
+      "course": {
+        "id": "97670e34-966e-461d-957e-3d48fbef6034",
+        "name": "Data Structures and Algorithms",
+        "description": null
+      },
+      "metadata": {
+        "version": 7,
+        "start_date": "2025-03-26T00:00:00",
+        "end_date": "2025-04-05T00:00:00",
+        "objective": "Implement basic array and linked list operations (insertion, deletion, traversal) in Python with 80% accuracy within 2 weeks."
+      },
+      "recommended_lessons": [
+        {
+          "id": "786049f6-32a9-4d14-b647-86837762fe1f",
+          "order": null,
+          "lesson": {
+            "id": "304c57fc-e6a0-4fea-8389-7085713f238c",
+            "title": "Lists",
+            "description": "This lesson introduces list data structures, their types, and their applications in programming. Students will explore different types of lists, including arrays (static lists) and linked lists (dynamic lists), and understand their advantages and limitations."
+          },
+          "explanation": "This lesson directly addresses the student's goal of implementing basic array and linked list operations. Understanding the differences between arrays and linked lists, and how to perform insertion, deletion, and traversal is crucial for achieving proficiency. Analyzing time and space complexity helps the student understand the efficiency of their implementations.",
+          "modules": []
+        },
+        {
+          "id": "5ff70190-651f-46e4-a6a5-541cbe4df710",
+          "order": null,
+          "lesson": {
+            "id": "3dc26b52-8cdb-4975-a35e-44f339cd4eb2",
+            "title": "Advanced BST",
+            "description": "This lesson delves into advanced concepts of Binary Search Trees (BST), focusing on self-balancing trees and optimized searching and insertion techniques. Students will explore the limitations of standard BSTs, such as skewed trees leading to inefficient operations, and learn about balanced BSTs like AVL trees, Red-Black trees, and Splay trees, which ensure optimal performance."
+          },
+          "explanation": "While this lesson focuses on advanced tree concepts, understanding balanced trees provides a deeper understanding of how data structures maintain efficiency.  This understanding of balancing techniques informs the design choices for data structures like arrays and linked lists, ensuring efficient insertion, deletion, and traversal operations.",
+          "modules": []
+        },
+        {
+          "id": "c8a1d736-61b4-4664-80a5-e24fd748b4fe",
+          "order": null,
+          "lesson": {
+            "id": "fba89e4a-c89a-499d-9429-985c0d001a69",
+            "title": "Graph representation and elementary algorithms",
+            "description": "This lesson introduces graph data structures, which are used to represent relationships between objects in various real-world applications such as networks, social connections, and transportation systems. Students will learn different ways to represent graphs, including adjacency lists, adjacency matrices, and edge lists, and understand their advantages and trade-offs."
+          },
+          "explanation": "While this lesson directly addresses graph data structures, understanding graph representation and traversal algorithms (BFS/DFS) helps build foundational understanding for more complex data structures and algorithms that build on the basic array and linked list operations. This will provide a strong base for future lessons.",
+          "modules": []
+        },
+        {
+          "id": "271dc8de-6af5-4b83-8060-63492b9aaec2",
+          "order": null,
+          "lesson": {
+            "id": "3e95f5e3-6621-4a96-b8d6-b8bcb2071b36",
+            "title": "Sorting",
+            "description": "This lesson covers sorting algorithms, which are fundamental for organizing and managing data efficiently. Students will explore different types of sorting techniques, including comparison-based sorting algorithms such as Bubble Sort, Selection Sort, Insertion Sort, Merge Sort, Quick Sort, and Heap Sort, as well as non-comparison-based sorting algorithms like Counting Sort and Radix Sort."
+          },
+          "explanation": "While the student's primary goal is to implement array and linked list operations, understanding sorting algorithms is crucial for a broader understanding of data structures and algorithms. This lesson helps build a solid foundation in algorithm analysis and design, which is necessary for success in this course.",
+          "modules": []
+        },
+        {
+          "id": "8f1178ae-b72e-410c-8d2b-64640e047489",
+          "order": null,
+          "lesson": {
+            "id": "1bfd8ded-fa98-48cf-be66-d6b291033f10",
+            "title": "Multiway Tree",
+            "description": "This lesson explores multiway trees, a type of tree data structure where each node can have more than two children, making them useful for hierarchical data organization in various applications. Students will learn the fundamental concepts of multiway trees, including general trees, m-ary trees, B-trees, and B+ trees, which are widely used in databases and file systems."
+          },
+          "explanation": "Although B-trees are not directly related to arrays and linked lists, they provide a valuable perspective on hierarchical data organization and efficient data access. Studying B-trees will improve the student's understanding of how data structures handle large datasets, and the importance of efficient operations.",
+          "modules": []
+        },
+        {
+          "id": "f1231a0d-8cc4-4b33-a115-67d23a4389d6",
+          "order": null,
+          "lesson": {
+            "id": "f987c521-39bc-4bac-bbab-d8c5b6096ab7",
+            "title": "Tree concepts and Binary Tree",
+            "description": "This lesson introduces tree data structures, a hierarchical way of organizing and storing data. Students will learn the fundamental concepts of trees, including nodes, edges, root, parent-child relationships, depth, height, and traversal methods."
+          },
+          "explanation": "This lesson introduces tree data structures. Understanding trees, especially binary trees, provides a good foundation for how data can be organized hierarchically. This understanding can be helpful when considering more advanced array and linked list operations.",
+          "modules": []
+        },
+        {
+          "id": "640d52a8-a2fe-4574-97fb-f91e75f5f4df",
+          "order": null,
+          "lesson": {
+            "id": "269ab4ca-aacc-47e5-af83-bc164014d9a9",
+            "title": "Course introduction, Recursion and Complexity of Algorithms",
+            "description": "This lesson provides an introduction to the Data Structures and Algorithms (DSA) course, outlining its objectives, structure, and the fundamental role of algorithms and data structures in computer science."
+          },
+          "explanation": "This lesson lays the groundwork for the entire course. Understanding recursion is crucial for later implementation of array and linked list operations, as well as the design and implementation of other algorithms. Understanding Big-O notation is critical for analyzing the efficiency of the student's implementations of array and linked list operations, enabling them to meet the 80% accuracy goal by designing efficient solutions.",
+          "modules": []
+        }
+      ]
+    },
+    {
+      "id": "119bf3d8-6106-4605-9e4a-3de8b15b4751",
+      "student": {
+        "id": "49de2631-bd30-496b-8c44-11fb25f1f4e4",
+        "email": "nguyentruongtuananh03@gmail.com"
+      },
+      "course": {
+        "id": "97670e34-966e-461d-957e-3d48fbef6034",
+        "name": "Data Structures and Algorithms",
+        "description": null
+      },
+      "metadata": {
+        "version": 8,
+        "start_date": "2025-03-26T00:00:00",
+        "end_date": "2025-04-05T00:00:00",
+        "objective": "Implement basic array and linked list operations (insertion, deletion, traversal) in Python within two weeks."
+      },
+      "recommended_lessons": [
+        {
+          "id": "ae787e0d-6117-48e6-9a4f-b069499dfe0d",
+          "order": null,
+          "lesson": {
+            "id": "1bfd8ded-fa98-48cf-be66-d6b291033f10",
+            "title": "Multiway Tree",
+            "description": "This lesson explores multiway trees, a type of tree data structure where each node can have more than two children, making them useful for hierarchical data organization in various applications. Students will learn the fundamental concepts of multiway trees, including general trees, m-ary trees, B-trees, and B+ trees, which are widely used in databases and file systems."
+          },
+          "explanation": "This lesson provides a valuable perspective on hierarchical data structures and how they are used in real-world applications like databases. While the student's immediate goal is not related, exposure to different data structures broadens their knowledge base and understanding of data organization and efficiency. This will also help with understanding how data is stored and accessed.",
+          "modules": []
+        },
+        {
+          "id": "696d10cb-d628-476c-aca1-324db9b21010",
+          "order": null,
+          "lesson": {
+            "id": "3e95f5e3-6621-4a96-b8d6-b8bcb2071b36",
+            "title": "Sorting",
+            "description": "This lesson covers sorting algorithms, which are fundamental for organizing and managing data efficiently. Students will explore different types of sorting techniques, including comparison-based sorting algorithms such as Bubble Sort, Selection Sort, Insertion Sort, Merge Sort, Quick Sort, and Heap Sort, as well as non-comparison-based sorting algorithms like Counting Sort and Radix Sort."
+          },
+          "explanation": "While this lesson doesn't directly address arrays and linked lists, understanding sorting algorithms and their efficiency is crucial for building a strong foundation in data structures. The time complexity analysis will be beneficial in the student's goal of understanding the efficiency of their array and linked list implementations.",
+          "modules": []
+        },
+        {
+          "id": "d9470b3c-3f38-4da4-947e-b77d89255e2a",
+          "order": null,
+          "lesson": {
+            "id": "269ab4ca-aacc-47e5-af83-bc164014d9a9",
+            "title": "Course introduction, Recursion and Complexity of Algorithms",
+            "description": "This lesson provides an introduction to the Data Structures and Algorithms (DSA) course, outlining its objectives, structure, and the fundamental role of algorithms and data structures in computer science."
+          },
+          "explanation": "This lesson lays the groundwork for understanding how algorithms work and how to analyze their efficiency. Recursion is a fundamental concept used in many data structure implementations. Understanding Big-O notation is crucial for evaluating the performance of array and linked list operations.",
+          "modules": []
+        },
+        {
+          "id": "ff73fa53-5231-4a6c-939a-ae86cf47e006",
+          "order": null,
+          "lesson": {
+            "id": "304c57fc-e6a0-4fea-8389-7085713f238c",
+            "title": "Lists",
+            "description": "This lesson introduces list data structures, their types, and their applications in programming. Students will explore different types of lists, including arrays (static lists) and linked lists (dynamic lists), and understand their advantages and limitations."
+          },
+          "explanation": "This lesson directly addresses the student's goal of implementing basic array and linked list operations. Mastering insertion, deletion, and traversal is fundamental to understanding and working with these data structures. Understanding the different types of linked lists will provide a broader perspective on the topic.",
+          "modules": []
+        },
+        {
+          "id": "cd838515-8334-4c86-bccb-d604e452a5ed",
+          "order": null,
+          "lesson": {
+            "id": "3dc26b52-8cdb-4975-a35e-44f339cd4eb2",
+            "title": "Advanced BST",
+            "description": "This lesson delves into advanced concepts of Binary Search Trees (BST), focusing on self-balancing trees and optimized searching and insertion techniques. Students will explore the limitations of standard BSTs, such as skewed trees leading to inefficient operations, and learn about balanced BSTs like AVL trees, Red-Black trees, and Splay trees, which ensure optimal performance."
+          },
+          "explanation": "Although this lesson covers advanced BSTs, understanding the concept of balanced trees (like AVL trees) and the need for them helps in understanding time complexity and efficient data access. This knowledge is indirectly relevant to the student's goal as it builds a foundation for understanding data organization principles, which are important in the context of the course.",
+          "modules": []
+        },
+        {
+          "id": "a9a645e5-4fcb-4587-b70a-707e988be7fe",
+          "order": null,
+          "lesson": {
+            "id": "f987c521-39bc-4bac-bbab-d8c5b6096ab7",
+            "title": "Tree concepts and Binary Tree",
+            "description": "This lesson introduces tree data structures, a hierarchical way of organizing and storing data. Students will learn the fundamental concepts of trees, including nodes, edges, root, parent-child relationships, depth, height, and traversal methods."
+          },
+          "explanation": "While this lesson doesn't directly cover arrays or linked lists, understanding trees builds a foundation for understanding hierarchical data structures and algorithms. This knowledge will provide the student with a broader understanding of data structures, which can improve their ability to implement array and linked list operations.",
+          "modules": []
+        }
+      ]
+    },
+    {
+      "id": "002d46e7-b4f9-4ff5-aa0a-0c2a17944401",
+      "student": {
+        "id": "f0c87e53-edd3-4b13-8563-2346585fbe76",
+        "email": "anh.nguyenbk70@hcmut.edu.vn"
+      },
+      "course": {
+        "id": "1d9f61c0-a3b2-4b61-bc5c-d66e2d729f18",
+        "name": "Introduction to AI",
+        "description": null
+      },
+      "metadata": {
+        "version": 2,
+        "start_date": "2025-01-20T00:00:00",
+        "end_date": "2025-02-19T00:00:00",
+        "objective": "Define basic AI terminology and identify core concepts like machine learning and deep learning within one month."
+      },
+      "recommended_lessons": [
+        {
+          "id": "dd3a67f1-79d4-4e30-8f33-af566759cd51",
+          "order": null,
+          "lesson": {
+            "id": "661dde6a-9807-469a-9ff6-443312075d88",
+            "title": "Data Structures and Algorithms",
+            "description": "A comprehensive course on data structures and algorithms, covering fundamental concepts, advanced techniques, and practical applications to build efficient and scalable software."
+          },
+          "explanation": "This lesson provides a broad overview of AI, including the basics of Machine Learning and Deep Learning. This is crucial for the student to meet their goal of defining basic AI terminology and identifying core concepts within one month.",
+          "modules": []
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "total_paths": 12,
+    "extraction_date": "2025-04-25T02:32:05.201875",
+    "filters_applied": {
+      "course_id": null,
+      "student_id": null,
+      "start_date": null,
+      "end_date": null
+    }
+  }
+}
