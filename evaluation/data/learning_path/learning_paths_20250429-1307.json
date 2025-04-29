@@ -1,0 +1,1992 @@
+{
+  "learning_paths": [
+    {
+      "id": "29bd5d1f-0b0c-40a8-b940-baf42fc4754e",
+      "student": {
+        "id": "49de2631-bd30-496b-8c44-11fb25f1f4e4",
+        "email": "nguyentruongtuananh03@gmail.com"
+      },
+      "course": {
+        "id": "97670e34-966e-461d-957e-3d48fbef6034",
+        "name": "Data Structures and Algorithms",
+        "description": null
+      },
+      "metadata": {
+        "version": 15,
+        "start_date": "2025-03-26T00:00:00",
+        "end_date": "2025-04-05T00:00:00",
+        "objective": "Understand and apply basic sorting algorithms for data manipulation."
+      },
+      "recommended_lessons": [
+        {
+          "id": "a1df6939-a61b-4118-a378-b72937d20c9a",
+          "order": 1,
+          "lesson": {
+            "id": "269ab4ca-aacc-47e5-af83-bc164014d9a9",
+            "title": "Course introduction, Recursion and Complexity of Algorithms",
+            "description": "This lesson provides an introduction to the Data Structures and Algorithms (DSA) course, outlining its objectives, structure, and the fundamental role of algorithms and data structures in computer science."
+          },
+          "explanation": "This lesson is critical because it lays the groundwork for understanding sorting algorithms. Recursion is often used in the implementation of sorting algorithms like Merge Sort and Quick Sort. Understanding Big O notation is essential for comparing and evaluating the efficiency of different sorting algorithms. Without a solid grasp of these concepts, it will be difficult to analyze and choose the best sorting algorithm for a given situation. This lesson sets the stage for the more complex topics that follow.",
+          "modules": [
+            {
+              "id": "18e95fa7-1557-4572-aeb8-49ea1d9ec13f",
+              "title": "Recursion and Sorting Algorithms",
+              "objectives": [
+                "Understand the concept of recursion.",
+                "Analyze the time and space complexity of recursive functions.",
+                "Apply recursion in sorting algorithms (e.g., Merge Sort, Quick Sort).",
+                "Compare the performance of different sorting algorithms using Big O notation.",
+                "Identify the trade-offs between different sorting algorithms."
+              ]
+            },
+            {
+              "id": "3b807ef6-4fc0-4642-8801-cd0dcd3d5a7a",
+              "title": "Sorting Algorithms: Recursive Implementations",
+              "objectives": [
+                "Implement Merge Sort recursively.",
+                "Implement Quick Sort recursively.",
+                "Analyze the time and space complexity of Merge Sort and Quick Sort.",
+                "Compare and contrast Merge Sort and Quick Sort.",
+                "Understand the practical applications of Merge Sort and Quick Sort."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ecb185df-6d44-4243-af05-83208aa0e6ab",
+          "order": 2,
+          "lesson": {
+            "id": "3e95f5e3-6621-4a96-b8d6-b8bcb2071b36",
+            "title": "Sorting",
+            "description": "This lesson covers sorting algorithms, which are fundamental for organizing and managing data efficiently. Students will explore different types of sorting techniques, including comparison-based sorting algorithms such as Bubble Sort, Selection Sort, Insertion Sort, Merge Sort, Quick Sort, and Heap Sort, as well as non-comparison-based sorting algorithms like Counting Sort and Radix Sort."
+          },
+          "explanation": "This lesson is the core of the learning goal, directly addressing the application of sorting algorithms. It provides practical knowledge of different sorting techniques, enabling the student to manipulate data effectively. Understanding the implementation details, performance characteristics, and trade-offs between different algorithms is vital for making informed decisions in real-world scenarios. This lesson offers the tools necessary to implement and evaluate sorting algorithms, ensuring the student can apply these techniques to data manipulation tasks.",
+          "modules": [
+            {
+              "id": "f5c16f81-c11b-488e-a1ed-5a068f784f7c",
+              "title": "Introduction to Sorting Algorithms",
+              "objectives": [
+                "Understand the fundamental concepts of sorting.",
+                "Identify different types of sorting algorithms.",
+                "Recognize the importance of sorting in computer science."
+              ]
+            },
+            {
+              "id": "601b3731-05d6-4abf-9e5a-9d1ef379b2f3",
+              "title": "Bubble Sort, Insertion Sort, and Selection Sort",
+              "objectives": [
+                "Understand the implementation of Bubble Sort, Insertion Sort, and Selection Sort.",
+                "Analyze the time and space complexity of each algorithm.",
+                "Compare and contrast the performance of these algorithms."
+              ]
+            },
+            {
+              "id": "b6f32857-9911-4989-9d0a-e4eafab497a0",
+              "title": "Merge Sort and Quick Sort",
+              "objectives": [
+                "Understand the implementation of Merge Sort and Quick Sort.",
+                "Analyze the time and space complexity of each algorithm.",
+                "Compare and contrast the performance of these algorithms with the previous sorts."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "9fbdde94-8fee-45fd-b842-f95e34eebf41",
+          "order": 3,
+          "lesson": {
+            "id": "304c57fc-e6a0-4fea-8389-7085713f238c",
+            "title": "Lists",
+            "description": "This lesson introduces list data structures, their types, and their applications in programming. Students will explore different types of lists, including arrays (static lists) and linked lists (dynamic lists), and understand their advantages and limitations."
+          },
+          "explanation": "This lesson provides the necessary understanding of list data structures, which are fundamental for implementing sorting algorithms. Sorting algorithms operate on lists of data, so a solid understanding of list operations and implementations is essential. Understanding the characteristics of different list implementations, such as arrays and linked lists, is crucial for choosing the right data structure for a sorting task. This knowledge directly supports the goal of applying sorting algorithms by preparing the student with the required data structure knowledge.",
+          "modules": [
+            {
+              "id": "505050b1-6a3d-4278-b0af-d86770403f9a",
+              "title": "Introduction to Sorting Algorithms and List Implementations",
+              "objectives": [
+                "Understand the fundamental concepts of sorting algorithms.",
+                "Explore different list implementations (arrays and linked lists).",
+                "Analyze the impact of list implementations on sorting algorithm performance.",
+                "Identify use cases for various list types in sorting."
+              ]
+            },
+            {
+              "id": "2d0f829f-e309-4b52-a06c-78c22e0238df",
+              "title": "Advanced Sorting Techniques and their List Applications",
+              "objectives": [
+                "Explore advanced sorting algorithms (merge sort, quicksort, heapsort).",
+                "Analyze the performance characteristics of each algorithm.",
+                "Apply sorting algorithms to real-world scenarios.",
+                "Understand the impact of list implementations on advanced sort performance."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "d0eeb89d-c0af-42c8-a73e-6fb184999476",
+      "student": {
+        "id": "49de2631-bd30-496b-8c44-11fb25f1f4e4",
+        "email": "nguyentruongtuananh03@gmail.com"
+      },
+      "course": {
+        "id": "97670e34-966e-461d-957e-3d48fbef6034",
+        "name": "Data Structures and Algorithms",
+        "description": null
+      },
+      "metadata": {
+        "version": 16,
+        "start_date": "2025-03-26T00:00:00",
+        "end_date": "2025-04-05T00:00:00",
+        "objective": "Model and traverse simple graphs for real-world problems."
+      },
+      "recommended_lessons": [
+        {
+          "id": "96794df9-05dc-4d12-91a1-db67ecad0180",
+          "order": 1,
+          "lesson": {
+            "id": "fba89e4a-c89a-499d-9429-985c0d001a69",
+            "title": "Graph representation and elementary algorithms",
+            "description": "This lesson introduces graph data structures, which are used to represent relationships between objects in various real-world applications such as networks, social connections, and transportation systems. Students will learn different ways to represent graphs, including adjacency lists, adjacency matrices, and edge lists, and understand their advantages and trade-offs."
+          },
+          "explanation": "This lesson is crucial because it lays the groundwork for understanding graphs.  Trees are a special type of graph, and understanding tree concepts provides a solid foundation for learning about graph representations and algorithms. Mastering tree traversals is directly applicable to graph traversal algorithms, as they share similar principles. This knowledge will make it easier to grasp more complex graph algorithms. By studying trees first, you'll build a necessary mental model for graphs. This builds a strong foundation for more complex graph algorithms.",
+          "modules": [
+            {
+              "id": "b95db70c-7a0a-47d1-bb6f-1bb6ae088368",
+              "title": "Introduction to Trees: Fundamentals and Traversals",
+              "objectives": [
+                "Define and differentiate tree data structures and their components.",
+                "Understand the properties of binary trees.",
+                "Master the pre-order, in-order, and post-order traversal algorithms.",
+                "Apply tree traversals to solve practical problems.",
+                "Recognize the relationship between trees and graphs."
+              ]
+            },
+            {
+              "id": "2c6654df-cbcf-48cf-a4f7-23d6e9fd3346",
+              "title": "Trees and Graphs: Connections and Applications",
+              "objectives": [
+                "Understand the similarities and differences between trees and graphs.",
+                "Explore the use of trees in real-world applications.",
+                "Model simple graph structures using trees.",
+                "Apply tree traversal techniques to graph-related problems.",
+                "Solve problems involving tree-based algorithms."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "071d5d28-33a9-4b47-ab37-f2f76735cd42",
+          "order": 2,
+          "lesson": {
+            "id": "1bfd8ded-fa98-48cf-be66-d6b291033f10",
+            "title": "Multiway Tree",
+            "description": "This lesson explores multiway trees, a type of tree data structure where each node can have more than two children, making them useful for hierarchical data organization in various applications. Students will learn the fundamental concepts of multiway trees, including general trees, m-ary trees, B-trees, and B+ trees, which are widely used in databases and file systems."
+          },
+          "explanation": "Understanding multiway trees expands your knowledge of hierarchical data structures and data organization principles. Although not directly related to graph traversal, it builds on the foundation established in the previous lesson. The principles of efficient data storage and retrieval in multiway trees can indirectly inform your understanding of graph representations, particularly when dealing with large graphs. This lesson provides valuable insights into data management. It is important to broaden your knowledge of data structures.",
+          "modules": [
+            {
+              "id": "9fa00e64-227a-4f3c-a7f7-9a70c648b8e1",
+              "title": "Introduction to B-Trees and B+ Trees",
+              "objectives": [
+                "Understand the structure and properties of B-trees and B+ trees.",
+                "Differentiate between B-trees and B+ trees.",
+                "Learn the operations of search, insertion, and deletion in these tree structures.",
+                "Analyze the time complexity of B-tree and B+ tree operations."
+              ]
+            },
+            {
+              "id": "588bce93-e71a-432f-a5d1-8f0da0fe7d8c",
+              "title": "Applications of B-Trees and B+ Trees",
+              "objectives": [
+                "Identify real-world applications of B-trees and B+ trees.",
+                "Understand how these structures are used in database indexing.",
+                "Explore the use of B+ trees in file systems.",
+                "Analyze the performance benefits of using these data structures."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "f0afebdf-1b0b-466e-beaa-5e6bef3febc8",
+          "order": 3,
+          "lesson": {
+            "id": "f987c521-39bc-4bac-bbab-d8c5b6096ab7",
+            "title": "Tree concepts and Binary Tree",
+            "description": "This lesson introduces tree data structures, a hierarchical way of organizing and storing data. Students will learn the fundamental concepts of trees, including nodes, edges, root, parent-child relationships, depth, height, and traversal methods."
+          },
+          "explanation": "This lesson directly addresses the student's goal of modeling and traversing simple graphs. It introduces the core concepts of graph representation and traversal algorithms. Understanding BFS and DFS is essential for solving a wide range of graph-related problems. These algorithms are fundamental building blocks for more advanced graph algorithms. Mastery of this lesson is crucial for achieving the learning objective. This lesson is the core of your goal, so make sure you understand it.",
+          "modules": [
+            {
+              "id": "b2dc54bb-ee66-40bd-aaa3-3359aa986b10",
+              "title": "Graph Representations: Adjacency Lists and Matrices",
+              "objectives": [
+                "Understand the concepts of graph representations.",
+                "Differentiate between adjacency lists and adjacency matrices.",
+                "Analyze the space and time complexity of each representation.",
+                "Implement graph representations in code.",
+                "Identify suitable graph representations for different use cases."
+              ]
+            },
+            {
+              "id": "eb5b9738-455b-457e-a14f-15c5f66a5089",
+              "title": "Breadth-First Search (BFS) and Depth-First Search (DFS)",
+              "objectives": [
+                "Understand the BFS and DFS algorithms.",
+                "Trace BFS and DFS on example graphs.",
+                "Implement BFS and DFS in code.",
+                "Analyze the time and space complexity of BFS and DFS.",
+                "Identify applications of BFS and DFS."
+              ]
+            },
+            {
+              "id": "7dda3af7-674d-43ed-81f1-11cac3a15b1e",
+              "title": "Graph Algorithms Applications",
+              "objectives": [
+                "Identify real-world problems solvable with graph algorithms.",
+                "Understand the application of BFS in shortest path problems.",
+                "Understand the application of DFS in cycle detection and topological sorting.",
+                "Apply graph algorithms to solve practical problems.",
+                "Analyze the efficiency of graph algorithms in real-world scenarios."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "1c701da6-e101-45aa-84da-fc412dc03e44",
+      "student": {
+        "id": "49de2631-bd30-496b-8c44-11fb25f1f4e4",
+        "email": "nguyentruongtuananh03@gmail.com"
+      },
+      "course": {
+        "id": "97670e34-966e-461d-957e-3d48fbef6034",
+        "name": "Data Structures and Algorithms",
+        "description": null
+      },
+      "metadata": {
+        "version": 17,
+        "start_date": "2025-03-26T00:00:00",
+        "end_date": "2025-04-05T00:00:00",
+        "objective": "Master basic data structures for efficient data organization."
+      },
+      "recommended_lessons": [
+        {
+          "id": "5b4c6ae0-c057-4d21-8693-96e4adb357bb",
+          "order": 1,
+          "lesson": {
+            "id": "269ab4ca-aacc-47e5-af83-bc164014d9a9",
+            "title": "Course introduction, Recursion and Complexity of Algorithms",
+            "description": "This lesson provides an introduction to the Data Structures and Algorithms (DSA) course, outlining its objectives, structure, and the fundamental role of algorithms and data structures in computer science."
+          },
+          "explanation": "This lesson is critical because it lays the groundwork for understanding data structures. Recursion is frequently used within data structures. Big-O notation is essential for evaluating the efficiency of data structures and algorithms, directly aligning with the goal of efficient data organization. Without this foundational knowledge, it's difficult to understand the performance characteristics of more complex data structures. Understanding the course introduction is also essential for context.",
+          "modules": [
+            {
+              "id": "e0f3cf2b-0e00-4905-8b31-1e7ebb6eadd2",
+              "title": "Recursion and Big O Notation",
+              "objectives": [
+                "Understand the concept of recursion and its applications.",
+                "Analyze the time and space complexity of recursive algorithms using Big O notation.",
+                "Compare different algorithms based on their Big O complexity.",
+                "Identify the dominant operations in an algorithm.",
+                "Grasp the principles of algorithm efficiency."
+              ]
+            },
+            {
+              "id": "930817bb-c26d-4869-b320-1a274d0f5264",
+              "title": "Algorithm Efficiency and Comparison",
+              "objectives": [
+                "Understand the concept of algorithm efficiency and its importance.",
+                "Analyze the time and space complexity of algorithms.",
+                "Compare different algorithms based on their Big O complexity.",
+                "Identify the best algorithm for a given problem.",
+                "Apply algorithm analysis techniques to real-world scenarios."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "85144c60-d627-4172-9393-f7b0857c8332",
+          "order": 2,
+          "lesson": {
+            "id": "304c57fc-e6a0-4fea-8389-7085713f238c",
+            "title": "Lists",
+            "description": "This lesson introduces list data structures, their types, and their applications in programming. Students will explore different types of lists, including arrays (static lists) and linked lists (dynamic lists), and understand their advantages and limitations."
+          },
+          "explanation": "This lesson is crucial because lists (arrays and linked lists) are fundamental data structures. They are building blocks for other more complex data structures. Mastering their properties and operations is essential for efficient data organization. Understanding when to use an array versus a linked list directly impacts the performance of data manipulation tasks, which supports the student's goal.",
+          "modules": [
+            {
+              "id": "0bf89c43-ca36-480d-b83f-9d83b9ecdc16",
+              "title": "Arrays vs. Linked Lists: Fundamental Data Structures",
+              "objectives": [
+                "Understand the core differences between arrays and linked lists.",
+                "Analyze the advantages and disadvantages of each data structure.",
+                "Implement basic operations (insertion, deletion, searching) for both.",
+                "Recognize scenarios where each data structure is most appropriate."
+              ]
+            },
+            {
+              "id": "ab5bdc8d-9093-43d1-aa9a-55a72b9f27aa",
+              "title": "Operations on Arrays and Linked Lists",
+              "objectives": [
+                "Master the fundamental operations: insertion, deletion, and searching.",
+                "Analyze the time complexity of each operation for arrays and linked lists.",
+                "Implement these operations in code (e.g., Python or Java).",
+                "Understand how these operations impact the choice of data structure."
+              ]
+            },
+            {
+              "id": "fd9544cf-2a31-43bc-ac4e-76142aa4787f",
+              "title": "Choosing the Right Data Structure",
+              "objectives": [
+                "Understand the factors influencing data structure selection.",
+                "Analyze different use cases and recommend appropriate data structures.",
+                "Compare and contrast the performance characteristics of arrays and linked lists.",
+                "Apply knowledge to solve practical programming problems."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ede3f18e-d548-4866-91c9-f27ea022b764",
+          "order": 3,
+          "lesson": {
+            "id": "3e95f5e3-6621-4a96-b8d6-b8bcb2071b36",
+            "title": "Sorting",
+            "description": "This lesson covers sorting algorithms, which are fundamental for organizing and managing data efficiently. Students will explore different types of sorting techniques, including comparison-based sorting algorithms such as Bubble Sort, Selection Sort, Insertion Sort, Merge Sort, Quick Sort, and Heap Sort, as well as non-comparison-based sorting algorithms like Counting Sort and Radix Sort."
+          },
+          "explanation": "This lesson is critical because efficient sorting is a prerequisite for many other operations. Sorting algorithms are used to organize data in a way that facilitates searching and other operations. Understanding the different sorting algorithms and their complexities allows students to choose the most efficient method for a given task, which directly improves data organization and performance. This knowledge is directly relevant to the student's learning goal.",
+          "modules": [
+            {
+              "id": "556178b9-a909-48b7-82b5-11f9b0750a59",
+              "title": "Introduction to Sorting Algorithms",
+              "objectives": [
+                "Understand the fundamental concepts of sorting.",
+                "Learn about different types of sorting algorithms.",
+                "Analyze the time and space complexity of sorting algorithms."
+              ]
+            },
+            {
+              "id": "33a68463-1812-4ba2-a93f-d66b62d76a99",
+              "title": "Insertion Sort and Selection Sort",
+              "objectives": [
+                "Understand the working of Insertion Sort.",
+                "Understand the working of Selection Sort.",
+                "Compare and contrast Insertion Sort and Selection Sort.",
+                "Analyze the performance characteristics of each algorithm."
+              ]
+            },
+            {
+              "id": "f38eaf08-7dcd-4f17-81df-f47328a44c61",
+              "title": "Merge Sort and QuickSort",
+              "objectives": [
+                "Understand the divide-and-conquer strategy.",
+                "Learn the working of Merge Sort.",
+                "Learn the working of QuickSort.",
+                "Compare and contrast Merge Sort and QuickSort.",
+                "Analyze the performance characteristics of each algorithm."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c6d34688-b4b3-4a27-b4d8-7b4658acb86c",
+          "order": 4,
+          "lesson": {
+            "id": "f987c521-39bc-4bac-bbab-d8c5b6096ab7",
+            "title": "Tree concepts and Binary Tree",
+            "description": "This lesson introduces tree data structures, a hierarchical way of organizing and storing data. Students will learn the fundamental concepts of trees, including nodes, edges, root, parent-child relationships, depth, height, and traversal methods."
+          },
+          "explanation": "This lesson is essential because graphs are used to model relationships between data. Learning graph algorithms is crucial for solving problems related to networks, relationships, and dependencies. Understanding graph data structures and algorithms extends the student's ability to efficiently organize and process more complex data, contributing to the overall goal of mastering data structures for efficient data organization.",
+          "modules": [
+            {
+              "id": "0ad7dbf4-b35e-4476-a789-7eeb495c7506",
+              "title": "Graph Representations and Basic Traversal",
+              "objectives": [
+                "Understand the difference between adjacency matrix and adjacency list representations.",
+                "Implement Breadth-First Search (BFS) and Depth-First Search (DFS) algorithms.",
+                "Analyze the time and space complexity of graph traversal algorithms.",
+                "Apply graph traversal to solve real-world problems like finding shortest paths."
+              ]
+            },
+            {
+              "id": "e81684d7-7258-481c-af4d-1e6fd36b0888",
+              "title": "Dijkstra's Algorithm and Minimum Spanning Trees",
+              "objectives": [
+                "Understand Dijkstra's algorithm for finding the shortest paths in a weighted graph.",
+                "Learn about Minimum Spanning Trees (MST) and their applications.",
+                "Implement Dijkstra's algorithm.",
+                "Implement Kruskal's algorithm"
+              ]
+            },
+            {
+              "id": "c8bc7974-4192-41a3-8e8d-4124a794a94c",
+              "title": "Graph Algorithms Applications and Advanced Topics",
+              "objectives": [
+                "Apply graph algorithms to solve real-world problems.",
+                "Understand the concept of topological sorting.",
+                "Explore advanced graph algorithms and techniques.",
+                "Understand the application of these algorithms"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "3bb65ba7-3283-4e6a-8847-83dfaa975087",
+          "order": 5,
+          "lesson": {
+            "id": "fba89e4a-c89a-499d-9429-985c0d001a69",
+            "title": "Graph representation and elementary algorithms",
+            "description": "This lesson introduces graph data structures, which are used to represent relationships between objects in various real-world applications such as networks, social connections, and transportation systems. Students will learn different ways to represent graphs, including adjacency lists, adjacency matrices, and edge lists, and understand their advantages and trade-offs."
+          },
+          "explanation": "This lesson is critical because trees are another fundamental data structure used for hierarchical data organization. Binary trees and their variations are widely used in applications like searching and sorting. Understanding tree concepts allows students to effectively manage and retrieve data in a structured way. This directly supports the student's goal of mastering data structures.",
+          "modules": [
+            {
+              "id": "8ce4906a-2cc4-4577-b5bf-32de583a3a43",
+              "title": "Introduction to Trees and Binary Trees",
+              "objectives": [
+                "Define trees and their terminology.",
+                "Explain the properties of binary trees.",
+                "Differentiate between various types of binary trees."
+              ]
+            },
+            {
+              "id": "2bde4385-9c16-4b6d-921a-3cda7545e06b",
+              "title": "Tree Traversal Algorithms",
+              "objectives": [
+                "Understand the three main tree traversal algorithms: inorder, preorder, and postorder.",
+                "Implement these algorithms in code.",
+                "Analyze the applications of each traversal method."
+              ]
+            },
+            {
+              "id": "be352d5e-b05d-4463-9ab6-5d3cfcccb66c",
+              "title": "Binary Search Trees and Tree Complexity",
+              "objectives": [
+                "Understand the properties of Binary Search Trees (BSTs).",
+                "Implement BST operations: insertion, deletion, and search.",
+                "Analyze the time complexity of BST operations.",
+                "Explain the importance of balanced trees."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "74953e05-5a02-4d6f-a4cd-9f0fb1475448",
+      "student": {
+        "id": "49de2631-bd30-496b-8c44-11fb25f1f4e4",
+        "email": "nguyentruongtuananh03@gmail.com"
+      },
+      "course": {
+        "id": "97670e34-966e-461d-957e-3d48fbef6034",
+        "name": "Data Structures and Algorithms",
+        "description": null
+      },
+      "metadata": {
+        "version": 18,
+        "start_date": "2025-03-26T00:00:00",
+        "end_date": "2025-04-05T00:00:00",
+        "objective": "Design efficient solutions for simple search problems using appropriate data structures."
+      },
+      "recommended_lessons": [
+        {
+          "id": "921ba286-49ed-4772-9a4a-b018b7f9e84f",
+          "order": 1,
+          "lesson": {
+            "id": "269ab4ca-aacc-47e5-af83-bc164014d9a9",
+            "title": "Course introduction, Recursion and Complexity of Algorithms",
+            "description": "This lesson provides an introduction to the Data Structures and Algorithms (DSA) course, outlining its objectives, structure, and the fundamental role of algorithms and data structures in computer science."
+          },
+          "explanation": "This lesson is foundational because it introduces the concept of algorithm complexity, which is essential for evaluating the efficiency of search algorithms.  Big O notation allows you to compare the performance of different search solutions, such as linear search versus binary search.  Understanding recursion is also useful since search problems might be solved recursively.  The ability to analyze the complexity of an algorithm is a core skill for designing efficient solutions, and this lesson provides the necessary background.",
+          "modules": [
+            {
+              "id": "94d21bf8-3295-4261-ab3b-b8668da10c77",
+              "title": "Introduction to Algorithm Complexity and Big O Notation",
+              "objectives": [
+                "Define algorithm complexity and its importance.",
+                "Understand Big O notation and its use in expressing time and space complexity.",
+                "Identify different complexity classes (e.g., O(n), O(log n), O(n^2))."
+              ]
+            },
+            {
+              "id": "db81d747-99b2-4c90-aaba-3eca9aedcea7",
+              "title": "Recursion and Its Impact on Complexity",
+              "objectives": [
+                "Understand the concept of recursion.",
+                "Analyze the time and space complexity of recursive functions.",
+                "Identify potential performance issues related to recursion."
+              ]
+            },
+            {
+              "id": "d994950c-09c6-43ce-9e5d-b96ee12c33c9",
+              "title": "Comparing Search Algorithms Based on Complexity",
+              "objectives": [
+                "Compare the time complexities of different search algorithms (e.g., linear search, binary search).",
+                "Understand how data structures impact search algorithm performance.",
+                "Choose appropriate search algorithms for various scenarios."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "8e26665c-a08d-44be-a02b-ce465eec2bb3",
+          "order": 2,
+          "lesson": {
+            "id": "304c57fc-e6a0-4fea-8389-7085713f238c",
+            "title": "Lists",
+            "description": "This lesson introduces list data structures, their types, and their applications in programming. Students will explore different types of lists, including arrays (static lists) and linked lists (dynamic lists), and understand their advantages and limitations."
+          },
+          "explanation": "This lesson introduces fundamental data structures like arrays and linked lists, which are building blocks for more complex data structures and search algorithms. Understanding the characteristics of lists, like how elements are stored and accessed, will help you choose the correct data structure for a specific search problem. This also lays the groundwork for understanding the trade-offs between different data structures. This lesson is critical because it directly relates to the application of appropriate data structures.",
+          "modules": [
+            {
+              "id": "28f902f3-b670-4a25-b08b-658becee99ce",
+              "title": "Arrays vs. Linked Lists: Data Structure Fundamentals",
+              "objectives": [
+                "Differentiate between array-based and linked list data structures.",
+                "Understand the advantages and disadvantages of each data structure for various operations.",
+                "Analyze the time complexities of common operations (search, insertion, deletion) in arrays and linked lists.",
+                "Identify scenarios where each data structure is most appropriate for efficient search problems."
+              ]
+            },
+            {
+              "id": "1bbc467b-93ef-4433-bac7-f4b0ebbc5df2",
+              "title": "Contiguous vs. Dynamic Memory Allocation and Search Performance",
+              "objectives": [
+                "Understand the difference between contiguous and dynamic memory allocation.",
+                "Explain how memory allocation impacts the performance of data structure operations.",
+                "Analyze how the choice of data structure and allocation method affects search efficiency, especially with frequent insertions/deletions.",
+                "Apply knowledge to design efficient search solutions in dynamic environments."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "03999189-0a99-4e01-bf19-e0eb4fbb2a28",
+          "order": 3,
+          "lesson": {
+            "id": "3e95f5e3-6621-4a96-b8d6-b8bcb2071b36",
+            "title": "Sorting",
+            "description": "This lesson covers sorting algorithms, which are fundamental for organizing and managing data efficiently. Students will explore different types of sorting techniques, including comparison-based sorting algorithms such as Bubble Sort, Selection Sort, Insertion Sort, Merge Sort, Quick Sort, and Heap Sort, as well as non-comparison-based sorting algorithms like Counting Sort and Radix Sort."
+          },
+          "explanation": "Sorting is a critical pre-processing step for many efficient search algorithms, such as binary search. This lesson will show you how to improve search performance by first sorting the data. Understanding different sorting algorithms and their complexities is crucial. This lesson aligns with the goal by directly enabling more efficient search solutions.",
+          "modules": [
+            {
+              "id": "5e08c1a5-531a-476b-bb23-317c23fffba2",
+              "title": "Introduction to Sorting Algorithms and Time Complexity",
+              "objectives": [
+                "Understand the fundamental concepts of sorting algorithms.",
+                "Analyze the time and space complexity of various sorting algorithms.",
+                "Identify the best, average, and worst-case scenarios for each algorithm.",
+                "Recognize the impact of sorting on search algorithm efficiency."
+              ]
+            },
+            {
+              "id": "5e8bfb9e-b471-4dd5-ba8a-a7b3c5a0d22d",
+              "title": "Detailed Analysis of Sorting Algorithms: Bubble Sort, Insertion Sort, and Selection Sort",
+              "objectives": [
+                "Deeply understand the mechanics of Bubble Sort, Insertion Sort, and Selection Sort.",
+                "Compare the performance characteristics of these algorithms.",
+                "Analyze the best, average, and worst-case time complexities of each.",
+                "Understand when to use each algorithm based on data size and characteristics."
+              ]
+            },
+            {
+              "id": "1e32d130-b82a-4815-8315-e253bb3ba6a5",
+              "title": "Advanced Sorting Algorithms: Merge Sort and QuickSort",
+              "objectives": [
+                "Understand the divide-and-conquer strategy used in Merge Sort and QuickSort.",
+                "Analyze the time and space complexities of Merge Sort and QuickSort.",
+                "Compare the performance of Merge Sort and QuickSort.",
+                "Understand the concept of in-place and out-of-place sorting and how it applies to these algorithms."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "5a81b629-d663-4c2e-a5a0-fd89a5c4ca0c",
+          "order": 4,
+          "lesson": {
+            "id": "3dc26b52-8cdb-4975-a35e-44f339cd4eb2",
+            "title": "Advanced BST",
+            "description": "This lesson delves into advanced concepts of Binary Search Trees (BST), focusing on self-balancing trees and optimized searching and insertion techniques. Students will explore the limitations of standard BSTs, such as skewed trees leading to inefficient operations, and learn about balanced BSTs like AVL trees, Red-Black trees, and Splay trees, which ensure optimal performance."
+          },
+          "explanation": "Binary Search Trees are a fundamental data structure that allows for efficient searching. They are also a great example of how choosing the correct data structure impacts the performance of a search algorithm. Self-balancing trees are critical to maintain good performance. This aligns with the goal as it enables efficient search solutions.",
+          "modules": [
+            {
+              "id": "2ebcf31a-9e39-40ea-916b-a8dc335f0f39",
+              "title": "Binary Search Trees: Fundamentals and Efficiency",
+              "objectives": [
+                "Understand the structure and properties of Binary Search Trees (BSTs).",
+                "Analyze the time complexity of BST operations (search, insertion, deletion).",
+                "Implement basic BST operations in a programming language.",
+                "Explain the advantages and disadvantages of using BSTs for search problems."
+              ]
+            },
+            {
+              "id": "be8934d8-1d78-494b-952f-1f715537b1f7",
+              "title": "Self-Balancing Trees: AVL and Red-Black Trees",
+              "objectives": [
+                "Understand the need for self-balancing trees to maintain search efficiency.",
+                "Explain the concepts of AVL trees and Red-Black trees.",
+                "Analyze the time complexity of operations in self-balancing trees.",
+                "Compare and contrast AVL and Red-Black trees."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "51312735-2df0-4c7e-a4b6-b7da39fc8e3b",
+          "order": 5,
+          "lesson": {
+            "id": "fba89e4a-c89a-499d-9429-985c0d001a69",
+            "title": "Graph representation and elementary algorithms",
+            "description": "This lesson introduces graph data structures, which are used to represent relationships between objects in various real-world applications such as networks, social connections, and transportation systems. Students will learn different ways to represent graphs, including adjacency lists, adjacency matrices, and edge lists, and understand their advantages and trade-offs."
+          },
+          "explanation": "Graphs are a versatile data structure that can represent complex search problems. This lesson shows how graph algorithms can be applied to search problems. It will enable you to design and analyze algorithms on graphs, enhancing your problem-solving skills. This lesson contributes directly to the goal of designing efficient solutions for simple search problems.",
+          "modules": [
+            {
+              "id": "f83f40e0-f927-4fde-b89a-29c466ae1975",
+              "title": "Graph Representations",
+              "objectives": [
+                "Understand the two primary graph representations: Adjacency Matrix and Adjacency List.",
+                "Compare and contrast the space and time complexities of each representation.",
+                "Choose the appropriate representation based on the problem's characteristics."
+              ]
+            },
+            {
+              "id": "25005ece-e467-4012-bc4c-b9148ebfc9cb",
+              "title": "Breadth-First Search (BFS)",
+              "objectives": [
+                "Understand the Breadth-First Search (BFS) algorithm.",
+                "Implement BFS in a programming language.",
+                "Apply BFS to solve shortest path problems in graphs.",
+                "Analyze the time and space complexity of BFS."
+              ]
+            },
+            {
+              "id": "f7fc6797-d646-4495-aec4-9223027ef440",
+              "title": "Depth-First Search (DFS)",
+              "objectives": [
+                "Understand the Depth-First Search (DFS) algorithm.",
+                "Implement DFS in a programming language.",
+                "Apply DFS to solve problems like cycle detection and topological sorting.",
+                "Analyze the time and space complexity of DFS."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "24114757-6eb8-48d7-afc2-c64ca44c8404",
+      "student": {
+        "id": "49de2631-bd30-496b-8c44-11fb25f1f4e4",
+        "email": "nguyentruongtuananh03@gmail.com"
+      },
+      "course": {
+        "id": "a4417c35-20a3-41ae-a36b-0b96f636112a",
+        "name": "Introduction to Computer Science",
+        "description": null
+      },
+      "metadata": {
+        "version": 19,
+        "start_date": "2025-02-12T00:00:00",
+        "end_date": "2025-05-12T00:00:00",
+        "objective": "Understand and apply fundamental programming constructs including variables, control flow, and functions."
+      },
+      "recommended_lessons": [
+        {
+          "id": "6912822c-1b6f-410c-9eef-3ceda152d0ca",
+          "order": 1,
+          "lesson": {
+            "id": "bd0c0424-3bfe-48f0-ad26-01ee5dee40df",
+            "title": "What is Computation",
+            "description": "Introduction to the concept of computation, understanding what computers can and cannot do, and the importance of algorithms."
+          },
+          "explanation": "This lesson is critical because it introduces the foundational concepts of computation and programming. Understanding what computation is and how algorithms work is crucial for grasping more complex programming constructs. Knowing how Python expressions are evaluated sets the stage for all subsequent lessons, providing a solid base for understanding how code translates into actions. This lesson directly supports the goal of understanding programming constructs by providing the necessary context and vocabulary.",
+          "modules": [
+            {
+              "id": "09e0ef68-31b9-4680-bfc6-0e9b1808a783",
+              "title": "Understanding Computation and Python Fundamentals",
+              "objectives": [
+                "Define computation and its relationship to programming.",
+                "Explain the role of algorithms in problem-solving.",
+                "Evaluate basic Python expressions.",
+                "Understand the connection between code and computer instructions.",
+                "Familiarize with Python syntax."
+              ]
+            },
+            {
+              "id": "7de6c759-702b-4521-94a7-3fce26354afc",
+              "title": "Algorithms, Expressions, and Python Syntax in Detail",
+              "objectives": [
+                "Explain and apply the concept of algorithms.",
+                "Write and evaluate Python expressions.",
+                "Differentiate between code and computer instructions.",
+                "Identify and use basic Python syntax elements.",
+                "Understand the importance of code readability."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "dc076565-0790-49b8-81bc-58372506b30b",
+          "order": 2,
+          "lesson": {
+            "id": "4dbc10d9-fc7d-4aba-9ff8-bc858f54db44",
+            "title": "Branching and Iteration",
+            "description": "Explores control flow in programming, including conditional statements and loops."
+          },
+          "explanation": "This lesson is essential as it teaches control flow, a fundamental aspect of programming. Branching and iteration allow programs to make decisions and perform repetitive tasks, which are the core functions of any software. Mastering control flow enables the student to create programs that can respond to different inputs and perform complex operations, directly addressing the goal of applying fundamental programming constructs. Proficiency in these concepts is crucial for building any functional program.",
+          "modules": [
+            {
+              "id": "6817d581-66b8-488d-843a-2fe8521b79e8",
+              "title": "Branching and Conditional Statements (If/Else)",
+              "objectives": [
+                "Understand the concept of conditional execution.",
+                "Learn how to use if/else statements to control program flow.",
+                "Practice writing code with nested if/else structures.",
+                "Apply conditional logic to solve real-world problems."
+              ]
+            },
+            {
+              "id": "89cfdfbe-732d-4ff8-93a5-710278c12bb3",
+              "title": "Iteration and Loops (For and While)",
+              "objectives": [
+                "Understand the concept of iteration.",
+                "Learn how to use `for` loops to iterate over sequences.",
+                "Learn how to use `while` loops to repeat code based on a condition.",
+                "Practice writing code with nested loops.",
+                "Apply loops to solve repetitive tasks."
+              ]
+            },
+            {
+              "id": "2209c782-a5e9-49aa-8f10-58b69a4c3045",
+              "title": "Combining Control Flow: Branching and Iteration",
+              "objectives": [
+                "Understand how to combine if/else statements and loops.",
+                "Practice using nested loops and conditional statements within loops.",
+                "Learn how to make decisions within loops.",
+                "Solve complex problems using combined control flow structures."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "aeed111c-a47f-478b-927b-99e9c59a0cfe",
+          "order": 3,
+          "lesson": {
+            "id": "ae542887-0f99-4a9e-baf4-bea6d7ff3491",
+            "title": "Decomposition, Abstraction, and Functions",
+            "description": "Focuses on breaking down complex problems into manageable parts using functions and abstraction."
+          },
+          "explanation": "This lesson is critical because functions are a cornerstone of good programming practice. They allow you to encapsulate code, making programs more organized, readable, and reusable. Functions enable you to avoid repeating code and simplify complex tasks, aligning perfectly with the goal of understanding and applying fundamental programming constructs. Mastering functions is key to writing efficient and maintainable code.",
+          "modules": [
+            {
+              "id": "e5eec2ea-c03e-4c6e-9344-48c2fa86bc4c",
+              "title": "Decomposing Problems with Functions in Python",
+              "objectives": [
+                "Understand the concept of function decomposition for problem-solving.",
+                "Define and use functions with parameters and return values.",
+                "Apply functions to create reusable code blocks.",
+                "Grasp the importance of code organization and readability through functions.",
+                "Understand variable scope within and outside functions."
+              ]
+            },
+            {
+              "id": "5fe1d1e4-7228-4213-b365-0b75bd86e4f1",
+              "title": "Building Blocks: Functions and Code Organization",
+              "objectives": [
+                "Understand the role of functions in organizing code.",
+                "Create functions that accept arguments and return values.",
+                "Utilize functions to perform specific tasks within a program.",
+                "Apply functions to improve code readability and maintainability.",
+                "Analyze variable scope and its implications in function design."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "49d499b1-0284-45b8-a183-e7bc0697fcc9",
+          "order": 4,
+          "lesson": {
+            "id": "da2fba2b-cbbf-45b0-895d-4ae0eb40a0da",
+            "title": "Strings, Guess & Check, Bisection",
+            "description": "Covers techniques for manipulating strings and introduces problem-solving strategies like guess-and-check and bisection search."
+          },
+          "explanation": "While not directly focused on core constructs, this lesson reinforces previously learned concepts in a practical context. String manipulation provides opportunities to apply and solidify understanding of control flow and functions. The 'guess and check' approach introduces a problem-solving methodology that is useful in various programming scenarios. This lesson reinforces the application of fundamental concepts and supports problem-solving skills, which is beneficial for the goal.",
+          "modules": [
+            {
+              "id": "c446ec9f-07d0-46b8-9250-88beb544c5ea",
+              "title": "String Manipulation Techniques",
+              "objectives": [
+                "Understand and apply string slicing.",
+                "Implement string concatenation.",
+                "Utilize string formatting methods.",
+                "Solve problems using string manipulation."
+              ]
+            },
+            {
+              "id": "7bd25be0-c958-4a18-9092-d56dc1ba75b9",
+              "title": "Guess and Check Approach",
+              "objectives": [
+                "Understand the 'guess and check' problem-solving strategy.",
+                "Apply 'guess and check' to solve computational problems.",
+                "Implement 'guess and check' in code using loops.",
+                "Analyze the efficiency of 'guess and check' solutions."
+              ]
+            },
+            {
+              "id": "349273b3-2b96-437e-828a-1000746a11d7",
+              "title": "Branching and Iteration with Strings",
+              "objectives": [
+                "Apply branching statements (if/else) to analyze string properties.",
+                "Use loops (for/while) to iterate through strings.",
+                "Solve string-related problems using branching and iteration.",
+                "Understand the control flow in string processing algorithms."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b655408f-a114-43bd-ac34-a405595bab35",
+          "order": 5,
+          "lesson": {
+            "id": "69590763-8469-4715-9c48-4b93d85ce9e7",
+            "title": "Understanding Program Efficiency",
+            "description": "This lecture introduces foundational ideas for evaluating the efficiency of programs, focusing on algorithm performance as input sizes grow. It explores different ways to measure program efficiency including timing, counting operations, and the use of Big O notation. The lecture also introduces the concepts of best, worst, and average case analysis and motivates the need for algorithmic efficiency in large-scale computational problems."
+          },
+          "explanation": "This lesson introduces important aspects of algorithmic efficiency, which is crucial for writing effective and scalable programs. Understanding how to analyze the performance of algorithms helps in making informed decisions about code design. It is an important lesson for students to start thinking about the efficiency of their code. This lesson supports the course's learning outcomes related to problem-solving and efficient solutions by introducing the concept of Big O notation.",
+          "modules": [
+            {
+              "id": "2207842c-3ffc-4dd3-847c-f4b82c1520ea",
+              "title": "Introduction to Program Efficiency and Algorithmic Analysis",
+              "objectives": [
+                "Define program efficiency and its importance.",
+                "Understand the concept of algorithmic analysis and its role in measuring performance.",
+                "Learn about Big O notation and its use in expressing time and space complexity.",
+                "Identify trade-offs between different algorithmic approaches."
+              ]
+            },
+            {
+              "id": "f4cb1d46-e322-4181-9acb-5d85b3d8770b",
+              "title": "Space Complexity and Memory Management",
+              "objectives": [
+                "Define space complexity and its importance.",
+                "Understand how to analyze the space requirements of algorithms.",
+                "Learn about different types of memory allocation (stack, heap).",
+                "Explore techniques for optimizing space usage.",
+                "Identify the trade-offs between space and time complexity."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "577166d1-8c36-430a-bfb4-16f662083749",
+      "student": {
+        "id": "49de2631-bd30-496b-8c44-11fb25f1f4e4",
+        "email": "nguyentruongtuananh03@gmail.com"
+      },
+      "course": {
+        "id": "a4417c35-20a3-41ae-a36b-0b96f636112a",
+        "name": "Introduction to Computer Science",
+        "description": null
+      },
+      "metadata": {
+        "version": 20,
+        "start_date": "2025-02-12T00:00:00",
+        "end_date": "2025-05-12T00:00:00",
+        "objective": "Understand and apply object-oriented concepts"
+      },
+      "recommended_lessons": [
+        {
+          "id": "7fac6005-bce3-4f25-b25f-251fc82b3924",
+          "order": 1,
+          "lesson": {
+            "id": "ef7561a2-a78c-4f9e-94a6-705f73cbff99",
+            "title": "Object-Oriented Programming",
+            "description": "Introduction to classes, objects, and encapsulation in Python."
+          },
+          "explanation": "This lesson is critical because it introduces the fundamental concepts of object-oriented programming, which is the core goal. OOP is a paradigm that structures software design around data, or objects, rather than functions and logic. Mastering OOP principles enables building modular, reusable, and maintainable code, which leads to a better understanding and application of the software design principles. This lesson directly addresses the student's learning goal and sets the foundation for the rest of the learning path. It allows you to build well-structured programs.",
+          "modules": [
+            {
+              "id": "cf8737fe-4935-4f39-8d06-0f768b005984",
+              "title": "Introduction to Object-Oriented Programming (OOP)",
+              "objectives": [
+                "Define Object-Oriented Programming and its core principles.",
+                "Understand the concepts of classes and objects.",
+                "Explain the benefits of OOP (encapsulation, inheritance, polymorphism).",
+                "Differentiate between procedural and object-oriented programming paradigms."
+              ]
+            },
+            {
+              "id": "dd095511-e7ce-41b5-828f-46b2ad37777d",
+              "title": "Encapsulation, Inheritance, and Polymorphism",
+              "objectives": [
+                "Explain the concept of encapsulation and its benefits.",
+                "Describe inheritance and how it enables code reuse.",
+                "Illustrate polymorphism and its role in flexible code design.",
+                "Understand the relationship between these three principles."
+              ]
+            },
+            {
+              "id": "9386cc3f-4e85-40e8-8dff-b02b6cc4b519",
+              "title": "Advanced OOP Concepts and Best Practices",
+              "objectives": [
+                "Explore abstract classes and interfaces.",
+                "Understand the SOLID principles of OOP.",
+                "Learn about design patterns and their applications.",
+                "Apply OOP principles to solve real-world problems."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "86360d54-df0e-4ec2-b940-e9b069dda0c4",
+          "order": 2,
+          "lesson": {
+            "id": "4dbc10d9-fc7d-4aba-9ff8-bc858f54db44",
+            "title": "Branching and Iteration",
+            "description": "Explores control flow in programming, including conditional statements and loops."
+          },
+          "explanation": "This lesson provides the necessary building blocks for implementing OOP concepts. Branching and iteration are fundamental to building programs that respond to different inputs, and control the execution flow, which is essential when working with objects and their interactions. This understanding is required to implement OOP principles, such as methods that execute based on certain conditions or loops that iterate through collections of objects. This lesson ensures you are able to create dynamic and interactive programs.",
+          "modules": [
+            {
+              "id": "e6e48607-de9f-4502-978c-fbc0e6eb6f26",
+              "title": "Conditional Statements: Mastering If/Else",
+              "objectives": [
+                "Understand the concept of conditional execution.",
+                "Learn to use if, else if, and else statements.",
+                "Implement nested conditional statements.",
+                "Apply conditional logic to solve programming problems.",
+                "Grasp the importance of code readability with indentation."
+              ]
+            },
+            {
+              "id": "169b9876-060d-45ba-808d-3fe583dbfe14",
+              "title": "Looping Constructs: Mastering For and While Loops",
+              "objectives": [
+                "Understand the purpose and use of loops.",
+                "Learn to use `for` loops for iteration.",
+                "Learn to use `while` loops for conditional repetition.",
+                "Apply loops to solve iterative programming problems.",
+                "Understand the use of `break` and `continue` statements."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "6da77a31-24d2-4c93-89d5-fe36862a37de",
+          "order": 3,
+          "lesson": {
+            "id": "ae542887-0f99-4a9e-baf4-bea6d7ff3491",
+            "title": "Decomposition, Abstraction, and Functions",
+            "description": "Focuses on breaking down complex problems into manageable parts using functions and abstraction."
+          },
+          "explanation": "This lesson is crucial because it introduces the principles of decomposition and abstraction, which are fundamental to object-oriented programming. Decomposition allows you to break down complex problems into smaller, more manageable parts that can be addressed independently. Abstraction allows you to hide the internal complexities of an object and expose only the necessary information. The ability to create reusable code blocks through functions is a key component of OOP. This lesson lays the groundwork for designing and implementing well-structured, modular, and reusable object-oriented code.",
+          "modules": [
+            {
+              "id": "9046f8dc-f660-4b46-9632-c3cbf7494012",
+              "title": "Decomposition and Abstraction: Breaking Down Problems",
+              "objectives": [
+                "Understand the importance of breaking down complex problems into smaller, manageable parts.",
+                "Learn how to utilize functions for modularity and code reusability.",
+                "Grasp the concept of abstraction and its role in hiding implementation details."
+              ]
+            },
+            {
+              "id": "27054858-20bf-4754-8a25-aa7e133ddaba",
+              "title": "Introduction to Classes and Objects",
+              "objectives": [
+                "Define and understand the concepts of classes and objects.",
+                "Learn how to create classes and instantiate objects.",
+                "Understand the role of methods and attributes in object-oriented programming."
+              ]
+            },
+            {
+              "id": "2e93cf60-ef14-4097-8087-5edd7f60708a",
+              "title": "Encapsulation and Method Creation",
+              "objectives": [
+                "Understand the concept of encapsulation and its benefits.",
+                "Learn how to create methods within classes.",
+                "Practice using methods to interact with objects and manage data."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "15266726-4700-4464-8195-d0dcafaf99ca",
+          "order": 4,
+          "lesson": {
+            "id": "69590763-8469-4715-9c48-4b93d85ce9e7",
+            "title": "Understanding Program Efficiency",
+            "description": "This lecture introduces foundational ideas for evaluating the efficiency of programs, focusing on algorithm performance as input sizes grow. It explores different ways to measure program efficiency including timing, counting operations, and the use of Big O notation. The lecture also introduces the concepts of best, worst, and average case analysis and motivates the need for algorithmic efficiency in large-scale computational problems."
+          },
+          "explanation": "Understanding program efficiency complements the goal of learning OOP by encouraging good coding practices, which is important for software design. Efficient code is often more maintainable and scalable. Learning about program efficiency helps with making better design decisions when implementing OOP principles. It is important to write high-quality code. This lesson helps you develop better skills in code design and program performance.",
+          "modules": [
+            {
+              "id": "fc5ff30f-ff36-41f1-b9fb-5ea615fbc8f1",
+              "title": "Module 1: Understanding Time and Space Complexity",
+              "objectives": [
+                "Define time and space complexity.",
+                "Explain Big O notation.",
+                "Analyze the time and space complexity of common algorithms.",
+                "Identify how design choices impact program performance."
+              ]
+            },
+            {
+              "id": "b65c87cc-e678-4dfb-9c4f-eb9d1659ef42",
+              "title": "Module 2: Optimizing Code for Performance",
+              "objectives": [
+                "Identify code bottlenecks.",
+                "Apply techniques for optimizing code.",
+                "Understand how to choose efficient algorithms and data structures.",
+                "Utilize profiling and debugging tools to resolve performance issues."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cb921cc0-659d-4d28-962a-761d94affaea",
+      "student": {
+        "id": "49de2631-bd30-496b-8c44-11fb25f1f4e4",
+        "email": "nguyentruongtuananh03@gmail.com"
+      },
+      "course": {
+        "id": "a4417c35-20a3-41ae-a36b-0b96f636112a",
+        "name": "Introduction to Computer Science",
+        "description": null
+      },
+      "metadata": {
+        "version": 21,
+        "start_date": "2025-02-12T00:00:00",
+        "end_date": "2025-05-12T00:00:00",
+        "objective": "Learn at a basic level how computer systems execute programs and manage data."
+      },
+      "recommended_lessons": [
+        {
+          "id": "fe1cd020-5d3c-47d0-a754-622799561295",
+          "order": 1,
+          "lesson": {
+            "id": "bd0c0424-3bfe-48f0-ad26-01ee5dee40df",
+            "title": "What is Computation",
+            "description": "Introduction to the concept of computation, understanding what computers can and cannot do, and the importance of algorithms."
+          },
+          "explanation": "This lesson is critical because it provides the foundational building blocks for understanding how computer systems work. It introduces the core concepts of computation, algorithms, and basic programming syntax. Grasping these fundamentals is essential for understanding how programs are executed and how data is manipulated. Without this base knowledge, the subsequent lessons will be difficult to comprehend. The lesson lays the groundwork for all the other topics.",
+          "modules": [
+            {
+              "id": "d47adcf1-5c7c-40fc-8454-b64bf4c12ad3",
+              "title": "Introduction to Algorithms and Data Types",
+              "objectives": [
+                "Understand the concept of algorithms and their role in computation.",
+                "Learn about fundamental data types and how they are used to represent information.",
+                "Familiarize yourself with the basic syntax of Python for declaring variables and assigning values."
+              ]
+            },
+            {
+              "id": "01cb04ab-2e3f-415c-8e05-5fffcfbc3761",
+              "title": "Understanding Program Execution and Source Code vs. Machine Code",
+              "objectives": [
+                "Learn how a computer executes programs.",
+                "Understand the difference between source code and machine code.",
+                "Gain a basic understanding of the compilation and interpretation processes."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "bde4c529-341b-440f-b3c1-5c4d31f29dc2",
+          "order": 2,
+          "lesson": {
+            "id": "4dbc10d9-fc7d-4aba-9ff8-bc858f54db44",
+            "title": "Branching and Iteration",
+            "description": "Explores control flow in programming, including conditional statements and loops."
+          },
+          "explanation": "This lesson is essential for understanding how programs make decisions and repeat actions. Control flow structures are the core of program logic, allowing programs to react to different inputs and perform repetitive tasks. Understanding branching and iteration is crucial for building any program that does more than simply execute a sequence of instructions. This is where programs begin to exhibit intelligence. It is a building block for more advanced concepts.",
+          "modules": [
+            {
+              "id": "afc5b58d-8804-4b5a-a1c9-b61b5c9de70c",
+              "title": "Introduction to Control Flow: Conditional Statements",
+              "objectives": [
+                "Understand the concept of control flow.",
+                "Learn about conditional statements (if, else, elif).",
+                "Write programs that use conditional logic.",
+                "Identify the role of boolean expressions in conditional statements."
+              ]
+            },
+            {
+              "id": "b978b0a8-3866-466f-9f6e-58d3a482d80c",
+              "title": "Loop Structures: For and While Loops",
+              "objectives": [
+                "Understand the concept of iteration.",
+                "Learn about 'for' and 'while' loop structures.",
+                "Write programs that use loops to repeat actions.",
+                "Differentiate between definite and indefinite loops."
+              ]
+            },
+            {
+              "id": "cf040f21-921f-48f8-9405-8db68594fe89",
+              "title": "Nested Loops and Conditional Statements",
+              "objectives": [
+                "Understand the concept of nested control structures.",
+                "Learn how to nest loops within loops.",
+                "Learn how to nest conditional statements within loops and vice versa.",
+                "Apply nested structures to solve complex problems."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "2937a776-78be-4edc-88b1-f1a96bb5fbd8",
+          "order": 3,
+          "lesson": {
+            "id": "da2fba2b-cbbf-45b0-895d-4ae0eb40a0da",
+            "title": "Strings, Guess & Check, Bisection",
+            "description": "Covers techniques for manipulating strings and introduces problem-solving strategies like guess-and-check and bisection search."
+          },
+          "explanation": "This lesson introduces string manipulation, which is a key aspect of data management and text processing. It also introduces important problem-solving strategies that are applicable across various computational challenges. Understanding how to manipulate strings and use algorithms is crucial for processing and analyzing data. These techniques are widely used in software development. This bridges the gap between theory and practical application.",
+          "modules": [
+            {
+              "id": "3c6629e6-272a-48f7-ae19-81db38b0b970",
+              "title": "String Manipulation Fundamentals",
+              "objectives": [
+                "Understand string representation in computer systems.",
+                "Learn basic string manipulation techniques (accessing, modifying).",
+                "Explore string comparison methods.",
+                "Apply string manipulation to simple problem-solving.",
+                "Grasp the concept of string immutability (if applicable)."
+              ]
+            },
+            {
+              "id": "f1266759-eaee-454b-9732-cf42ad1db680",
+              "title": "Guess-and-Check and Bisection Search with Strings",
+              "objectives": [
+                "Understand the guess-and-check approach.",
+                "Learn how to implement bisection search.",
+                "Apply these techniques to string-based problems.",
+                "Analyze the efficiency of these algorithms.",
+                "Practice using string operations within algorithms."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "6848ab2b-e48b-45cd-9863-7df23788d41a",
+          "order": 4,
+          "lesson": {
+            "id": "ae542887-0f99-4a9e-baf4-bea6d7ff3491",
+            "title": "Decomposition, Abstraction, and Functions",
+            "description": "Focuses on breaking down complex problems into manageable parts using functions and abstraction."
+          },
+          "explanation": "This lesson focuses on the crucial concept of structuring programs using functions. Functions are essential for organizing code, making it reusable, and improving its readability. By understanding how to use functions, you will be able to write more complex programs. This lesson is a cornerstone of programming principles. Functions are a fundamental part of program design and are essential to writing readable and maintainable code. This also helps with debugging and testing.",
+          "modules": [
+            {
+              "id": "8a8abf06-0209-4ea4-b231-c6ccee7dd327",
+              "title": "Module 1: Decomposition and Abstraction",
+              "objectives": [
+                "Understand the concept of decomposition in programming.",
+                "Learn about abstraction and its benefits.",
+                "Identify real-world examples of decomposition and abstraction."
+              ]
+            },
+            {
+              "id": "4b0b7b18-34a4-44ea-bdb4-01f5ce5a37d2",
+              "title": "Module 2: Functions: Definition and Calling",
+              "objectives": [
+                "Learn how to define functions in Python.",
+                "Understand the syntax for function definitions.",
+                "Practice calling functions with and without arguments.",
+                "Explore the concept of function scope."
+              ]
+            },
+            {
+              "id": "11418f44-654b-45d8-8f49-6bfd3b3258a5",
+              "title": "Module 3: Function Arguments and Return Values",
+              "objectives": [
+                "Understand different types of function arguments.",
+                "Learn how to use return values from functions.",
+                "Practice using functions with arguments and return values.",
+                "Explore the use of functions to improve code readability and maintainability."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "3d27d8fe-30b4-47d5-aeb8-5f54b20179ca",
+          "order": 5,
+          "lesson": {
+            "id": "69590763-8469-4715-9c48-4b93d85ce9e7",
+            "title": "Understanding Program Efficiency",
+            "description": "This lecture introduces foundational ideas for evaluating the efficiency of programs, focusing on algorithm performance as input sizes grow. It explores different ways to measure program efficiency including timing, counting operations, and the use of Big O notation. The lecture also introduces the concepts of best, worst, and average case analysis and motivates the need for algorithmic efficiency in large-scale computational problems."
+          },
+          "explanation": "This lesson introduces the critical concept of program efficiency and Big O notation. Understanding efficiency is crucial for understanding how programs manage data and how their performance scales. Being able to analyze and optimize the efficiency of your code is a critical skill for any programmer. This ensures that programs run efficiently and can handle large amounts of data effectively. It is essential for writing high-performance applications.",
+          "modules": [
+            {
+              "id": "2ec21390-0c60-4a01-ba77-39accc88e67e",
+              "title": "Introduction to Big O Notation",
+              "objectives": [
+                "Define Big O notation and its purpose.",
+                "Understand how to analyze the time complexity of algorithms.",
+                "Identify different Big O complexities (e.g., O(n), O(n^2))."
+              ]
+            },
+            {
+              "id": "01cbcd59-758e-48c0-ae99-94b871bf30ac",
+              "title": "Program Efficiency and Optimization",
+              "objectives": [
+                "Understand the importance of writing efficient code.",
+                "Learn techniques for optimizing code performance.",
+                "Identify potential bottlenecks in your programs.",
+                "Apply Big O notation to evaluate code efficiency."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e7528a82-0c3c-405e-95e3-4e01354f59ab",
+      "student": {
+        "id": "49de2631-bd30-496b-8c44-11fb25f1f4e4",
+        "email": "nguyentruongtuananh03@gmail.com"
+      },
+      "course": {
+        "id": "97670e34-966e-461d-957e-3d48fbef6034",
+        "name": "Data Structures and Algorithms",
+        "description": null
+      },
+      "metadata": {
+        "version": 22,
+        "start_date": "2025-03-26T00:00:00",
+        "end_date": "2025-04-05T00:00:00",
+        "objective": "Train logical thinking patterns: decomposition, abstraction, pattern recognition, and algorithm design."
+      },
+      "recommended_lessons": [
+        {
+          "id": "f29090fc-b234-4c5f-a6e9-613cab11ab2c",
+          "order": 1,
+          "lesson": {
+            "id": "269ab4ca-aacc-47e5-af83-bc164014d9a9",
+            "title": "Course introduction, Recursion and Complexity of Algorithms",
+            "description": "This lesson provides an introduction to the Data Structures and Algorithms (DSA) course, outlining its objectives, structure, and the fundamental role of algorithms and data structures in computer science."
+          },
+          "explanation": "This lesson is critical because it introduces the core concepts of algorithm design and analysis. Recursion is a powerful technique for solving problems by breaking them down into smaller subproblems, directly supporting the student's goal of developing logical thinking patterns. Understanding complexity analysis is essential for evaluating the efficiency of algorithms. By learning to analyze time and space complexity, the student will be able to compare and choose the best algorithm for a given task, aligning directly with the learning goal of algorithm design and efficiency. This knowledge forms the foundation for all subsequent lessons.",
+          "modules": [
+            {
+              "id": "ff88d8d2-ef86-4cc0-a112-9da9bcaf0a33",
+              "title": "Introduction to Algorithm Design and Recursion",
+              "objectives": [
+                "Understand the fundamental concepts of algorithm design.",
+                "Define and implement recursive algorithms.",
+                "Analyze the time and space complexity of recursive functions.",
+                "Identify different recursion patterns."
+              ]
+            },
+            {
+              "id": "dce1194a-a941-41df-9093-296567c20a84",
+              "title": "Recursion Patterns and Complexity Analysis",
+              "objectives": [
+                "Identify and differentiate between various recursion patterns.",
+                "Analyze the time and space complexity of recursive algorithms.",
+                "Understand Big O notation and its significance.",
+                "Apply complexity analysis to different recursive algorithms."
+              ]
+            },
+            {
+              "id": "ce197956-9088-451a-84ff-1180df35b7f4",
+              "title": "Big O Notation and Algorithm Complexity Types",
+              "objectives": [
+                "Understand the significance of Big O notation.",
+                "Identify and differentiate between various algorithm complexity types (e.g., O(1), O(log n), O(n), O(n log n), O(n^2)).",
+                "Analyze the complexity of different algorithms.",
+                "Choose the best algorithms based on complexity considerations."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "4bdf9422-b654-46ad-9724-b6d731b1fb32",
+          "order": 2,
+          "lesson": {
+            "id": "304c57fc-e6a0-4fea-8389-7085713f238c",
+            "title": "Lists",
+            "description": "This lesson introduces list data structures, their types, and their applications in programming. Students will explore different types of lists, including arrays (static lists) and linked lists (dynamic lists), and understand their advantages and limitations."
+          },
+          "explanation": "Lists are a fundamental data structure, and this lesson will provide a crucial understanding of how data is organized and manipulated. Mastering lists is essential for building more complex data structures and algorithms later. The ability to efficiently insert, delete, and search elements within a list directly contributes to the development of logical thinking skills related to data manipulation and algorithm design. Understanding the time complexity of list operations is also crucial for evaluating the performance of algorithms that use lists, further supporting the goal of designing efficient algorithms.",
+          "modules": [
+            {
+              "id": "08738691-2be7-4e71-a806-c8e3062220ae",
+              "title": "Understanding List Data Structures",
+              "objectives": [
+                "Define and differentiate between various list implementations (arrays, linked lists).",
+                "Analyze the time complexity of fundamental list operations.",
+                "Understand the differences between static and dynamic lists.",
+                "Implement lists from scratch and utilize library implementations.",
+                "Apply lists to solve common algorithmic problems."
+              ]
+            },
+            {
+              "id": "a9b2eb1a-8b0f-4381-b378-5f17fd266907",
+              "title": "List Applications and Advanced Concepts",
+              "objectives": [
+                "Explore real-world applications of lists.",
+                "Understand advanced list operations and techniques.",
+                "Analyze the use of lists in sorting and searching algorithms.",
+                "Apply lists to solve complex algorithmic challenges.",
+                "Evaluate the trade-offs between different list implementations in various scenarios."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c0931119-92e0-4308-aa25-0a9c8665aee0",
+          "order": 3,
+          "lesson": {
+            "id": "3e95f5e3-6621-4a96-b8d6-b8bcb2071b36",
+            "title": "Sorting",
+            "description": "This lesson covers sorting algorithms, which are fundamental for organizing and managing data efficiently. Students will explore different types of sorting techniques, including comparison-based sorting algorithms such as Bubble Sort, Selection Sort, Insertion Sort, Merge Sort, Quick Sort, and Heap Sort, as well as non-comparison-based sorting algorithms like Counting Sort and Radix Sort."
+          },
+          "explanation": "Sorting algorithms are a cornerstone of computer science and algorithm design. This lesson directly supports the student's goal by providing practical examples of algorithm design and analysis. Comparing different sorting algorithms and understanding their complexities will teach the student how to evaluate and choose the most efficient solution for a given problem. The implementation of these algorithms further reinforces the concepts of algorithm design and the importance of efficiency. The application of sorting algorithms to different datasets enhances the ability to recognize patterns and apply algorithms to solve real-world problems.",
+          "modules": [
+            {
+              "id": "f11da224-e468-4732-99e7-6eaa7fdcca8c",
+              "title": "Bubble Sort and Selection Sort",
+              "objectives": [
+                "Understand the principles of Bubble Sort and Selection Sort.",
+                "Analyze the time and space complexity of both algorithms.",
+                "Implement Bubble Sort and Selection Sort in code.",
+                "Compare the performance of Bubble Sort and Selection Sort."
+              ]
+            },
+            {
+              "id": "e12e1e3c-bd9f-423d-a5f2-7dc4a8e0548e",
+              "title": "Merge Sort and Quick Sort",
+              "objectives": [
+                "Understand the principles of Merge Sort and Quick Sort.",
+                "Analyze the time and space complexity of these algorithms.",
+                "Implement Merge Sort and Quick Sort in code.",
+                "Compare the performance and stability of Merge Sort and Quick Sort."
+              ]
+            },
+            {
+              "id": "af798298-b94a-47a2-a0d5-3bda829a2d25",
+              "title": "Heap Sort and Comparison of Sorting Algorithms",
+              "objectives": [
+                "Understand the principles of Heap Sort.",
+                "Analyze the time and space complexity of Heap Sort.",
+                "Implement Heap Sort in code.",
+                "Compare and contrast all sorting algorithms discussed (Bubble Sort, Selection Sort, Merge Sort, Quick Sort, and Heap Sort)."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "4851274c-4dd8-46d0-b365-c0dd8c8707be",
+          "order": 4,
+          "lesson": {
+            "id": "fba89e4a-c89a-499d-9429-985c0d001a69",
+            "title": "Graph representation and elementary algorithms",
+            "description": "This lesson introduces graph data structures, which are used to represent relationships between objects in various real-world applications such as networks, social connections, and transportation systems. Students will learn different ways to represent graphs, including adjacency lists, adjacency matrices, and edge lists, and understand their advantages and trade-offs."
+          },
+          "explanation": "Graphs are a powerful data structure for modeling relationships between entities, and this lesson provides key knowledge for algorithm design. This lesson directly supports the student's goal by introducing the concept of graph traversal algorithms like BFS and DFS. These algorithms demonstrate how to systematically explore and analyze relationships within a dataset. Understanding graph representations and associated complexities will enhance the ability to select the most efficient algorithm. These concepts are fundamental to understanding how to apply algorithms to solve complex problems, fostering the student's logical thinking skills.",
+          "modules": [
+            {
+              "id": "0df75acb-dc4d-4f00-b047-fcf8b4796ca1",
+              "title": "Graph Representations and Basic Traversal",
+              "objectives": [
+                "Understand the differences between adjacency matrix and adjacency list representations.",
+                "Implement Breadth-First Search (BFS) and Depth-First Search (DFS) algorithms.",
+                "Analyze the time and space complexity of BFS and DFS.",
+                "Identify real-world applications of graph traversal algorithms."
+              ]
+            },
+            {
+              "id": "cf532eed-3f58-4315-af7c-747acdf29a72",
+              "title": "Cycles in Graphs and Algorithm Performance",
+              "objectives": [
+                "Define cycles in graphs and their implications.",
+                "Identify cycle detection algorithms.",
+                "Analyze how cycles affect the performance of graph algorithms.",
+                "Understand the role of cycles in real-world graph problems."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1d1d36fa-b934-4c18-8952-fa51046e229a",
+          "order": 5,
+          "lesson": {
+            "id": "3dc26b52-8cdb-4975-a35e-44f339cd4eb2",
+            "title": "Advanced BST",
+            "description": "This lesson delves into advanced concepts of Binary Search Trees (BST), focusing on self-balancing trees and optimized searching and insertion techniques. Students will explore the limitations of standard BSTs, such as skewed trees leading to inefficient operations, and learn about balanced BSTs like AVL trees, Red-Black trees, and Splay trees, which ensure optimal performance."
+          },
+          "explanation": "This lesson builds upon the foundational knowledge of trees, introducing advanced data structures that optimize algorithmic efficiency, and directly supports the goal of training logical thinking and algorithm design. By understanding self-balancing BSTs, the student will learn how to improve the performance of search operations, insertion, and deletion. This enhances the ability to choose the right data structure for a given problem and optimize the performance of algorithms. This also demonstrates how to use data structures to improve algorithmic efficiency.",
+          "modules": [
+            {
+              "id": "dddb9c45-57b2-4a5f-a64d-e381f53dd9df",
+              "title": "AVL Trees: Self-Balancing Binary Search Trees",
+              "objectives": [
+                "Understand the concept of self-balancing BSTs and their advantages.",
+                "Explain the structure and properties of AVL trees.",
+                "Describe the AVL tree balancing operations: rotations.",
+                "Analyze the time complexity of AVL tree operations.",
+                "Implement AVL trees and compare them with regular BSTs."
+              ]
+            },
+            {
+              "id": "a554b48f-4e3d-4d68-87a1-bbd61b2142f8",
+              "title": "Red-Black Trees: Another Self-Balancing Approach",
+              "objectives": [
+                "Understand the properties of Red-Black Trees.",
+                "Explain the Red-Black Tree balancing rules.",
+                "Describe the insertion and deletion operations in Red-Black Trees.",
+                "Analyze the time complexity of Red-Black Tree operations.",
+                "Compare and contrast Red-Black Trees with AVL Trees."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "7e1a993f-f9da-4b78-a40e-45e005b461f5",
+      "student": {
+        "id": "49de2631-bd30-496b-8c44-11fb25f1f4e4",
+        "email": "nguyentruongtuananh03@gmail.com"
+      },
+      "course": {
+        "id": "a4417c35-20a3-41ae-a36b-0b96f636112a",
+        "name": "Introduction to Computer Science",
+        "description": null
+      },
+      "metadata": {
+        "version": 23,
+        "start_date": "2025-02-12T00:00:00",
+        "end_date": "2025-05-12T00:00:00",
+        "objective": "\n\n    Be able to write simple programs that not only work but are reasonably efficient and readable."
+      },
+      "recommended_lessons": [
+        {
+          "id": "eec504d3-5080-4751-a1ee-ce2fbe620207",
+          "order": 1,
+          "lesson": {
+            "id": "bd0c0424-3bfe-48f0-ad26-01ee5dee40df",
+            "title": "What is Computation",
+            "description": "Introduction to the concept of computation, understanding what computers can and cannot do, and the importance of algorithms."
+          },
+          "explanation": "This lesson is critical because it lays the groundwork for all subsequent programming concepts. Without a solid grasp of these basics, you will struggle to write even the simplest programs. Understanding data types and operators is essential for manipulating data, while the basic syntax forms the building blocks of all code. Learning to debug early will save you significant time and frustration as you progress. This lesson directly addresses the need to write *working* programs.",
+          "modules": [
+            {
+              "id": "a60c8655-2d4f-45db-886e-8f21346c2021",
+              "title": "Introduction to Python Fundamentals",
+              "objectives": [
+                "Understand fundamental data types in Python.",
+                "Learn how to use operators for calculations and comparisons.",
+                "Grasp the concept of variable assignment.",
+                "Write simple Python programs with input, calculation, and output.",
+                "Understand the basic structure of a Python program."
+              ]
+            },
+            {
+              "id": "f05d236d-2c2f-43c4-a963-780781aa7d41",
+              "title": "Control Flow and Program Structure",
+              "objectives": [
+                "Understand how to use conditional statements (if, elif, else).",
+                "Learn how to use loops (for and while).",
+                "Grasp the concept of code blocks and indentation.",
+                "Write programs that make decisions and repeat actions.",
+                "Learn to use comments to explain your code."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "a2978621-b39e-465d-bbc8-1390c07d398e",
+          "order": 2,
+          "lesson": {
+            "id": "4dbc10d9-fc7d-4aba-9ff8-bc858f54db44",
+            "title": "Branching and Iteration",
+            "description": "Explores control flow in programming, including conditional statements and loops."
+          },
+          "explanation": "This lesson is crucial for building programs that can handle different scenarios and perform repetitive tasks. Control flow allows you to create programs that are more flexible and powerful. Understanding how to use conditionals and loops correctly is fundamental to writing programs that not only work but also handle various inputs and situations. Mastering control flow contributes directly to writing programs that are reasonably structured and, consequently, more readable.",
+          "modules": [
+            {
+              "id": "2ba88afc-8977-4eb7-b90b-e000d1607b31",
+              "title": "Conditional Statements and Control Flow",
+              "objectives": [
+                "Understand and apply 'if', 'elif', and 'else' statements.",
+                "Master the use of 'for' and 'while' loops.",
+                "Write programs that make decisions based on input.",
+                "Implement loop termination conditions to avoid infinite loops.",
+                "Improve code readability using indentation and clear variable names."
+              ]
+            },
+            {
+              "id": "f6e7bbaa-bab0-4a57-b0a9-a87b72074f8e",
+              "title": "Efficient and Readable Code",
+              "objectives": [
+                "Write programs that work correctly.",
+                "Improve program efficiency.",
+                "Enhance code readability through formatting.",
+                "Use meaningful variable names.",
+                "Implement comments to explain complex logic."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "84cd3b2b-5e1f-4fc3-aab5-f618aaa27f15",
+          "order": 3,
+          "lesson": {
+            "id": "da2fba2b-cbbf-45b0-895d-4ae0eb40a0da",
+            "title": "Strings, Guess & Check, Bisection",
+            "description": "Covers techniques for manipulating strings and introduces problem-solving strategies like guess-and-check and bisection search."
+          },
+          "explanation": "This lesson bridges the gap between basic programming and algorithmic thinking. String manipulation is a common requirement in many programs. Guess-and-check and bisection search introduce problem-solving strategies that are key to writing efficient programs.  Understanding how to choose the right algorithm for a given problem is crucial for writing programs that are reasonably efficient, directly addressing the student's goal. These techniques also improve problem-solving skills.",
+          "modules": [
+            {
+              "id": "7a99f738-31b1-46e3-b33b-e2b1f5481580",
+              "title": "String Manipulation Techniques",
+              "objectives": [
+                "Understand and apply string slicing.",
+                "Master string concatenation.",
+                "Utilize built-in string methods for various tasks.",
+                "Write programs that process and transform text effectively."
+              ]
+            },
+            {
+              "id": "22ae68d1-bbcd-4e66-86d1-83ce7c97c99d",
+              "title": "Guess-and-Check Algorithms",
+              "objectives": [
+                "Understand the concept of guess-and-check.",
+                "Implement guess-and-check algorithms to solve simple problems.",
+                "Analyze the efficiency of guess-and-check approaches.",
+                "Apply guess-and-check to search for solutions."
+              ]
+            },
+            {
+              "id": "864ba228-fa8d-4044-ad04-ac1146710224",
+              "title": "Bisection Search and Algorithmic Efficiency",
+              "objectives": [
+                "Understand the concept of bisection search.",
+                "Implement bisection search for efficient solution finding.",
+                "Analyze the time complexity of bisection search.",
+                "Compare bisection search with linear search and guess-and-check."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "9cd74914-1a37-4924-8eab-0805f2847177",
+          "order": 4,
+          "lesson": {
+            "id": "ae542887-0f99-4a9e-baf4-bea6d7ff3491",
+            "title": "Decomposition, Abstraction, and Functions",
+            "description": "Focuses on breaking down complex problems into manageable parts using functions and abstraction."
+          },
+          "explanation": "This lesson is essential for writing readable and maintainable code. Functions allow you to organize your code into logical blocks, making it easier to understand and debug.  Decomposition and abstraction are key to writing complex programs that are still manageable.  Writing functions promotes code reuse and reduces redundancy, which is critical for writing efficient and maintainable programs.  This directly addresses the 'readable' aspect of the student's goal.",
+          "modules": [
+            {
+              "id": "cab7c2f5-6145-4999-873a-090bf5f81db1",
+              "title": "Decomposition: Breaking Down Problems",
+              "objectives": [
+                "Understand the concept of decomposition.",
+                "Learn how to break down complex problems into smaller, manageable sub-problems.",
+                "Identify when and how to apply decomposition in programming."
+              ]
+            },
+            {
+              "id": "72b10032-c750-408e-b0e3-676cbec955a3",
+              "title": "Abstraction: Hiding Implementation Details",
+              "objectives": [
+                "Understand the concept of abstraction in programming.",
+                "Learn how to use abstraction to create reusable and maintainable code.",
+                "Differentiate between interface and implementation.",
+                "Apply abstraction to simplify complex systems."
+              ]
+            },
+            {
+              "id": "4219d55a-4724-4292-8bfc-168222cb9ea4",
+              "title": "Functions: Building Blocks of Code",
+              "objectives": [
+                "Understand the concept of functions.",
+                "Learn how to define and call functions.",
+                "Practice writing functions with parameters and return values.",
+                "Explore the benefits of using functions in programming."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ff20098b-2e4a-409a-bde8-cfee0309ff07",
+          "order": 5,
+          "lesson": {
+            "id": "69590763-8469-4715-9c48-4b93d85ce9e7",
+            "title": "Understanding Program Efficiency",
+            "description": "This lecture introduces foundational ideas for evaluating the efficiency of programs, focusing on algorithm performance as input sizes grow. It explores different ways to measure program efficiency including timing, counting operations, and the use of Big O notation. The lecture also introduces the concepts of best, worst, and average case analysis and motivates the need for algorithmic efficiency in large-scale computational problems."
+          },
+          "explanation": "This lesson is critical for understanding how to write *reasonably efficient* programs. Big O notation provides a framework for evaluating the performance of algorithms as the input size grows.  By understanding Big O, you can make informed decisions about which algorithms to use, leading to programs that scale well. This directly addresses the student's goal of writing efficient programs and ties into the understanding of algorithms.",
+          "modules": [
+            {
+              "id": "9142338b-a1d3-4320-aeaf-0020c14e7476",
+              "title": "Introduction to Program Efficiency and Big O Notation",
+              "objectives": [
+                "Understand the concept of program efficiency and its importance.",
+                "Define time and space complexity.",
+                "Learn about Big O notation and its use in algorithm analysis.",
+                "Identify common Big O complexities (O(1), O(n), O(log n), O(n^2)).",
+                "Analyze the time complexity of simple algorithms."
+              ]
+            },
+            {
+              "id": "8f74318c-a66d-48c0-b2eb-b42907516450",
+              "title": "Algorithm Design and Efficiency Comparison",
+              "objectives": [
+                "Understand different algorithm design paradigms (e.g., divide and conquer, greedy algorithms).",
+                "Compare the efficiency of different algorithms for the same task.",
+                "Analyze the time complexity of algorithms using Big O notation.",
+                "Choose the most efficient algorithm for a given problem.",
+                "Understand the trade-offs between time and space complexity."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "2117a6a0-080a-4405-84a4-38d2762705ab",
+          "order": 6,
+          "lesson": {
+            "id": "310d6271-057f-4b4d-b4fc-4f10ddacfdd3",
+            "title": "Searching and Sorting Algorithms",
+            "description": "This lecture introduces fundamental algorithms for searching and sorting data. It begins with basic search techniques like linear search and bisection (binary) search, discussing their implementations and time complexities. The lecture then explores various sorting algorithms, including inefficient methods like bogosort and more practical ones like bubble sort. Emphasis is placed on understanding the trade-offs between different algorithms in terms of efficiency and applicability."
+          },
+          "explanation": "This lesson provides practical examples of how to apply the principles of efficiency learned in the previous lesson.  Searching and sorting algorithms are fundamental building blocks in many applications. Understanding these algorithms allows you to write programs that can efficiently process and manipulate data. This reinforces the understanding of Big O and directly contributes to the goal of writing reasonably efficient programs.",
+          "modules": [
+            {
+              "id": "b6abebcb-68e5-4a0d-acac-b744e70d5ede",
+              "title": "Introduction to Searching Algorithms",
+              "objectives": [
+                "Understand the concept of searching algorithms.",
+                "Learn about linear search and its time complexity.",
+                "Learn about binary search and its time complexity.",
+                "Compare and contrast linear and binary search.",
+                "Implement linear and binary search in code."
+              ]
+            },
+            {
+              "id": "cc9e1e1d-c3ec-4c5a-8c5a-5c6615e92b94",
+              "title": "Introduction to Sorting Algorithms",
+              "objectives": [
+                "Understand the concept of sorting algorithms.",
+                "Learn about bubble sort, insertion sort, merge sort and quicksort.",
+                "Compare and contrast different sorting algorithms.",
+                "Analyze the time and space complexities of each algorithm.",
+                "Implement sorting algorithms in code."
+              ]
+            },
+            {
+              "id": "68a80a33-1684-4a65-8ec3-adef1b31d63d",
+              "title": "Comparing Algorithm Performance with Big O Notation",
+              "objectives": [
+                "Understand Big O notation and its significance.",
+                "Analyze the time and space complexities of algorithms.",
+                "Determine the Big O complexity of linear search, binary search, bubble sort, insertion sort, merge sort and quicksort.",
+                "Compare the performance of different algorithms using Big O notation.",
+                "Understand how Big O affects program efficiency."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "625b9596-2f2d-4024-b18f-0f68fefeeac8",
+      "student": {
+        "id": "49de2631-bd30-496b-8c44-11fb25f1f4e4",
+        "email": "nguyentruongtuananh03@gmail.com"
+      },
+      "course": {
+        "id": "97670e34-966e-461d-957e-3d48fbef6034",
+        "name": "Data Structures and Algorithms",
+        "description": null
+      },
+      "metadata": {
+        "version": 24,
+        "start_date": "2025-03-26T00:00:00",
+        "end_date": "2025-04-05T00:00:00",
+        "objective": "Implement and analyze three sorting algorithms (Merge Sort, Quick Sort, Heap Sort) with 80% accuracy within three weeks."
+      },
+      "recommended_lessons": [
+        {
+          "id": "68544939-5b8b-45da-aba1-eb710c7b3781",
+          "order": 1,
+          "lesson": {
+            "id": "269ab4ca-aacc-47e5-af83-bc164014d9a9",
+            "title": "Course introduction, Recursion and Complexity of Algorithms",
+            "description": "This lesson provides an introduction to the Data Structures and Algorithms (DSA) course, outlining its objectives, structure, and the fundamental role of algorithms and data structures in computer science."
+          },
+          "explanation": "This lesson is critical because it provides the fundamental knowledge needed to understand and analyze sorting algorithms. Recursion is a core technique used in algorithms like QuickSort and MergeSort, so mastering it is essential for implementation. Understanding Big O notation is vital for evaluating the efficiency of the sorting algorithms, which is part of the goal. Without a grasp of time complexity, the student won't be able to analyze and compare the performance of Merge Sort, Quick Sort, and Heap Sort effectively. This foundational knowledge will directly support the student's learning outcome of analyzing and evaluating time complexity.",
+          "modules": [
+            {
+              "id": "3b3579ba-9425-418c-adb5-a996ce344a48",
+              "title": "Module 1: Introduction to Recursion and Big O Notation",
+              "objectives": [
+                "Define recursion and identify its key characteristics.",
+                "Understand the concept of Big O notation and its importance in algorithm analysis.",
+                "Explain the impact of different operations on time complexity.",
+                "Identify common complexity classes (O(n), O(log n), O(n^2), etc.)."
+              ]
+            },
+            {
+              "id": "d854e148-bc67-49e1-a649-ae936ac5cc65",
+              "title": "Module 2: Analyzing Time and Space Complexity",
+              "objectives": [
+                "Analyze the time and space complexity of simple recursive algorithms.",
+                "Understand the trade-offs of different complexity classes.",
+                "Determine the complexity of recursive functions.",
+                "Apply Big O notation to assess algorithm efficiency."
+              ]
+            },
+            {
+              "id": "d9d6883f-adc4-4c2c-8cc8-367b529581ed",
+              "title": "Module 3: Complexity Classes and Trade-offs",
+              "objectives": [
+                "Describe and differentiate various complexity classes (O(n), O(log n), O(n^2), etc.).",
+                "Understand the trade-offs of different complexity classes.",
+                "Identify the impact of complexity on algorithm performance.",
+                "Choose appropriate complexity classes for different scenarios."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "53f9325e-eb89-4aef-8aa7-ba77f072bfa2",
+          "order": 2,
+          "lesson": {
+            "id": "3e95f5e3-6621-4a96-b8d6-b8bcb2071b36",
+            "title": "Sorting",
+            "description": "This lesson covers sorting algorithms, which are fundamental for organizing and managing data efficiently. Students will explore different types of sorting techniques, including comparison-based sorting algorithms such as Bubble Sort, Selection Sort, Insertion Sort, Merge Sort, Quick Sort, and Heap Sort, as well as non-comparison-based sorting algorithms like Counting Sort and Radix Sort."
+          },
+          "explanation": "This lesson is at the core of achieving the student's goal. It directly covers the implementation and analysis of Merge Sort, Quick Sort, and Heap Sort. By implementing the algorithms, the student will gain hands-on experience and a deeper understanding of how they work. Analyzing the time complexity is essential for meeting the learning outcome. Comparing the sorting algorithms is important because it helps to understand why each algorithm is useful in different situations. Implementing and analyzing these algorithms will provide the practical skills needed to meet the project goals. The lesson directly supports the goal of implementing and analyzing the sorting algorithms.",
+          "modules": [
+            {
+              "id": "9b9ab155-2ee7-4482-9fc5-50f3ee25f521",
+              "title": "Merge Sort: Implementation and Analysis",
+              "objectives": [
+                "Understand the Merge Sort algorithm's divide-and-conquer strategy.",
+                "Implement Merge Sort in code (e.g., Python, Java).",
+                "Analyze the time and space complexity of Merge Sort.",
+                "Identify the strengths and weaknesses of Merge Sort.",
+                "Apply Merge Sort to various datasets."
+              ]
+            },
+            {
+              "id": "d5563537-73ea-4833-9823-3c33615d8375",
+              "title": "Quick Sort: Implementation and Analysis",
+              "objectives": [
+                "Understand the Quick Sort algorithm's partitioning strategy.",
+                "Implement Quick Sort in code.",
+                "Analyze the time and space complexity of Quick Sort.",
+                "Identify the strengths and weaknesses of Quick Sort.",
+                "Compare Quick Sort's performance with Merge Sort."
+              ]
+            },
+            {
+              "id": "d92fddb5-a0ec-4136-8911-bd0ad924d75f",
+              "title": "Heap Sort: Implementation and Analysis",
+              "objectives": [
+                "Understand the Heap Sort algorithm's heap data structure.",
+                "Implement Heap Sort in code.",
+                "Analyze the time and space complexity of Heap Sort.",
+                "Identify the strengths and weaknesses of Heap Sort.",
+                "Compare Heap Sort with Quick Sort and Merge Sort."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "0f3aaf2f-565e-43a4-b489-682100b7de92",
+      "student": {
+        "id": "49de2631-bd30-496b-8c44-11fb25f1f4e4",
+        "email": "nguyentruongtuananh03@gmail.com"
+      },
+      "course": {
+        "id": "97670e34-966e-461d-957e-3d48fbef6034",
+        "name": "Data Structures and Algorithms",
+        "description": null
+      },
+      "metadata": {
+        "version": 25,
+        "start_date": "2025-03-26T00:00:00",
+        "end_date": "2025-04-05T00:00:00",
+        "objective": "I will implement 10 classic sorting and searching algorithms (e.g., Merge Sort, Quick Sort, Binary Search) from scratch without referring to external code, and achieve correct results on at least 90% "
+      },
+      "recommended_lessons": [
+        {
+          "id": "8ca11fcf-2b89-41c3-8464-4386c7d5205d",
+          "order": 1,
+          "lesson": {
+            "id": "269ab4ca-aacc-47e5-af83-bc164014d9a9",
+            "title": "Course introduction, Recursion and Complexity of Algorithms",
+            "description": "This lesson provides an introduction to the Data Structures and Algorithms (DSA) course, outlining its objectives, structure, and the fundamental role of algorithms and data structures in computer science."
+          },
+          "explanation": "This lesson is critical because it introduces fundamental concepts for understanding and implementing algorithms. Recursion is frequently used in sorting algorithms, especially divide-and-conquer approaches like Merge Sort and Quick Sort. Understanding complexity analysis is directly relevant to the student's goal, as it enables them to evaluate the efficiency of their implementations and meet the 90% correctness requirement. Without a solid grasp of recursion and complexity, implementing and optimizing sorting and searching algorithms effectively is very difficult.",
+          "modules": [
+            {
+              "id": "df9467d5-7d08-4eec-b77b-fabc2fd03bf8",
+              "title": "Recursion Fundamentals and Algorithm Analysis",
+              "objectives": [
+                "Understand the concept of recursion and its implementation.",
+                "Identify base and recursive cases in recursive functions.",
+                "Analyze time and space complexity of algorithms using Big O notation.",
+                "Differentiate between best, average, and worst-case algorithm complexities.",
+                "Recognize common complexity classes: O(n), O(log n), and O(n^2)."
+              ]
+            },
+            {
+              "id": "8476ef21-9190-4821-9890-1c8f850bf51c",
+              "title": "Sorting and Searching Algorithms: Implementation and Analysis",
+              "objectives": [
+                "Implement at least five sorting algorithms (e.g., Merge Sort, Quick Sort).",
+                "Implement at least three searching algorithms (e.g., Binary Search).",
+                "Analyze the time and space complexity of each implemented algorithm.",
+                "Compare the performance of different sorting algorithms.",
+                "Apply sorting and searching algorithms to solve practical problems."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "efe1e9e4-a1fa-46a5-92dd-8b381c8cbd3a",
+          "order": 2,
+          "lesson": {
+            "id": "304c57fc-e6a0-4fea-8389-7085713f238c",
+            "title": "Lists",
+            "description": "This lesson introduces list data structures, their types, and their applications in programming. Students will explore different types of lists, including arrays (static lists) and linked lists (dynamic lists), and understand their advantages and limitations."
+          },
+          "explanation": "This lesson is essential because sorting algorithms often operate on lists of data. Understanding the underlying data structure (lists) is crucial for implementing and optimizing these algorithms. Although this lesson isn't directly about sorting or searching, it provides the foundational knowledge of data structures needed for the rest of the course. Knowing the characteristics of list operations (time and space complexity) will aid in analyzing the performance of sorting algorithms. Correct implementation and understanding of lists is a prerequisite for the student's core goal.",
+          "modules": [
+            {
+              "id": "3655fc35-baa5-430c-ae0f-a97fb46e870d",
+              "title": "Arrays vs. Linked Lists: A Deep Dive",
+              "objectives": [
+                "Understand the fundamental differences between arrays and linked lists.",
+                "Analyze the time and space complexity of common list operations (insertion, deletion, access).",
+                "Evaluate the pros and cons of arrays and linked lists for different use cases.",
+                "Implement basic list operations in both array and linked list implementations.",
+                "Identify scenarios where one list type is preferred over the other."
+              ]
+            },
+            {
+              "id": "29d32fbc-21a0-4b28-8308-8d441b797fd9",
+              "title": "List Applications and Building Blocks for Data Structures",
+              "objectives": [
+                "Identify common applications of lists in software development.",
+                "Understand how lists can be used to implement other data structures.",
+                "Explore the use of lists in various algorithms.",
+                "Analyze the advantages and disadvantages of using lists in different contexts.",
+                "Implement lists for specific problem-solving scenarios."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ed054539-908b-4710-83df-7315d0d38cc3",
+          "order": 3,
+          "lesson": {
+            "id": "3e95f5e3-6621-4a96-b8d6-b8bcb2071b36",
+            "title": "Sorting",
+            "description": "This lesson covers sorting algorithms, which are fundamental for organizing and managing data efficiently. Students will explore different types of sorting techniques, including comparison-based sorting algorithms such as Bubble Sort, Selection Sort, Insertion Sort, Merge Sort, Quick Sort, and Heap Sort, as well as non-comparison-based sorting algorithms like Counting Sort and Radix Sort."
+          },
+          "explanation": "This lesson directly addresses the student's core goal of implementing sorting algorithms. It provides the necessary knowledge and practice to implement the classic sorting algorithms (Merge Sort, Quick Sort, etc.). The emphasis on implementing from scratch and testing ensures the student meets the 90% correctness requirement. Understanding the time and space complexity of each algorithm is crucial for comparing and selecting the most appropriate sorting algorithm for a given scenario. This lesson will directly contribute to the student's ability to achieve their learning objective.",
+          "modules": [
+            {
+              "id": "7dab4716-2267-4100-9abd-46c843eb179d",
+              "title": "Module 1: Understanding Sorting Algorithms - Foundations",
+              "objectives": [
+                "Define sorting algorithms and their significance in computer science.",
+                "Understand time and space complexity analysis (Big O notation).",
+                "Differentiate between stable and unstable sorting algorithms.",
+                "Explain the basic principles behind Bubble Sort, Insertion Sort, and Selection Sort."
+              ]
+            },
+            {
+              "id": "6cbafc8f-a169-4058-b93b-bf010ca220ca",
+              "title": "Module 2:  Implementation and Analysis of Bubble Sort, Insertion Sort, and Selection Sort",
+              "objectives": [
+                "Implement Bubble Sort, Insertion Sort, and Selection Sort from scratch.",
+                "Analyze the time and space complexity of each algorithm.",
+                "Identify the advantages and disadvantages of each algorithm.",
+                "Test the implemented algorithms with various datasets, including edge cases.",
+                "Compare the performance of the algorithms."
+              ]
+            },
+            {
+              "id": "132d62a1-ce80-481a-ba07-25d652cae20d",
+              "title": "Module 3: Introduction to Merge Sort and Quick Sort",
+              "objectives": [
+                "Understand the divide-and-conquer paradigm.",
+                "Explain the principles of Merge Sort and Quick Sort.",
+                "Analyze the time and space complexity of Merge Sort and Quick Sort.",
+                "Discuss the advantages and disadvantages of each algorithm.",
+                "Compare Merge Sort and Quick Sort."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "7a873daa-d301-47f9-a50f-90d5313d4eba",
+          "order": 4,
+          "lesson": {
+            "id": "fba89e4a-c89a-499d-9429-985c0d001a69",
+            "title": "Graph representation and elementary algorithms",
+            "description": "This lesson introduces graph data structures, which are used to represent relationships between objects in various real-world applications such as networks, social connections, and transportation systems. Students will learn different ways to represent graphs, including adjacency lists, adjacency matrices, and edge lists, and understand their advantages and trade-offs."
+          },
+          "explanation": "While not directly related to the core goal, this lesson introduces graph data structures and search algorithms, which are fundamental concepts in computer science. This lesson can broaden the student's knowledge of algorithm design and data structures. It is also a good exercise for reinforcing the student's understanding of algorithm implementation and complexity analysis. Since this lesson is less critical than the others, the student can prioritize the sorting and searching algorithms and revisit this lesson later if needed.",
+          "modules": [
+            {
+              "id": "f3420996-f918-430b-b71e-b432dc39ee84",
+              "title": "Graph Representations: Adjacency Matrix and Adjacency List",
+              "objectives": [
+                "Understand the concepts of graph representations.",
+                "Differentiate between adjacency matrix and adjacency list.",
+                "Analyze the space and time complexity of each representation.",
+                "Implement adjacency matrix and adjacency list in code."
+              ]
+            },
+            {
+              "id": "8eb3ccb1-384d-4610-8b91-b940cf6eb114",
+              "title": "Breadth-First Search (BFS) and Depth-First Search (DFS)",
+              "objectives": [
+                "Understand the concepts of BFS and DFS algorithms.",
+                "Implement BFS and DFS using adjacency matrix and adjacency list representations.",
+                "Analyze the time and space complexity of BFS and DFS.",
+                "Apply BFS and DFS to solve graph-related problems."
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "total_paths": 11,
+    "extraction_date": "2025-04-29T06:07:51.459946",
+    "filters_applied": {
+      "course_id": null,
+      "student_id": null,
+      "start_date": null,
+      "end_date": null
+    }
+  }
+}
