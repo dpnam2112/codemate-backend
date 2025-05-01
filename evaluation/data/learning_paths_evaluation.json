@@ -1,0 +1,490 @@
+{
+  "learning_paths": [
+    {
+      "id": "29bd5d1f-0b0c-40a8-b940-baf42fc4754e",
+      "student": {
+        "id": "49de2631-bd30-496b-8c44-11fb25f1f4e4",
+        "email": "nguyentruongtuananh03@gmail.com"
+      },
+      "course": {
+        "id": "97670e34-966e-461d-957e-3d48fbef6034",
+        "name": "Data Structures and Algorithms",
+        "description": null
+      },
+      "metadata": {
+        "version": 15,
+        "start_date": "2025-03-26T00:00:00",
+        "end_date": "2025-04-05T00:00:00",
+        "objective": "Understand and apply basic sorting algorithms for data manipulation."
+      },
+      "recommended_lessons": [
+        {
+          "id": "a1df6939-a61b-4118-a378-b72937d20c9a",
+          "order": 1,
+          "lesson": {
+            "id": "269ab4ca-aacc-47e5-af83-bc164014d9a9",
+            "title": "Course introduction, Recursion and Complexity of Algorithms",
+            "description": "This lesson provides an introduction to the Data Structures and Algorithms (DSA) course, outlining its objectives, structure, and the fundamental role of algorithms and data structures in computer science."
+          },
+          "explanation": "This lesson is critical because it lays the groundwork for understanding sorting algorithms. Recursion is often used in the implementation of sorting algorithms like Merge Sort and Quick Sort. Understanding Big O notation is essential for comparing and evaluating the efficiency of different sorting algorithms. Without a solid grasp of these concepts, it will be difficult to analyze and choose the best sorting algorithm for a given situation. This lesson sets the stage for the more complex topics that follow.",
+          "modules": [
+            {
+              "id": "3b807ef6-4fc0-4642-8801-cd0dcd3d5a7a",
+              "title": "Sorting Algorithms: Recursive Implementations",
+              "objectives": [
+                "Implement Merge Sort recursively.",
+                "Implement Quick Sort recursively.",
+                "Analyze the time and space complexity of Merge Sort and Quick Sort.",
+                "Compare and contrast Merge Sort and Quick Sort.",
+                "Understand the practical applications of Merge Sort and Quick Sort."
+              ]
+            },
+            {
+              "id": "18e95fa7-1557-4572-aeb8-49ea1d9ec13f",
+              "title": "Recursion and Sorting Algorithms",
+              "objectives": [
+                "Understand the concept of recursion.",
+                "Analyze the time and space complexity of recursive functions.",
+                "Apply recursion in sorting algorithms (e.g., Merge Sort, Quick Sort).",
+                "Compare the performance of different sorting algorithms using Big O notation.",
+                "Identify the trade-offs between different sorting algorithms."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ecb185df-6d44-4243-af05-83208aa0e6ab",
+          "order": 2,
+          "lesson": {
+            "id": "3e95f5e3-6621-4a96-b8d6-b8bcb2071b36",
+            "title": "Sorting",
+            "description": "This lesson covers sorting algorithms, which are fundamental for organizing and managing data efficiently. Students will explore different types of sorting techniques, including comparison-based sorting algorithms such as Bubble Sort, Selection Sort, Insertion Sort, Merge Sort, Quick Sort, and Heap Sort, as well as non-comparison-based sorting algorithms like Counting Sort and Radix Sort."
+          },
+          "explanation": "This lesson is the core of the learning goal, directly addressing the application of sorting algorithms. It provides practical knowledge of different sorting techniques, enabling the student to manipulate data effectively. Understanding the implementation details, performance characteristics, and trade-offs between different algorithms is vital for making informed decisions in real-world scenarios. This lesson offers the tools necessary to implement and evaluate sorting algorithms, ensuring the student can apply these techniques to data manipulation tasks.",
+          "modules": [
+            {
+              "id": "b6f32857-9911-4989-9d0a-e4eafab497a0",
+              "title": "Merge Sort and Quick Sort",
+              "objectives": [
+                "Understand the implementation of Merge Sort and Quick Sort.",
+                "Analyze the time and space complexity of each algorithm.",
+                "Compare and contrast the performance of these algorithms with the previous sorts."
+              ]
+            },
+            {
+              "id": "601b3731-05d6-4abf-9e5a-9d1ef379b2f3",
+              "title": "Bubble Sort, Insertion Sort, and Selection Sort",
+              "objectives": [
+                "Understand the implementation of Bubble Sort, Insertion Sort, and Selection Sort.",
+                "Analyze the time and space complexity of each algorithm.",
+                "Compare and contrast the performance of these algorithms."
+              ]
+            },
+            {
+              "id": "f5c16f81-c11b-488e-a1ed-5a068f784f7c",
+              "title": "Introduction to Sorting Algorithms",
+              "objectives": [
+                "Understand the fundamental concepts of sorting.",
+                "Identify different types of sorting algorithms.",
+                "Recognize the importance of sorting in computer science."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "9fbdde94-8fee-45fd-b842-f95e34eebf41",
+          "order": 3,
+          "lesson": {
+            "id": "304c57fc-e6a0-4fea-8389-7085713f238c",
+            "title": "Lists",
+            "description": "This lesson introduces list data structures, their types, and their applications in programming. Students will explore different types of lists, including arrays (static lists) and linked lists (dynamic lists), and understand their advantages and limitations."
+          },
+          "explanation": "This lesson provides the necessary understanding of list data structures, which are fundamental for implementing sorting algorithms. Sorting algorithms operate on lists of data, so a solid understanding of list operations and implementations is essential. Understanding the characteristics of different list implementations, such as arrays and linked lists, is crucial for choosing the right data structure for a sorting task. This knowledge directly supports the goal of applying sorting algorithms by preparing the student with the required data structure knowledge.",
+          "modules": [
+            {
+              "id": "2d0f829f-e309-4b52-a06c-78c22e0238df",
+              "title": "Advanced Sorting Techniques and their List Applications",
+              "objectives": [
+                "Explore advanced sorting algorithms (merge sort, quicksort, heapsort).",
+                "Analyze the performance characteristics of each algorithm.",
+                "Apply sorting algorithms to real-world scenarios.",
+                "Understand the impact of list implementations on advanced sort performance."
+              ]
+            },
+            {
+              "id": "505050b1-6a3d-4278-b0af-d86770403f9a",
+              "title": "Introduction to Sorting Algorithms and List Implementations",
+              "objectives": [
+                "Understand the fundamental concepts of sorting algorithms.",
+                "Explore different list implementations (arrays and linked lists).",
+                "Analyze the impact of list implementations on sorting algorithm performance.",
+                "Identify use cases for various list types in sorting."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "d0eeb89d-c0af-42c8-a73e-6fb184999476",
+      "student": {
+        "id": "49de2631-bd30-496b-8c44-11fb25f1f4e4",
+        "email": "nguyentruongtuananh03@gmail.com"
+      },
+      "course": {
+        "id": "97670e34-966e-461d-957e-3d48fbef6034",
+        "name": "Data Structures and Algorithms",
+        "description": null
+      },
+      "metadata": {
+        "version": 16,
+        "start_date": "2025-03-26T00:00:00",
+        "end_date": "2025-04-05T00:00:00",
+        "objective": "Model and traverse simple graphs for real-world problems."
+      },
+      "recommended_lessons": [
+        {
+          "id": "96794df9-05dc-4d12-91a1-db67ecad0180",
+          "order": 1,
+          "lesson": {
+            "id": "fba89e4a-c89a-499d-9429-985c0d001a69",
+            "title": "Graph representation and elementary algorithms",
+            "description": "This lesson introduces graph data structures, which are used to represent relationships between objects in various real-world applications such as networks, social connections, and transportation systems. Students will learn different ways to represent graphs, including adjacency lists, adjacency matrices, and edge lists, and understand their advantages and trade-offs."
+          },
+          "explanation": "This lesson is crucial because it lays the groundwork for understanding graphs.  Trees are a special type of graph, and understanding tree concepts provides a solid foundation for learning about graph representations and algorithms. Mastering tree traversals is directly applicable to graph traversal algorithms, as they share similar principles. This knowledge will make it easier to grasp more complex graph algorithms. By studying trees first, you'll build a necessary mental model for graphs. This builds a strong foundation for more complex graph algorithms.",
+          "modules": [
+            {
+              "id": "2c6654df-cbcf-48cf-a4f7-23d6e9fd3346",
+              "title": "Trees and Graphs: Connections and Applications",
+              "objectives": [
+                "Understand the similarities and differences between trees and graphs.",
+                "Explore the use of trees in real-world applications.",
+                "Model simple graph structures using trees.",
+                "Apply tree traversal techniques to graph-related problems.",
+                "Solve problems involving tree-based algorithms."
+              ]
+            },
+            {
+              "id": "b95db70c-7a0a-47d1-bb6f-1bb6ae088368",
+              "title": "Introduction to Trees: Fundamentals and Traversals",
+              "objectives": [
+                "Define and differentiate tree data structures and their components.",
+                "Understand the properties of binary trees.",
+                "Master the pre-order, in-order, and post-order traversal algorithms.",
+                "Apply tree traversals to solve practical problems.",
+                "Recognize the relationship between trees and graphs."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "071d5d28-33a9-4b47-ab37-f2f76735cd42",
+          "order": 2,
+          "lesson": {
+            "id": "1bfd8ded-fa98-48cf-be66-d6b291033f10",
+            "title": "Multiway Tree",
+            "description": "This lesson explores multiway trees, a type of tree data structure where each node can have more than two children, making them useful for hierarchical data organization in various applications. Students will learn the fundamental concepts of multiway trees, including general trees, m-ary trees, B-trees, and B+ trees, which are widely used in databases and file systems."
+          },
+          "explanation": "Understanding multiway trees expands your knowledge of hierarchical data structures and data organization principles. Although not directly related to graph traversal, it builds on the foundation established in the previous lesson. The principles of efficient data storage and retrieval in multiway trees can indirectly inform your understanding of graph representations, particularly when dealing with large graphs. This lesson provides valuable insights into data management. It is important to broaden your knowledge of data structures.",
+          "modules": [
+            {
+              "id": "588bce93-e71a-432f-a5d1-8f0da0fe7d8c",
+              "title": "Applications of B-Trees and B+ Trees",
+              "objectives": [
+                "Identify real-world applications of B-trees and B+ trees.",
+                "Understand how these structures are used in database indexing.",
+                "Explore the use of B+ trees in file systems.",
+                "Analyze the performance benefits of using these data structures."
+              ]
+            },
+            {
+              "id": "9fa00e64-227a-4f3c-a7f7-9a70c648b8e1",
+              "title": "Introduction to B-Trees and B+ Trees",
+              "objectives": [
+                "Understand the structure and properties of B-trees and B+ trees.",
+                "Differentiate between B-trees and B+ trees.",
+                "Learn the operations of search, insertion, and deletion in these tree structures.",
+                "Analyze the time complexity of B-tree and B+ tree operations."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "f0afebdf-1b0b-466e-beaa-5e6bef3febc8",
+          "order": 3,
+          "lesson": {
+            "id": "f987c521-39bc-4bac-bbab-d8c5b6096ab7",
+            "title": "Tree concepts and Binary Tree",
+            "description": "This lesson introduces tree data structures, a hierarchical way of organizing and storing data. Students will learn the fundamental concepts of trees, including nodes, edges, root, parent-child relationships, depth, height, and traversal methods."
+          },
+          "explanation": "This lesson directly addresses the student's goal of modeling and traversing simple graphs. It introduces the core concepts of graph representation and traversal algorithms. Understanding BFS and DFS is essential for solving a wide range of graph-related problems. These algorithms are fundamental building blocks for more advanced graph algorithms. Mastery of this lesson is crucial for achieving the learning objective. This lesson is the core of your goal, so make sure you understand it.",
+          "modules": [
+            {
+              "id": "7dda3af7-674d-43ed-81f1-11cac3a15b1e",
+              "title": "Graph Algorithms Applications",
+              "objectives": [
+                "Identify real-world problems solvable with graph algorithms.",
+                "Understand the application of BFS in shortest path problems.",
+                "Understand the application of DFS in cycle detection and topological sorting.",
+                "Apply graph algorithms to solve practical problems.",
+                "Analyze the efficiency of graph algorithms in real-world scenarios."
+              ]
+            },
+            {
+              "id": "eb5b9738-455b-457e-a14f-15c5f66a5089",
+              "title": "Breadth-First Search (BFS) and Depth-First Search (DFS)",
+              "objectives": [
+                "Understand the BFS and DFS algorithms.",
+                "Trace BFS and DFS on example graphs.",
+                "Implement BFS and DFS in code.",
+                "Analyze the time and space complexity of BFS and DFS.",
+                "Identify applications of BFS and DFS."
+              ]
+            },
+            {
+              "id": "b2dc54bb-ee66-40bd-aaa3-3359aa986b10",
+              "title": "Graph Representations: Adjacency Lists and Matrices",
+              "objectives": [
+                "Understand the concepts of graph representations.",
+                "Differentiate between adjacency lists and adjacency matrices.",
+                "Analyze the space and time complexity of each representation.",
+                "Implement graph representations in code.",
+                "Identify suitable graph representations for different use cases."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "1c701da6-e101-45aa-84da-fc412dc03e44",
+      "student": {
+        "id": "49de2631-bd30-496b-8c44-11fb25f1f4e4",
+        "email": "nguyentruongtuananh03@gmail.com"
+      },
+      "course": {
+        "id": "97670e34-966e-461d-957e-3d48fbef6034",
+        "name": "Data Structures and Algorithms",
+        "description": null
+      },
+      "metadata": {
+        "version": 17,
+        "start_date": "2025-03-26T00:00:00",
+        "end_date": "2025-04-05T00:00:00",
+        "objective": "Master basic data structures for efficient data organization."
+      },
+      "recommended_lessons": [
+        {
+          "id": "5b4c6ae0-c057-4d21-8693-96e4adb357bb",
+          "order": 1,
+          "lesson": {
+            "id": "269ab4ca-aacc-47e5-af83-bc164014d9a9",
+            "title": "Course introduction, Recursion and Complexity of Algorithms",
+            "description": "This lesson provides an introduction to the Data Structures and Algorithms (DSA) course, outlining its objectives, structure, and the fundamental role of algorithms and data structures in computer science."
+          },
+          "explanation": "This lesson is critical because it lays the groundwork for understanding data structures. Recursion is frequently used within data structures. Big-O notation is essential for evaluating the efficiency of data structures and algorithms, directly aligning with the goal of efficient data organization. Without this foundational knowledge, it's difficult to understand the performance characteristics of more complex data structures. Understanding the course introduction is also essential for context.",
+          "modules": [
+            {
+              "id": "930817bb-c26d-4869-b320-1a274d0f5264",
+              "title": "Algorithm Efficiency and Comparison",
+              "objectives": [
+                "Understand the concept of algorithm efficiency and its importance.",
+                "Analyze the time and space complexity of algorithms.",
+                "Compare different algorithms based on their Big O complexity.",
+                "Identify the best algorithm for a given problem.",
+                "Apply algorithm analysis techniques to real-world scenarios."
+              ]
+            },
+            {
+              "id": "e0f3cf2b-0e00-4905-8b31-1e7ebb6eadd2",
+              "title": "Recursion and Big O Notation",
+              "objectives": [
+                "Understand the concept of recursion and its applications.",
+                "Analyze the time and space complexity of recursive algorithms using Big O notation.",
+                "Compare different algorithms based on their Big O complexity.",
+                "Identify the dominant operations in an algorithm.",
+                "Grasp the principles of algorithm efficiency."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "85144c60-d627-4172-9393-f7b0857c8332",
+          "order": 2,
+          "lesson": {
+            "id": "304c57fc-e6a0-4fea-8389-7085713f238c",
+            "title": "Lists",
+            "description": "This lesson introduces list data structures, their types, and their applications in programming. Students will explore different types of lists, including arrays (static lists) and linked lists (dynamic lists), and understand their advantages and limitations."
+          },
+          "explanation": "This lesson is crucial because lists (arrays and linked lists) are fundamental data structures. They are building blocks for other more complex data structures. Mastering their properties and operations is essential for efficient data organization. Understanding when to use an array versus a linked list directly impacts the performance of data manipulation tasks, which supports the student's goal.",
+          "modules": [
+            {
+              "id": "fd9544cf-2a31-43bc-ac4e-76142aa4787f",
+              "title": "Choosing the Right Data Structure",
+              "objectives": [
+                "Understand the factors influencing data structure selection.",
+                "Analyze different use cases and recommend appropriate data structures.",
+                "Compare and contrast the performance characteristics of arrays and linked lists.",
+                "Apply knowledge to solve practical programming problems."
+              ]
+            },
+            {
+              "id": "ab5bdc8d-9093-43d1-aa9a-55a72b9f27aa",
+              "title": "Operations on Arrays and Linked Lists",
+              "objectives": [
+                "Master the fundamental operations: insertion, deletion, and searching.",
+                "Analyze the time complexity of each operation for arrays and linked lists.",
+                "Implement these operations in code (e.g., Python or Java).",
+                "Understand how these operations impact the choice of data structure."
+              ]
+            },
+            {
+              "id": "0bf89c43-ca36-480d-b83f-9d83b9ecdc16",
+              "title": "Arrays vs. Linked Lists: Fundamental Data Structures",
+              "objectives": [
+                "Understand the core differences between arrays and linked lists.",
+                "Analyze the advantages and disadvantages of each data structure.",
+                "Implement basic operations (insertion, deletion, searching) for both.",
+                "Recognize scenarios where each data structure is most appropriate."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ede3f18e-d548-4866-91c9-f27ea022b764",
+          "order": 3,
+          "lesson": {
+            "id": "3e95f5e3-6621-4a96-b8d6-b8bcb2071b36",
+            "title": "Sorting",
+            "description": "This lesson covers sorting algorithms, which are fundamental for organizing and managing data efficiently. Students will explore different types of sorting techniques, including comparison-based sorting algorithms such as Bubble Sort, Selection Sort, Insertion Sort, Merge Sort, Quick Sort, and Heap Sort, as well as non-comparison-based sorting algorithms like Counting Sort and Radix Sort."
+          },
+          "explanation": "This lesson is critical because efficient sorting is a prerequisite for many other operations. Sorting algorithms are used to organize data in a way that facilitates searching and other operations. Understanding the different sorting algorithms and their complexities allows students to choose the most efficient method for a given task, which directly improves data organization and performance. This knowledge is directly relevant to the student's learning goal.",
+          "modules": [
+            {
+              "id": "f38eaf08-7dcd-4f17-81df-f47328a44c61",
+              "title": "Merge Sort and QuickSort",
+              "objectives": [
+                "Understand the divide-and-conquer strategy.",
+                "Learn the working of Merge Sort.",
+                "Learn the working of QuickSort.",
+                "Compare and contrast Merge Sort and QuickSort.",
+                "Analyze the performance characteristics of each algorithm."
+              ]
+            },
+            {
+              "id": "33a68463-1812-4ba2-a93f-d66b62d76a99",
+              "title": "Insertion Sort and Selection Sort",
+              "objectives": [
+                "Understand the working of Insertion Sort.",
+                "Understand the working of Selection Sort.",
+                "Compare and contrast Insertion Sort and Selection Sort.",
+                "Analyze the performance characteristics of each algorithm."
+              ]
+            },
+            {
+              "id": "556178b9-a909-48b7-82b5-11f9b0750a59",
+              "title": "Introduction to Sorting Algorithms",
+              "objectives": [
+                "Understand the fundamental concepts of sorting.",
+                "Learn about different types of sorting algorithms.",
+                "Analyze the time and space complexity of sorting algorithms."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c6d34688-b4b3-4a27-b4d8-7b4658acb86c",
+          "order": 4,
+          "lesson": {
+            "id": "f987c521-39bc-4bac-bbab-d8c5b6096ab7",
+            "title": "Tree concepts and Binary Tree",
+            "description": "This lesson introduces tree data structures, a hierarchical way of organizing and storing data. Students will learn the fundamental concepts of trees, including nodes, edges, root, parent-child relationships, depth, height, and traversal methods."
+          },
+          "explanation": "This lesson is essential because graphs are used to model relationships between data. Learning graph algorithms is crucial for solving problems related to networks, relationships, and dependencies. Understanding graph data structures and algorithms extends the student's ability to efficiently organize and process more complex data, contributing to the overall goal of mastering data structures for efficient data organization.",
+          "modules": [
+            {
+              "id": "c8bc7974-4192-41a3-8e8d-4124a794a94c",
+              "title": "Graph Algorithms Applications and Advanced Topics",
+              "objectives": [
+                "Apply graph algorithms to solve real-world problems.",
+                "Understand the concept of topological sorting.",
+                "Explore advanced graph algorithms and techniques.",
+                "Understand the application of these algorithms"
+              ]
+            },
+            {
+              "id": "e81684d7-7258-481c-af4d-1e6fd36b0888",
+              "title": "Dijkstra's Algorithm and Minimum Spanning Trees",
+              "objectives": [
+                "Understand Dijkstra's algorithm for finding the shortest paths in a weighted graph.",
+                "Learn about Minimum Spanning Trees (MST) and their applications.",
+                "Implement Dijkstra's algorithm.",
+                "Implement Kruskal's algorithm"
+              ]
+            },
+            {
+              "id": "0ad7dbf4-b35e-4476-a789-7eeb495c7506",
+              "title": "Graph Representations and Basic Traversal",
+              "objectives": [
+                "Understand the difference between adjacency matrix and adjacency list representations.",
+                "Implement Breadth-First Search (BFS) and Depth-First Search (DFS) algorithms.",
+                "Analyze the time and space complexity of graph traversal algorithms.",
+                "Apply graph traversal to solve real-world problems like finding shortest paths."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "3bb65ba7-3283-4e6a-8847-83dfaa975087",
+          "order": 5,
+          "lesson": {
+            "id": "fba89e4a-c89a-499d-9429-985c0d001a69",
+            "title": "Graph representation and elementary algorithms",
+            "description": "This lesson introduces graph data structures, which are used to represent relationships between objects in various real-world applications such as networks, social connections, and transportation systems. Students will learn different ways to represent graphs, including adjacency lists, adjacency matrices, and edge lists, and understand their advantages and trade-offs."
+          },
+          "explanation": "This lesson is critical because trees are another fundamental data structure used for hierarchical data organization. Binary trees and their variations are widely used in applications like searching and sorting. Understanding tree concepts allows students to effectively manage and retrieve data in a structured way. This directly supports the student's goal of mastering data structures.",
+          "modules": [
+            {
+              "id": "be352d5e-b05d-4463-9ab6-5d3cfcccb66c",
+              "title": "Binary Search Trees and Tree Complexity",
+              "objectives": [
+                "Understand the properties of Binary Search Trees (BSTs).",
+                "Implement BST operations: insertion, deletion, and search.",
+                "Analyze the time complexity of BST operations.",
+                "Explain the importance of balanced trees."
+              ]
+            },
+            {
+              "id": "2bde4385-9c16-4b6d-921a-3cda7545e06b",
+              "title": "Tree Traversal Algorithms",
+              "objectives": [
+                "Understand the three main tree traversal algorithms: inorder, preorder, and postorder.",
+                "Implement these algorithms in code.",
+                "Analyze the applications of each traversal method."
+              ]
+            },
+            {
+              "id": "8ce4906a-2cc4-4577-b5bf-32de583a3a43",
+              "title": "Introduction to Trees and Binary Trees",
+              "objectives": [
+                "Define trees and their terminology.",
+                "Explain the properties of binary trees.",
+                "Differentiate between various types of binary trees."
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "total_paths": 3,
+    "extraction_date": "2025-04-26T04:11:04.893277",
+    "filters_applied": {
+      "course_id": null,
+      "student_id": null,
+      "start_date": null,
+      "end_date": null
+    }
+  }
+}

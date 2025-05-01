@@ -1,4 +1,5 @@
 import backoff
+import concurrent.futures
 from pydantic import BaseModel
 from core.llm import LLMModelConfig
 from deepeval.models.base_model import DeepEvalBaseLLM
@@ -52,6 +53,36 @@ class LiteLLMWrapper(DeepEvalBaseLLM):
             return schema.model_validate_json(response_content)
 
         return response_content
+
+    @backoff.on_exception(
+        backoff.expo,
+        RateLimitError,
+        max_tries=10,
+        jitter=backoff.full_jitter,
+        base=2,
+        factor=1
+    )
+    def _generate_single(self, prompt: str) -> str:
+        """
+        Internal helper for a single sync prompt generation, with retry.
+        """
+        response = completion(
+            model=self.llm_cfg.model_name,
+            messages=[{"role": "user", "content": prompt}],
+            api_key=self.llm_cfg.api_key
+        )
+        return response['choices'][0]['message']['content']
+
+    def batch_generate(self, prompts: list[str]) -> list[str]:
+        """
+        Batch prompt generation using threads for concurrent API calls.
+        """
+        results = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=min(5, len(prompts))) as executor:
+            futures = [executor.submit(self._generate_single, prompt) for prompt in prompts]
+            for future in concurrent.futures.as_completed(futures):
+                results.append(future.result())
+        return results
 
     def get_model_name(self) -> str:
         return self.llm_cfg.model_name

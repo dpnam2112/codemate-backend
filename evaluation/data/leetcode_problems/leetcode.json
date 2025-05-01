@@ -1,0 +1,112 @@
+[
+  {
+    "problem_description": "Given an integer n, print whether it is even or odd.\n\nInput:\n    A single integer n (-10^9 <= n <= 10^9).\n\nOutput:\n    'Even' if the number is even, 'Odd' otherwise.\n\nExample:\nInput:\n4\n\nOutput:\nEven\n\nInput:\n7\n\nOutput:\nOdd",
+    "solutions": [
+      {
+	"language_id": 71,
+	"code_solution": "n = int(input())\r\nif n % 2 == 0:\r\n    print(\"Even\")\r\nelse:\r\n    print(\"Odd\")"
+      }
+    ]
+  },
+  {
+    "problem_description": "Given two integers a and b, print their greatest common divisor (GCD).\n\nInput:\n    Two integers a and b (1 <= a, b <= 10^9).\n\nOutput:\n    A single integer, the GCD of a and b.\n\nExample:\nInput:\n48 18\n\nOutput:\n6",
+    "solutions": [
+      {
+	"language_id": 71,
+	"code_solution": "import math\r\n\r\na, b = map(int, input().split())\r\nprint(math.gcd(a, b))\r\n"
+      }
+    ]
+  },
+  {
+    "problem_description": "Given a list of integers, count how many numbers are positive, negative, and zero.\n\nInput:\n    First line: an integer n (1 <= n <= 10^5).\n    Second line: n integers (-10^9 <= a[i] <= 10^9).\n\nOutput:\n    Three integers separated by space: count of positives, negatives, and zeros.\n\nExample:\nInput:\n5\n-2 0 5 -7 9\n\nOutput:\n2 2 1",
+    "solutions": [
+      {
+	"language_id": 71,
+	"code_solution": "n = int(input())\r\narr = list(map(int, input().split()))\r\n\r\npos = neg = zero = 0\r\n\r\nfor num in arr:\r\n    if num > 0:\r\n        pos += 1\r\n    elif num < 0:\r\n        neg += 1\r\n    else:\r\n        zero += 1\r\n\r\nprint(pos, neg, zero)\r\n"
+      }
+    ]
+  },
+  {
+    "problem_description": "Given a string, check if it is a palindrome.\n\nInput:\n    A single string s (1 <= |s| <= 10^5) consisting of lowercase letters.\n\nOutput:\n    'Yes' if the string is a palindrome, 'No' otherwise.\n\nExample:\nInput:\nmadam\n\nOutput:\nYes",
+    "solutions": [
+      {
+	"language_id": 71,
+	"code_solution": "s = input().strip()\r\nif s == s[::-1]:\r\n    print(\"Yes\")\r\nelse:\r\n    print(\"No\")"
+      }
+    ]
+  },
+  {
+    "problem_description": "Given a list of integers, print the second largest unique number. If it does not exist, print -1.\n\nInput:\n    First line: an integer n (2 <= n <= 10^5).\n    Second line: n integers (-10^9 <= a[i] <= 10^9).\n\nOutput:\n    The second largest unique number or -1.\n\nExample:\nInput:\n5\n4 1 2 4 3\n\nOutput:\n3",
+    "solutions": [
+      {
+	"language_id": 71,
+	"code_solution": "n = int(input())\r\narr = list(map(int, input().split()))\r\n\r\nunique_numbers = list(set(arr))\r\nif len(unique_numbers) < 2:\r\n    print(-1)\r\nelse:\r\n    unique_numbers.sort(reverse=True)\r\n    print(unique_numbers[1])\r\n"
+      }
+    ]
+  },
+  {
+    "problem_description": "Given an integer n, print all its divisors in ascending order.\n\nInput:\n    A single integer n (1 <= n <= 10^6).\n\nOutput:\n    Space-separated divisors of n in ascending order.\n\nExample:\nInput:\n12\n\nOutput:\n1 2 3 4 6 12",
+    "solutions": [
+      {
+	"language_id": 71,
+	"code_solution": "import math\r\n\r\nn = int(input())\r\ndivisors = []\r\n\r\nfor i in range(1, int(math.isqrt(n)) + 1):\r\n    if n % i == 0:\r\n        divisors.append(i)\r\n        if i != n \/\/ i:\r\n            divisors.append(n \/\/ i)\r\n\r\ndivisors.sort()\r\nprint(*divisors)\r\n"
+      }
+    ]
+  },
+  {
+    "problem_description": "Given a string, print the number of vowels (a, e, i, o, u).\n\nInput:\n    A single string s (1 <= |s| <= 10^5).\n\nOutput:\n    A single integer representing the number of vowels.\n\nExample:\nInput:\nleetcode\n\nOutput:\n4",
+    "solutions": [
+      {
+	"language_id": 71,
+	"code_solution": "s = input()\r\nvowels = {'a', 'e', 'i', 'o', 'u'}\r\ncount = sum(1 for char in s if char in vowels)\r\nprint(count)\r\n"
+      }
+    ]
+  },
+  {
+    "problem_description": "Given a number n, determine whether it is a prime number.\n\nInput:\n    A single integer n (1 <= n <= 10^6).\n\nOutput:\n    'Yes' if prime, otherwise 'No'.\n\nExample:\nInput:\n5\n\nOutput:\nYes",
+    "solutions": [
+      {
+	"language_id": 71,
+	"code_solution": "import math\r\n\r\nn = int(input())\r\n\r\nif n < 2:\r\n    print(\"No\")\r\nelse:\r\n    for i in range(2, int(math.isqrt(n)) + 1):\r\n        if n % i == 0:\r\n            print(\"No\")\r\n            break\r\n    else:\r\n        print(\"Yes\")\r\n"
+      }
+    ]
+  },
+
+  {
+    "problem_description": "Problem Description:\r\nGiven a sorted array of integers and a target, find two distinct indices such that their values add up to the target. Indices are 1-based.\r\n\r\nInput Format:\r\n\r\n    The first line contains two integers n and target.\r\n\r\n    The second line contains n integers (the array).\r\n\r\nOutput Format:\r\n\r\n    Two integers (the 1-based indices) separated by space.\r\n\r\nExample:\r\n\r\nInput:\r\n4 9\r\n2 7 11 15\r\n\r\nOutput:\r\n1 2\r\n\r\nConstraints:\r\n\r\n    2 \u2264 n \u2264 10\u2075\r\n\r\n    -10\u2079 \u2264 numbers[i] \u2264 10\u2079\r\n\r\n    numbers is sorted in non-decreasing order.",
+    "solutions": [
+      {
+	"language_id": 71,
+	"code_solution": "import sys\r\n\r\ndef two_sum_sorted(nums, target):\r\n    left, right = 0, len(nums) - 1\r\n    while left < right:\r\n        s = nums[left] + nums[right]\r\n        if s == target:\r\n            # return 1-based indices\r\n            return left + 1, right + 1\r\n        elif s < target:\r\n            left += 1\r\n        else:\r\n            right -= 1\r\n    return None  # according to problem there is always exactly one solution\r\n\r\ndef main():\r\n    data = sys.stdin.read().split()\r\n    n, target = map(int, data[:2])\r\n    nums = list(map(int, data[2:2 + n]))\r\n    i, j = two_sum_sorted(nums, target)\r\n    print(i, j)\r\n\r\nif __name__ == \"__main__\":\r\n    main()\r\n"
+      }
+    ]
+  },
+  {
+    "problem_description": "Problem Description:\r\nGiven an array, find all unique triplets [a, b, c] such that a + b + c = 0. Triplets must be in ascending order.\r\n\r\nInput Format:\r\n\r\n    The first line contains an integer n.\r\n\r\n    The second line contains n integers.\r\n\r\nOutput Format:\r\n\r\n    Each line contains a triplet of three integers, sorted ascending within the triplet.\r\n\r\n    Triplets should not be duplicated.\r\n\r\nExample:\r\n\r\nInput:\r\n6\r\n-1 0 1 2 -1 -4\r\n\r\nOutput:\r\n-1 -1 2\r\n-1 0 1\r\n\r\nConstraints:\r\n\r\n    3 \u2264 n \u2264 10\u2074\r\n\r\n    -10\u2079 \u2264 nums[i] \u2264 10\u2079",
+    "solutions": [
+      {
+	"language_id": 71,
+	"code_solution": "import sys\r\n\r\ndef three_sum(nums):\r\n    nums.sort()\r\n    n = len(nums)\r\n    result = []\r\n    for i in range(n - 2):\r\n        # Skip duplicate values for the first element\r\n        if i > 0 and nums[i] == nums[i - 1]:\r\n            continue\r\n        a = nums[i]\r\n        left, right = i + 1, n - 1\r\n        while left < right:\r\n            b, c = nums[left], nums[right]\r\n            s = a + b + c\r\n            if s == 0:\r\n                result.append((a, b, c))\r\n                # Move pointers and skip duplicates\r\n                left += 1\r\n                right -= 1\r\n                while left < right and nums[left] == nums[left - 1]:\r\n                    left += 1\r\n                while left < right and nums[right] == nums[right + 1]:\r\n                    right -= 1\r\n            elif s < 0:\r\n                left += 1\r\n            else:\r\n                right -= 1\r\n    return result\r\n\r\ndef main():\r\n    data = sys.stdin.read().split()\r\n    n = int(data[0])\r\n    nums = list(map(int, data[1:1 + n]))\r\n    triplets = three_sum(nums)\r\n    # Print each triplet on its own line\r\n    for a, b, c in triplets:\r\n        print(a, b, c)\r\n\r\nif __name__ == \"__main__\":\r\n    main()\r\n"
+      }
+    ]
+  },
+  {
+    "problem_description": "Problem Description:\r\nFind the length of the longest substring without repeating characters.\r\n\r\nInput Format:\r\n\r\n    A single line containing a string s.\r\n\r\nOutput Format:\r\n\r\n    A single integer (the length).\r\n\r\nExample:\r\n\r\nInput:\r\nabcabcbb\r\n\r\nOutput:\r\n3\r\n\r\nConstraints:\r\n\r\n    1 \u2264 |s| \u2264 10\u2075\r\n\r\n",
+    "solutions": [
+      {
+	"language_id": 71,
+	"code_solution": "s = input().strip()\r\n\r\nchar_set = set()\r\nleft = 0\r\nmax_len = 0\r\n\r\nfor right in range(len(s)):\r\n    while s[right] in char_set:\r\n        char_set.remove(s[left])\r\n        left += 1\r\n    char_set.add(s[right])\r\n    max_len = max(max_len, right - left + 1)\r\n\r\nprint(max_len)\r\n"
+      }
+    ]
+  },
+  {
+    "problem_description": "Problem Description:\r\nReturn all subsets (power set) of a given set of integers.\r\n\r\nInput Format:\r\n\r\n    The first line contains an integer n.\r\n\r\n    The second line contains n integers.\r\n\r\nOutput Format:\r\n\r\n    Each subset printed on a new line, numbers separated by space.\r\n\r\n    Subsets can be printed in any order.\r\n\r\nExample:\r\n\r\nInput:\r\n3\r\n1 2 3\r\n\r\nOutput:\r\n(empty line)\r\n1\r\n2\r\n3\r\n1 2\r\n1 3\r\n2 3\r\n1 2 3\r\n\r\nConstraints:\r\n\r\n    1 \u2264 n \u2264 10",
+    "solutions": [
+      {
+	"language_id": 71,
+	"code_solution": "def main():\r\n    import sys\r\n    data = sys.stdin.read().strip().split()\r\n    n = int(data[0])\r\n    nums = list(map(int, data[1:]))\r\n\r\n    # There are 2^n subsets\r\n    for mask in range(1 << n):\r\n        subset = []\r\n        for i in range(n):\r\n            if mask & (1 << i):\r\n                subset.append(str(nums[i]))\r\n        # Print elements separated by space; empty subset prints a blank line\r\n        sys.stdout.write(\" \".join(subset) + \"\\n\")\r\n\r\nif __name__ == \"__main__\":\r\n    main()\r\n"
+      }
+    ]
+  }
+]
+

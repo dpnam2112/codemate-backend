@@ -212,10 +212,10 @@ Examples:
         help='Filter paths before this date (YYYY-MM-DD)'
     )
     parser.add_argument(
-        '--output',
+        '-d', '--dir',
         type=str,
-        default='learning_paths_evaluation.json',
-        help='Output JSON file path (default: learning_paths_evaluation.json)'
+        default='.',
+        help='Directory to store output file (default: current directory)'
     )
     parser.add_argument(
         '--verbose',
@@ -235,8 +235,11 @@ Examples:
         )
         
         # Create output directory if it doesn't exist
-        output_path = Path(args.output)
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M")
+        output_filename = f"learning_paths_{timestamp}.json"
+        output_path = Path(args.dir) / output_filename
         output_path.parent.mkdir(parents=True, exist_ok=True)
+
         
         # Save the data
         with open(output_path, 'w', encoding='utf-8') as f:

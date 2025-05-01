@@ -1,0 +1,14 @@
+path_id,model,goal,final_score
+002d46e7-b4f9-4ff5-aa0a-0c2a17944401,gpt-4o-mini,Define basic AI terminology and identify core concepts like machine learning and deep learning within one month.,0.315
+04d21a2a-07d0-4f18-aee2-3d675f535d11,gpt-4o-mini,"Implement basic array and linked list operations (insertion, deletion, traversal) in Python with 80% accuracy within 2 weeks.",0.84
+05a7f98f-8af9-4118-b314-365e571ec23b,gpt-4o-mini,"Accurately implement basic list operations (insertion, deletion, traversal) using arrays and linked lists within one week.",0.955
+071af013-4a53-4efe-9ef6-13b7c29153df,gpt-4o-mini,"Implement basic array and linked list operations (insertion, deletion, traversal) in Python within two weeks.",0.745
+0f367eef-47c6-474b-9575-d98f7b372a1b,gpt-4o-mini,Implement and compare the performance of Merge Sort and Quick Sort for different input sizes within two weeks.,0.82
+119bf3d8-6106-4605-9e4a-3de8b15b4751,gpt-4o-mini,"Implement basic array and linked list operations (insertion, deletion, traversal) in Python within two weeks.",0.71
+3132d0ea-cbe7-4a51-86cc-d939776d913c,gpt-4o-mini,"Implement and explain two basic sorting algorithms (Bubble Sort, Insertion Sort) in Python within two weeks.",0.75
+56e5e62c-59d0-4267-a887-6e2bb16bf64e,gpt-4o-mini,I want to learn more about stack,0.8
+ab3ec51b-bd0e-45b5-ba0d-a808c62e1f9d,gpt-4o-mini,"Explain time and space complexity using Big-O notation for basic algorithms (e.g., searching, sorting) within one week.",0.85
+bc7936de-bb7d-4761-8ba8-c6cc73439e6c,gpt-4o-mini,Master linked list operations,0.835
+d14911b6-80bc-4d95-bed2-7fd6cefcd663,gpt-4o-mini,i only want study about sorting,0.815
+e81140de-29fc-4886-b3a1-448b6825c9da,gpt-4o-mini,"i only want study about lists
+",0.72

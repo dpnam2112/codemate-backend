@@ -17,6 +17,9 @@ def get_model_for_experiment(model_name: str) -> LiteLLMWrapper:
     elif model_name.startswith("gemini/") or model_name.startswith("vertex_ai/"):
         api_key = test_settings.gemini_api_key
         provider = "Gemini"
+    elif model_name.startswith("together_ai/"):
+        api_key = test_settings.together_ai_api_key
+        provider = "TogetherAI"
     else:
         raise ValueError(f"Unsupported model provider for model_name='{model_name}'")
 
