@@ -715,7 +715,7 @@ async def get_students_for_course(
         Student.name.label("name"),
         Student.email.label("email"),
         Student.avatar_url.label("avatar_url"),
-        Student.mssv.label("mssv"),
+        Student.mssv.label("ms"),
     ]
 
     join_conditions = {
@@ -737,7 +737,7 @@ async def get_students_for_course(
             student_name=student.name,
             student_email=student.email,
             student_avatar=str(student.avatar_url) if student.avatar_url else "",
-            student_mssv=student.mssv,
+            student_mssv=student.ms,
         )
         for student in students
     ]
@@ -870,6 +870,13 @@ async def create_course(
         raise BadRequestException(message="At least one course is required.")
 
     if len(request) == 1:
+        if not request[0].nSemester or not request[0].class_name:
+            raise BadRequestException(message="Semester and class name are required.")
+        checkIfCourseExists = await courses_controller.courses_repository.first(
+            where_=[Courses.courseID == request[0].courseID, Courses.nSemester == request[0].nSemester, Courses.class_name == request[0].class_name]
+        )
+        if checkIfCourseExists:
+            raise BadRequestException(message="Course already exists.")
         saveProfessorId = await professors_controller.professor_repository.first(
             Professor.mscb == request[0].professorID
         )
@@ -949,6 +956,13 @@ async def create_course(
 
         courses_attributes = []
         for course in request:
+            if not course.nSemester or not course.class_name:
+                raise BadRequestException(message="Semester and class name are required.")
+            checkIfCourseExists = await courses_controller.courses_repository.first(
+                where_=[Courses.courseID == course.courseID, Courses.nSemester == course.nSemester, Courses.class_name == course.class_name]
+            )
+            if checkIfCourseExists:
+                raise BadRequestException(message="Course already exists.")
             if not course.name:
                 raise BadRequestException(message="Course name is required.")
 
