@@ -715,6 +715,7 @@ async def get_students_for_course(
         Student.name.label("name"),
         Student.email.label("email"),
         Student.avatar_url.label("avatar_url"),
+        Student.mssv.label("mssv"),
     ]
 
     join_conditions = {
@@ -736,6 +737,7 @@ async def get_students_for_course(
             student_name=student.name,
             student_email=student.email,
             student_avatar=str(student.avatar_url) if student.avatar_url else "",
+            student_mssv=student.mssv,
         )
         for student in students
     ]
