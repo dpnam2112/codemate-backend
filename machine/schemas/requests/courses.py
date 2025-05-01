@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List
 from uuid import UUID
 from datetime import date
@@ -54,3 +54,37 @@ class UpdateCourseRequest(BaseModel):
     n_semester: Optional[int] = None
     courseID: Optional[str] = None
     class_name: Optional[str] = None
+    
+    
+class AddStudentsToCourseRequest(BaseModel):
+    """
+    Request model for adding students to an existing course
+    """
+    course_id: str = Field(..., description="The ID of the course to add students to")
+    student_ids: List[str] = Field(..., min_items=1, description="List of student MSVVs to add to the course")
+
+class StudentCourseInfo(BaseModel):
+    """
+    Information about a student's enrollment in a course
+    """
+    student_id: str
+    student_mssv: Optional[str] = None
+    course_id: str
+    last_accessed: Optional[str] = None
+    completed_lessons: Optional[int] = None
+    time_spent: Optional[str] = None
+    percentage_done: Optional[int] = None
+    
+    class Config:
+        # Allow extra fields during validation
+        extra = "ignore"
+
+class AddStudentsToCourseResponse(BaseModel):
+    """
+    Response model for the add students to course endpoint
+    """
+    course_id: str
+    course_name: str
+    added_students_count: int
+    already_enrolled_count: int
+    student_courses_list: List[StudentCourseInfo]

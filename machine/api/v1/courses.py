@@ -247,6 +247,136 @@ async def get_available_courses(
     courses_list = availableCourses
     return Ok(data=courses_list, message="Successfully fetched the available courses.")
 
+@router.post("/add-students", response_model=Ok[AddStudentsToCourseResponse])
+async def add_students_to_course(
+    request: AddStudentsToCourseRequest,
+    token: str = Depends(oauth2_scheme),
+    courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
+    student_courses_controller: StudentCoursesController = Depends(InternalProvider().get_studentcourses_controller),
+    student_controller: StudentController = Depends(InternalProvider().get_student_controller),
+    admin_controller: AdminController = Depends(InternalProvider().get_admin_controller),
+):
+    # Verify admin token
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+
+    # Check if user is an admin
+    user = await admin_controller.admin_repository.first(where_=[Admin.id == user_id])
+    if not user:
+        raise NotFoundException(message="Your account is not allowed to add students to courses.")
+    
+    # Validate request
+    if not request.course_id:
+        raise BadRequestException(message="Course ID is required.")
+    
+    if not request.student_ids or len(request.student_ids) == 0:
+        raise BadRequestException(message="At least one student ID is required.")
+    
+    # Check if course exists
+    course = await courses_controller.courses_repository.first(where_=[Courses.id == request.course_id])
+    if not course:
+        raise NotFoundException(message=f"Course with ID {request.course_id} not found.")
+    
+    # Get students by their MSVVs (student IDs)
+    students = await student_controller.student_repository._get_many(
+        where_=[Student.mssv.in_(request.student_ids)],
+        fields=[Student.id, Student.mssv]
+    )
+    
+    if not students:
+        raise NotFoundException(message="No valid students found with the provided IDs.")
+    
+    # Check which students are already enrolled in the course to avoid duplicates
+    existing_enrollments = await student_courses_controller.student_courses_repository._get_many(
+        where_=[
+            StudentCourses.course_id == request.course_id,
+            StudentCourses.student_id.in_([student["id"] for student in students])
+        ],
+        fields=[StudentCourses.student_id]
+    )
+    
+    # Create a set of already enrolled student IDs for quick lookup
+    enrolled_student_ids = {enrollment["student_id"] for enrollment in existing_enrollments}
+    
+    # Filter out students who are already enrolled
+    students_to_enroll = [student for student in students if student["id"] not in enrolled_student_ids]
+    
+    if not students_to_enroll:
+        # Return a success response with 0 added students if all are already enrolled
+        return Ok(
+            data={
+                "course_id": course.id,
+                "course_name": course.name,
+                "added_students_count": 0,
+                "already_enrolled_count": len(request.student_ids),
+                "student_courses_list": []
+            },
+            message="All provided students are already enrolled in this course."
+        )
+    
+    # Prepare attributes for creating new student-course relationships
+    student_courses_attributes = [
+        {
+            "student_id": student["id"],
+            "course_id": request.course_id,
+        }
+        for student in students_to_enroll
+    ]
+    
+    try:
+        # Create the student-course relationships
+        create_student_courses = await student_courses_controller.student_courses_repository.create_many(
+            attributes_list=student_courses_attributes, commit=True
+        )
+        
+        if not create_student_courses:
+            raise Exception("Failed to add students to the course - no records returned.")
+            
+        # Prepare response with safe field access
+        student_courses_response = []
+        for sc in create_student_courses:
+            # Find the matching student MSSV
+            student_mssv = None
+            for student in students_to_enroll:
+                if str(student["id"]) == str(sc.student_id):
+                    student_mssv = student["mssv"]
+                    break
+                    
+            # Create a response object with only the fields we know are safe
+            student_course_data = StudentCourseInfo(
+                student_id=str(sc.student_id),
+                student_mssv=student_mssv,
+                course_id=str(sc.course_id),
+                last_accessed=str(sc.last_accessed) if hasattr(sc, 'last_accessed') else None,
+                completed_lessons=sc.completed_lessons if hasattr(sc, 'completed_lessons') else None,
+                time_spent=str(sc.time_spent) if hasattr(sc, 'time_spent') else None,
+                percentage_done=sc.percentage_done if hasattr(sc, 'percentage_done') else None
+            )
+            student_courses_response.append(student_course_data)
+        
+        # Get the count of students who were already enrolled
+        already_enrolled_count = len(request.student_ids) - len(students_to_enroll)
+        
+        response = AddStudentsToCourseResponse(
+            course_id=str(course.id),
+            course_name=course.name,
+            added_students_count=len(create_student_courses),
+            already_enrolled_count=already_enrolled_count,
+            student_courses_list=student_courses_response
+        )
+        
+        return Ok(
+            data=response,
+            message=f"Successfully added {len(create_student_courses)} student(s) to the course. {already_enrolled_count} student(s) were already enrolled."
+        )
+        
+    except Exception as e:
+        # Simple error handling without checking for specific schema errors
+        print(f"Error adding students to course: {str(e)}")
+        raise Exception(f"Failed to add students to the course: {str(e)}")
+        
 @router.get("/admin", description="Get all courses for admin", response_model=Ok[GetAdminCoursesPaginatedResponse])
 async def get_courses(
     token: str = Depends(oauth2_scheme),
