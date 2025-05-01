@@ -31,7 +31,7 @@
     "solutions": [
       {
 	"language_id": 71,
-	"code_solution": ""
+	"code_solution": "s = input().strip()\r\nif s == s[::-1]:\r\n    print(\"Yes\")\r\nelse:\r\n    print(\"No\")"
       }
     ]
   },
