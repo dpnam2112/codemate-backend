@@ -202,8 +202,8 @@ async def get_available_courses(
         raise BadRequestException(message="Your account is not authorized. Please log in again.")
     
     check_role = await admin_controller.admin_repository.exists(where_=[Admin.id == user_id])
-    if not check_role:
-        raise ForbiddenException(message="You are not allowed to access this feature.")
+    # if not check_role:
+    #     raise ForbiddenException(message="You are not allowed to access this feature.")
     courses_list = availableCourses
     return Ok(data=courses_list, message="Successfully fetched the available courses.")
 

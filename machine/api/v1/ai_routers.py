@@ -790,7 +790,7 @@ async def regenerate_lesson_content(
         "supplementary_explanation": "- Explanation point 1\\n- Explanation point 2\\n- Explanation point 3 (Explanation of how these modules address the specific issues...)",
         "supplementary_modules": [
             {{
-                "title": "Addressing: [Specific Issue]",
+                "title": "Extra: [Specific Issue]",
                 "objectives": ["Objective 1", "Objective 2", "Objective 3"],
                 "reading_material": {{
                     "theoryContent": [
@@ -878,9 +878,12 @@ async def regenerate_lesson_content(
     recommend_documents_attributes_list = []
 
     for module_data in supplementary_content["supplementary_modules"]:
+        title = module_data["title"]
+        if not title.startswith("Extra: "):
+            title = f"Extra: {title}"
         module_attr = {
             "recommend_lesson_id": recommend_lesson_id,
-            "title": module_data["title"],
+            "title": title,
             "objectives": module_data["objectives"]
         }
         module_attributes_list.append(module_attr)
