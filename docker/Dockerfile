@@ -55,7 +55,9 @@ RUN set -ex \
   # Tools
   vim curl wget \
   # Install libmagic for python-magic (this is needed for detecting file type)
-  libmagic1
+  libmagic1 \
+  # Supervisor for managing FastAPI server and Dramatiq background tasks
+  supervisor
 
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt \
@@ -74,10 +76,16 @@ COPY supervisord.conf /etc/supervisor/supervisord.conf
 # Copy the rest of the project files to the working directory
 COPY . .
 
+# Directory for storing logs of Supervisor's processes 
+RUN mkdir -p /var/log/supervisor \
+    && chown -R appuser:appgroup /var/log/supervisor \
+    && chmod -R 755 /var/log/supervisor
+
 # Expose port 5000 for external access
 EXPOSE 8080
 
 # Run the application
-CMD ["supervisord", "-c", "/etc/supervisor/supervisord.conf"]
+
+CMD ["/usr/bin/supervisord",  "-c", "./supervisord.conf"]
 
 USER appuser
