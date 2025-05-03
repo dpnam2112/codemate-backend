@@ -321,8 +321,8 @@ class ExercisesController(BaseController[Exercises]):
                 status=result_data["status"],
                 stdout=result_data["stdout"],
                 stderr=result_data["stderr"],
-                time=float(result_data["time"]),
-                memory=float(result_data["memory"]),
+                time=None,
+                memory=None,
                 judge0_token=result_data["token"]
             )
 
