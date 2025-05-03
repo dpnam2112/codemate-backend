@@ -48,7 +48,7 @@ async def get_recent_course(
     )
 
     if not recent_course:
-        raise NotFoundException(message="No course found for the given student ID.")
+        return Ok(data=None, message="No recent course found.")
 
     # Handle last_accessed field
     last_accessed = recent_course.last_accessed

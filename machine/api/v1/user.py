@@ -253,7 +253,7 @@ async def get_profile(
         "fullname": check_user.fullname,
         "avatar": avatar_url,
         "email": check_user.email,
-        "ms": check_user.mssv if hasattr(check_user, "mssv") else check_user.mscb,
+        "ms": check_user.mscb if role == "admin" or role == "professor" else check_user.mssv,
         "date_of_birth": check_user.date_of_birth,
         "role": role
     }

@@ -42,7 +42,7 @@ async def create_feedback(
     user_type = "student" if student else "professor"
     print(request.type, "...............................................................")
     feedback_attributes = {
-        "feedback_type": "course" if request.type == FeedbackType.course else FeedbackType.system,  # Fixed here
+        "feedback_type": FeedbackType.course.value if request.type == FeedbackType.course else FeedbackType.system.value,
         "title": request.title,
         "category": request.category,
         "description": request.description,

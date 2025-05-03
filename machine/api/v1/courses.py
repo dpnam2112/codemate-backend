@@ -120,7 +120,14 @@ async def get_student_courses(
     )
 
     if not courses:
-        return Ok(data=[], message="No courses found.")
+        empty_response = {
+        "content": [],
+        "pageSize": page_size,
+        "currentPage": page,
+        "totalRows": 0,
+        "totalPages": 0,
+    }
+        return Ok(data=empty_response, message="No courses found.")
     
     total_page = math.ceil(len(courses) / page_size)
     content = []
