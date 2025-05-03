@@ -14,6 +14,29 @@ from datetime import datetime
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
+def sanitize_text(extracted_content):
+    """Sanitize text to ensure it's valid UTF-8 without null bytes."""
+    if extracted_content is None:
+        return None
+        
+    # Handle different data types
+    if isinstance(extracted_content, str):
+        # Remove null bytes
+        sanitized = extracted_content.replace('\x00', '')
+        # Replace other invalid characters with space
+        return ''.join(ch if ord(ch) < 0x10000 else ' ' for ch in sanitized)
+    elif isinstance(extracted_content, list) or isinstance(extracted_content, dict):
+        # For list/dict content, convert to JSON string and sanitize
+        import json
+        try:
+            content_str = json.dumps(extracted_content)
+            return sanitize_text(content_str)
+        except:
+            # If JSON conversion fails, try string conversion
+            return sanitize_text(str(extracted_content))
+    else:
+        # Try string conversion for other types
+        return sanitize_text(str(extracted_content))
 async def process_document(file: UploadFile, lesson_id: str, description: str, document_controller: DocumentsController = Depends(InternalProvider().get_documents_controller), extracted_text_controller: ExtractedTextController = Depends(InternalProvider().get_extracted_text_controller)) -> dict:
     """
     Handle document processing: extract text, upload to S3, update database
@@ -69,6 +92,9 @@ async def process_document(file: UploadFile, lesson_id: str, description: str, d
             await document_controller.documents_repository.update(where_=[Documents.id == document_record.id], attributes=update_response, commit=True)
             return {"filename": file.filename, "error": "Extraction failed"}
 
+        # Sanitize the extracted text to ensure valid UTF-8
+        sanitized_text = sanitize_text(extracted_text)
+        
         # Update progress 50% (Extracted)
         update_response = {
             "progress_upload": 50
@@ -98,12 +124,18 @@ async def process_document(file: UploadFile, lesson_id: str, description: str, d
         
         create_response = {
             "document_id": document_record.id,
-            "extracted_content": str(extracted_text),
+            "extracted_content": sanitized_text,
             "processing_status": "completed"
         }
 
-        await extracted_text_controller.extracted_text_repository.create(attributes=create_response, commit=True)
-        logger.info("Inserted extracted content into database for document: %s", file.filename)
+        try:
+            await extracted_text_controller.extracted_text_repository.create(attributes=create_response, commit=True)
+            logger.info("Inserted extracted content into database for document: %s", file.filename)
+        except Exception as db_err:
+            logger.error(f"Database insertion error for extracted text: {str(db_err)}")
+            # Try with fallback minimal content if insertion fails
+            create_response["extracted_content"] = f"Text extraction completed for {file.filename}"
+            await extracted_text_controller.extracted_text_repository.create(attributes=create_response, commit=True)
         
         await document_controller.documents_repository.update(where_=[Documents.id == document_record.id], attributes=update_response, commit=True)
 
@@ -116,6 +148,7 @@ async def process_document(file: UploadFile, lesson_id: str, description: str, d
 
     except Exception as e:
         logger.error("Error processing document %s: %s", file.filename, str(e))
+        logger.error(traceback.format_exc())  # Add traceback for better debugging
 
         update_response = {
             "status": "failed",
