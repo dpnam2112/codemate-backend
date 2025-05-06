@@ -48,11 +48,14 @@ async def poll_judge0_submission_result(submission_id_str: str):
             judge0_results = await judge0_client.get_submission_results(tokens, test_cases)
 
             for tr, res in zip(pending_results, judge0_results):
+                time = res.get("time")
+                memory = res.get("memory")
+
                 tr.status = res["status"]
                 tr.stdout = res["stdout"]
                 tr.stderr = res["stderr"]
-                tr.time = res.get("time")
-                tr.memory = res.get("memory")
+                tr.time = float(time) if time else None
+                tr.memory = float(memory) if memory else None
 
                 if res["status"] in ["In Queue", "Processing"]:
                     still_processing = True
