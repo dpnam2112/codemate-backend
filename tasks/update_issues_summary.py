@@ -91,7 +91,10 @@ async def update_issues_summary_task(submission_id_str: str):
 
         # Get current issues summary
         current_summary = student_course.issues_summary or {"common_issues": []}
-        issues_summary = IssuesSummary.model_validate_json(current_summary)
+        issues_summary = (
+            IssuesSummary.model_validate_json(current_summary) if isinstance(current_summary, str) else
+            IssuesSummary.model_validate(current_summary)
+        )
 
         # Get LLM analysis
         llm_cfg = LLMModelConfig(
