@@ -11,7 +11,7 @@ from machine.providers import InternalProvider
 from machine.schemas.responses.dashboard import *
 from fastapi.security import OAuth2PasswordBearer
 from fastapi import APIRouter, Depends, HTTPException
-from core.exceptions import NotFoundException, BadRequestException
+from core.exceptions import NotFoundException, BadRequestException, ForbiddenException
 from core.utils.auth_utils import verify_token
 from datetime import datetime
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
@@ -48,7 +48,7 @@ async def get_recent_course(
     )
 
     if not recent_course:
-        raise NotFoundException(message="No course found for the given student ID.")
+        return Ok(data=None, message="No recent course found.")
 
     # Handle last_accessed field
     last_accessed = recent_course.last_accessed
@@ -114,8 +114,7 @@ async def get_activities(
 
     return Ok(data=activities_data, message="Successfully fetched the recent activities.")
 
-
-@router.post("/student-activities", response_model=Ok[bool])
+@router.post("/student-activities", response_model=Ok[bool]) # add logic recommend lesson 
 async def add_activity(
     request: AddActivityRequest,
     token: str = Depends(oauth2_scheme),

@@ -43,7 +43,7 @@ class LearningPathsController(BaseController[LearningPaths]):
             relations=[LearningPaths.recommend_lessons],
             order_={"desc": ["version"]}
         )
-        if lp is None: raise NotFoundException(message="learning path is not created.")
+        # if lp is None: raise NotFoundException(message="learning path is not created.")
         return lp
 
     async def get_recommended_lessons(self, user_id: UUID, course_id: UUID, expand: Optional[str] = None) -> list[RecommendedLessonDTO]:

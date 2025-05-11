@@ -41,6 +41,7 @@ class QuizListResponse(BaseModel):
     max_score: float
     time_limit: Optional[int] = None
     duration: Optional[int] = None  
+    question_count: int
    
 class ModuleResponse(BaseModel):
     module_id: UUID

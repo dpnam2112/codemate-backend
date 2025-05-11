@@ -5,7 +5,6 @@ from uuid import UUID
 class GenerateLearningPathRequest(BaseModel):
     course_id: UUID
     goal: str
-
 class DifficultyDistribution(BaseModel):
     easy: Optional[int] = Field(default=10, ge=0, le=40, description="Number of easy questions")
     medium: Optional[int] = Field(default=20, ge=0, le=40, description="Number of medium questions")

@@ -9,14 +9,11 @@ class CreateFeedbackRequest(BaseModel):
     description: str
     rate: int
     status: FeedbackStatusType
-class CreateFeedbackCourseRequest(BaseModel):
-    type: FeedbackType
-    title: str
-    category: FeedbackCategory
-    description: str
-    rate: int
-    status: FeedbackStatusType
-    course_id: Optional[str] = None
+    courseId: Optional[str] = None
+    professorId: Optional[str] = None
     
 class UpdateFeedbackRequest(BaseModel):
     status: FeedbackStatusType
+class FeedbackDashboardRequest(BaseModel):
+    course_id: Optional[str] = None
+    limit: Optional[int] = 5
