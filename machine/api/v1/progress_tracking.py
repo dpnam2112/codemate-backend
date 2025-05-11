@@ -1,5 +1,4 @@
 import os
-from data.constant import *
 from fastapi import APIRouter, Depends, Request, HTTPException
 from dotenv import load_dotenv
 from fastapi.security import OAuth2PasswordBearer
@@ -42,107 +41,69 @@ def generate_standard_prompt(student: Student, student_goal: str, lessons: list)
     and formatted according to a specific JSON structure.
     """
     prompt = f"""
-    Hello! You are an education assessment expert, and I need your help to evaluate a student’s learning progress in a detailed, systematic way based on a Rubric standard. I’d like you to create an assessment based on the information I provide below. This student has a specific learning goal and is working through a series of lessons. Your task is to analyze this data using up to three criteria: **Theoretical Knowledge**, **Coding Skills** (if applicable), and **Effort**, then provide a concise summary in English, formatted as a JSON object following a specific structure. I’ll provide a rubric for you to evaluate each section, and I also require a **Progress Review** (Strengths, Areas to Note) and **Advice** for the student. Let’s go through this step by step!
+        Hello! You are an education assessment expert. I need your help evaluating a student's learning progress. 
 
-    ### Student Information:
-    - **Name**: {student.fullname}
-    - **Email**: {student.email}
+        ### Student Information:
+        - **Name**: {student.fullname}
+        - **Email**: {student.email}
 
-    ### Learning Goal:
-    "{student_goal}"  
-    This is the target they need to achieve before the midterm exam.
+        ### Learning Goal:
+        "{student_goal}"  
+        This is the target they need to achieve before the midterm exam.
 
-    ### Lesson Data:
-    {json.dumps(lessons, indent=2, ensure_ascii=False)}
+        ### Lesson Data:
+        {json.dumps(lessons, indent=2, ensure_ascii=False)}
 
-    ### Analysis Criteria:
-    Evaluate the student based on the following criteria, adapting to the course context using the lesson data (progress, time_spent, explain, status, objectives in modules, etc.):
-    1. **Theoretical Knowledge**: Assess their understanding of theory based on progress in lessons related to theoretical concepts (e.g., algorithm complexity, software testing principles).
-    2. **Coding Skills**: Only apply this criterion if the course involves coding exercises (e.g., implementing algorithms). If not applicable (e.g., a course like 'Testing Software'), replace it with a relevant practical skill (e.g., 'Practical Testing Skills') based on the goal and lesson objectives.
-    3. **Effort**: Assess their dedication based on time spent (time_spent), the number of lessons started (status), and overall progress.
+        ### FORMATTING REQUIREMENTS:
+        - Present all content in list format with bullet points or numbering
+        - Never use paragraphs - always use lists, bullets, or numbered points
+        - Keep individual list items concise (1-2 sentences max)
+        - Use hierarchical structure for clarity
+        - Include bullet points (•) at the start of list items
+        - Use numbered lists (1., 2., etc.) for sequential information
 
-    ### Rubric for Each Section:
-    #### 1. Situation:
-    - **Excellent**: Fully and vividly describe the student’s learning context, including their name, course, and connection to the learning goal.
-    - **Good**: Describe the context clearly, mentioning the course but lacking some personal details or vividness.
-    - **Average**: Provide a vague description of the context, only generally mentioning learning without specifics.
-    - **Poor**: Fail to describe or inaccurately describe the learning context.
+        ### Analysis Criteria:
+        Evaluate the student based on these criteria:
+        1. **Theoretical Knowledge**: Present assessment as bullet points
+        2. **Coding Skills** (if applicable): Structure as a list of capabilities
+        3. **Effort**: Break down into measurable bullet points
 
-    #### 2. Task:
-    - **Excellent**: Restate the goal accurately and clearly, emphasizing the importance of achieving it before the midterm (e.g., 70% accuracy if specified).
-    - **Good**: Restate the goal accurately but lack emphasis or midterm context.
-    - **Average**: Restate the goal unclearly or with minor omissions.
-    - **Poor**: Misstate or omit the goal.
-
-    #### 3. Action:
-    - **Excellent**: List actions in detail for each applicable criterion (Theoretical Knowledge, Coding Skills or alternative practical skill, Effort), based on lesson data (progress, time_spent, objectives), with specific examples (e.g., “Completed 82% of a lesson on testing principles”).
-    - **Good**: List main actions per criterion but lack details like lesson titles or specific figures.
-    - **Average**: Mention actions vaguely, without clear analysis per criterion.
-    - **Poor**: Fail to mention or misdescribe actions.
-
-    #### 4. Result:
-    - **Excellent**: Accurately assess overall progress against the goal (e.g., 70% if specified), based on data and analyzed by applicable criteria, with a clear judgment (on track/needs effort/at risk) and reference to the current date (3/31/2025).
-    - **Good**: Assess progress correctly but lack detail per criterion or time reference.
-    - **Average**: Provide a vague assessment, not clearly tied to data or the goal.
-    - **Poor**: Assess incorrectly or fail to provide a clear result.
-
-    ### Implementation Guidelines:
-    - **Situation**: Describe the learning context of {student.fullname}, e.g., “{student.fullname} is taking a course on software testing to prepare for the midterm” or “...on data structures and algorithms.”
-    - **Task**: Restate the goal, e.g., “The task of {student.fullname} is to master software testing principles before the midterm” or “...to implement sorting algorithms with 70% accuracy.”
-    - **Action**: Analyze actions per criterion, splitting them into separate fields:
-      - **Theoretical Knowledge**: Based on progress in theory lessons (e.g., testing concepts or algorithm complexity).
-      - **Coding Skills (or Alternative)**: If coding applies, evaluate it; if not, assess a practical skill like applying testing methods, based on objectives.
-      - **Effort**: Based on time_spent and lessons started.
-    - **Result**: Evaluate overall progress, e.g., “With X% progress as of 3/31/2025, {student.fullname} is on track for theoretical knowledge but needs effort in practical skills.”
-
-    ### Additional Requirements:
-    - **Progress Review**:
-      - **Strengths**: Highlight standout points from the data (e.g., “The student excels in theoretical lessons”).
-      - **Areas to Note**: Point out weaknesses or risks (e.g., “Limited progress in practical lessons”).
-    - **Advice**: Provide specific suggestions split by criterion:
-      - **Theoretical Knowledge**: Advice for theory improvement.
-      - **Coding Skills (or Alternative)**: Advice for coding or practical skill improvement.
-      - **Effort**: Advice for enhancing dedication.
-
-    ### JSON Output Format:
-    The response must follow this structure (in English):
-    ```json
-    {{
-      "student_assessment": {{
-        "student_info": {{
-          "name": "{student.fullname}",
-          "email": "{student.email}"
-        }},
-        "learning_goal": "{student_goal}",
-        "assessment_date": "2025-03-31",
-        "assessment_summary": {{
-          "situation": "string",
-          "task": "string",
-          "action": {{
-            "theoretical_knowledge": "string",
-            "coding_skills": "string (or practical skill if no coding)",
-            "effort": "string"
-          }},
-          "result": "string"
-        }},
-        "progress_review": {{
-          "strengths": "string",
-          "areas_to_note": "string"
-        }},
-        "advice": {{
-          "theoretical_knowledge": "string",
-          "coding_skills": "string (or practical skill if no coding)",
-          "effort": "string"
+        ### Output Format
+        The response must follow this structure (in English):
+        ```json
+        {{
+        "student_assessment": {{
+            "student_info": {{
+            "name": "{student.fullname}",
+            "email": "{student.email}"
+            }},
+            "learning_goal": "{student_goal}",
+            "assessment_date": "2025-03-31",
+            "assessment_summary": {{
+            "situation": "• Context point 1\\n• Context point 2",
+            "task": "• Goal point 1\\n• Goal point 2",
+            "action": {{
+                "theoretical_knowledge": "• Action 1\\n• Action 2\\n• Action 3",
+                "coding_skills": "• Skill 1\\n• Skill 2\\n• Skill 3",
+                "effort": "• Effort point 1\\n• Effort point 2\\n• Effort point 3"
+            }},
+            "result": "• Result 1\\n• Result 2\\n• Result 3"
+            }},
+            "progress_review": {{
+            "strengths": "• Strength 1\\n• Strength 2\\n• Strength 3",
+            "areas_to_note": "• Area 1\\n• Area 2\\n• Area 3"
+            }},
+            "advice": {{
+            "theoretical_knowledge": "• Advice 1\\n• Advice 2\\n• Advice 3",
+            "coding_skills": "• Coding advice 1\\n• Coding advice 2\\n• Coding advice 3",
+            "effort": "• Effort advice 1\\n• Effort advice 2\\n• Effort advice 3"
+            }}
         }}
-      }}
-    }}
-    Key Requirements:
-    - Write all sections in English, concise yet detailed per the rubric.
-    - Output the result as a valid JSON object matching the structure above.
-    - Ensure no truncation and all fields are filled appropriately, adapting 'coding_skills' to a practical skill if coding isn’t required.
-    Are you ready? Let’s start and give me a detailed, specific assessment tailored to the course context in the required JSON format!
-    """
+        }}
+        """
     return prompt
+
+
 @router.post("/student/{courseId}/assessment")
 async def get_assessment(
     courseId: str,

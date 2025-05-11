@@ -22,7 +22,7 @@ from pydantic import BaseModel
 
 @router.post("/")
 async def create_feedback(
-    request: Union[CreateFeedbackRequest, CreateFeedbackCourseRequest],
+    request: Union[CreateFeedbackRequest],
     token: str = Depends(oauth2_scheme),
     feedback_controller: FeedbackController = Depends(InternalProvider().get_feedback_controller),
     student_controller: StudentController = Depends(InternalProvider().get_student_controller),
@@ -40,23 +40,23 @@ async def create_feedback(
         raise BadRequestException(message="You are not allowed to create feedback.")
 
     user_type = "student" if student else "professor"
-
+    print(request.type, "...............................................................")
     feedback_attributes = {
-        "feedback_type": "course" if request.type == "course" else "system",  # Fixed here
+        "feedback_type": FeedbackType.course.value if request.type == FeedbackType.course else FeedbackType.system.value,
         "title": request.title,
         "category": request.category,
         "description": request.description,
         "rate": request.rate,
         "status": "pending",
         "student_id": user_id if user_type == "student" else None,
-        "professor_id": user_id if user_type == "professor" else None,
-        "course_id": request.course_id if request.type == "course" else None,
+        "professor_id": request.professorId if request.professorId else None,
+        "course_id": request.courseId if request.courseId else None,
     }
 
-    if isinstance(request, CreateFeedbackCourseRequest):
-        if not request.course_id:
-            raise BadRequestException(message="Course ID is required for course feedback.")
-        feedback_attributes["course_id"] = request.course_id
+    # if isinstance(request, CreateFeedbackCourseRequest):
+    #     if not request.course_id:
+    #         raise BadRequestException(message="Course ID is required for course feedback.")
+    #     feedback_attributes["course_id"] = request.course_id
 
     try:
         feedback = await feedback_controller.feedback_repository.create(
@@ -319,3 +319,95 @@ async def delete_feedback(
         raise BadRequestException(message=f"Failed to delete feedback: {str(e)}")
 
     return Ok(data=bool(True), message="Feedback deleted successfully.")
+
+@router.post("/professors", response_model=Ok[List[FeedbackSummaryResponse]])
+async def get_recent_professor_feedback(
+    request: FeedbackDashboardRequest,
+    token: str = Depends(oauth2_scheme),
+    feedback_controller: FeedbackController = Depends(InternalProvider().get_feedback_controller),
+    professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
+    courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
+):
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+
+    # Verify that user is a professor
+    professor = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
+    if not professor:
+        raise ForbiddenException(message="Only professors can access this feedback data.")
+
+    # Set up filter conditions
+    filters = [Feedback.feedback_type == "course"]
+    
+    # If course_id is provided, filter by that course
+    if request.course_id:
+        course = await courses_controller.courses_repository.first(
+            where_=[
+                Courses.id == request.course_id,
+                Courses.professor_id == professor.id
+            ]
+        )
+        if not course:
+            raise BadRequestException(message="Course not found or you don't have access to it.")
+        filters.append(Feedback.course_id == request.course_id)
+    else:
+        # Get all courses for this professor if no specific course_id
+        courses = await courses_controller.courses_repository.get_many(
+            where_=[Courses.professor_id == professor.id]
+        )
+        course_ids = [course.id for course in courses]
+        if course_ids:
+            filters.append(Feedback.course_id.in_(course_ids))
+        else:
+            # If professor has no courses, return empty result
+            return Ok(data=[], message="No courses found for this professor.")
+
+    # Join with student and course tables to get required information
+    join_conditions = {
+        "student": {"type": "left", "alias": "student_alias"},
+        "course": {"type": "left", "alias": "course_alias"},
+    }
+    
+    # Select fields including student name and course name
+    select_fields = [
+        Feedback.id,
+        Feedback.title,
+        Feedback.category,
+        Feedback.description,
+        Feedback.rate,
+        Feedback.created_at,
+        Feedback.student_id,
+        Feedback.course_id,
+        Student.name.label("student_name"),
+        Courses.name.label("course_name"),
+    ]
+
+    # Order by created_at (most recent first) and limit results
+    limit = request.limit if hasattr(request, "limit") and request.limit else 5
+    
+    feedbacks = await feedback_controller.feedback_repository._get_many(
+        where_=filters, 
+        join_=join_conditions, 
+        fields=select_fields,
+        order_={"desc": ["created_at"]},
+        limit=limit
+    )
+    
+    feedback_responses = []
+    for feedback in feedbacks:
+        feedback_responses.append({
+            "id": str(feedback.id),
+            "student_id": str(feedback.student_id),
+            "student_name": feedback.student_name if feedback.student_name else "",
+            "title": feedback.title,
+            "description": feedback.description,
+            "category": feedback.category,
+            "rate": feedback.rate,
+            "created_at": str(feedback.created_at),
+            "course_id": str(feedback.course_id) if feedback.course_id else None,
+            "course_name": feedback.course_name if feedback.course_name else None,
+        })
+    
+    return Ok(data=feedback_responses, message="Recent feedback retrieved successfully.")

@@ -182,6 +182,7 @@ async def login(
             "name": new_user.name,
             "email": new_user.email,
             "is_email_verified": new_user.is_email_verified,
+            "ms": new_user.mssv if role_response == "student" else new_user.mscb,
         }
 
         return Ok(data=user_response, message="User not found. Verification code sent to email")
@@ -212,7 +213,8 @@ async def login(
     'is_active': True,
     'is_email_verified': True,
     'role': role_response,
-    'avatar_url': new_user.avatar_url if new_user.avatar_url and "documents/" not in new_user.avatar_url else generate_presigned_url(new_user.avatar_url) if new_user.avatar_url else None
+    'avatar_url': new_user.avatar_url if new_user.avatar_url and "documents/" not in new_user.avatar_url else generate_presigned_url(new_user.avatar_url) if new_user.avatar_url else None,
+    'ms': new_user.mssv if role_response == "student" else new_user.mscb,
 }
 
 
@@ -259,6 +261,7 @@ async def login(
     "is_email_verified": True,
     "role": role_response,
     "avatar_url": user.avatar_url if user.avatar_url and "documents/" not in user.avatar_url else generate_presigned_url(user.avatar_url) if user.avatar_url else None
+, 'ms': user.mssv if role_response == "student" else user.mscb,
 }
 
     return Ok(

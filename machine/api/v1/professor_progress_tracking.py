@@ -63,9 +63,7 @@ async def get_grades(
         student_name = student.name
         student_email = student.email
         student_mssv = student.mssv
-        learning_path_progress = await learning_paths_controller.learning_paths_repository.first(
-            where_=[LearningPaths.course_id == course_id, LearningPaths.student_id == student_id]
-        )
+        learning_path_progress = await learning_paths_controller.get_learning_path( user_id=student_id, course_id=course_id)
         learning_path = None
         if learning_path_progress:
             recommend_lessons = await recommend_lessons_controller.recommend_lessons_repository.get_many(

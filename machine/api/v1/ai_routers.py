@@ -2,6 +2,7 @@ import json
 import os
 import logging
 import re
+import asyncio
 from typing import Dict, List, Any, Optional
 from fastapi import APIRouter, Depends, Body
 from core.response import Ok
@@ -23,7 +24,6 @@ from machine.schemas.responses.llm_code import *
 from dotenv import load_dotenv
 from utils.chunk_manager import ChunkingManager
 from machine.services.workflows.ai_tool_provider import AIToolProvider, LLMModelName
-from core.settings import settings as env_settings
 load_dotenv()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 router = APIRouter(prefix="/ai", tags=["ai"])
@@ -140,7 +140,8 @@ async def select_relevant_lessons(
     - Course Learning Outcomes: {json.dumps(course_learning_outcomes, indent=2)}
     - Timeline: Start Date: {timeline['start_date']}, End Date: {timeline['end_date']}
     - Available Lessons: {json.dumps(lessons_data, indent=2)}
-## Task Requirements
+
+    ## Task Requirements
     1. **Analyze the Goal in Context:**
        - Interpret the student's goal in the context of the course name and learning outcomes.
        - If the goal is vague or grade-based (e.g., "achieve at least B+"), assume it means achieving a subset of the course's learning outcomes sufficient for that grade (e.g., B+ might cover 70-80% of outcomes, while A+ covers 100%).
@@ -160,7 +161,8 @@ async def select_relevant_lessons(
     5. **Return Result:**
        - Return only the relevant lessons with their IDs, order, titles, and explanations.
 
-    ## Output Format [
+    ## Output Format
+    [
         {{
             "lesson_id": "Lesson ID",
             "order": 1,
@@ -716,7 +718,7 @@ async def regenerate_lesson_content(
     modules_controller: ModulesController,
     recommend_documents_controller: RecommendDocumentsController
 ) -> dict:
-    """Regenerate content for a recommended lesson based on analysis result."""
+    """Bổ sung nội dung cho một recommended lesson dựa trên analysis result mà không xóa modules cũ."""
     # Fetch existing data
     recommend_lesson = await recommend_lessons_controller.recommend_lessons_repository.first(
         where_=[RecommendLessons.id == recommend_lesson_id]
@@ -730,20 +732,13 @@ async def regenerate_lesson_content(
     if not lesson:
         raise NotFoundException(message="Lesson not found.")
 
-    # Step 1: Delete old modules and their recommend documents
-    old_modules = await modules_controller.modules_repository.get_many(
+    # Get existing modules to reference later
+    existing_modules = await modules_controller.modules_repository.get_many(
         where_=[Modules.recommend_lesson_id == recommend_lesson_id]
     )
-    for module in old_modules:
-        await recommend_documents_controller.recommend_documents_repository.delete(
-            where_=[RecommendDocuments.module_id == module.id]
-        )
-        await modules_controller.modules_repository.delete(
-            where_=[Modules.id == module.id]
-        )
-    await modules_controller.modules_repository.session.commit()
+    existing_module_titles = [module.title for module in existing_modules]
 
-    # Step 2: Generate new content
+    # Initialize the ChunkingManager
     chunking_manager = ChunkingManager(
         provider="gemini",
         gemini_model_name="gemini-2.0-flash-lite",
@@ -752,16 +747,18 @@ async def regenerate_lesson_content(
         max_output_tokens=8000
     )
 
+    # Prompt for creating supplementary modules focused on issues
     prompt = f"""
-    ## Lesson Content Regeneration Task
+    ## Supplementary Learning Content Generation Task
+
     ### Context
     - Lesson Title: "{lesson.title}"
-    - Current Recommended Content: "{recommend_lesson.recommended_content}"
+    - Current Recommended Content: "{recommend_lesson.recommended_content}"  
     - Current Explanation: "{recommend_lesson.explain}"
     - Start Date: "{recommend_lesson.start_date}"
     - End Date: "{recommend_lesson.end_date}"
-    - Duration Notes: "{recommend_lesson.duration_notes}"
-    - Analysis Result: {json.dumps(analysis_result, indent=2)}
+    - Existing Module Titles: {json.dumps(existing_module_titles)}
+    - Issues Analysis: {json.dumps(analysis_result.get('issues_analysis', {}), indent=2)}
 
     ### Prior Recommend Lessons Context (Only if Review Prior is Required)
     - Prior Recommend Lessons:
@@ -770,137 +767,123 @@ async def regenerate_lesson_content(
     }}
 
     ### Task Requirements
-    You are tasked with regenerating the content for a recommended lesson to optimize the student's learning experience based on the analysis result from their study progress. Follow these steps:
+    You are tasked with creating supplementary modules that specifically address the issues identified in the student's learning progress. Rather than replacing existing content, these new modules will complement it and help the student overcome their specific challenges.
 
-    1. **Analyze Current Content and Analysis Result:**
-       - Review the `Current Recommended Content` and `Current Explanation` to understand the original focus.
-       - Use the `Analysis Result` to identify specific struggles:
-         - `issues_analysis.significant_issues`: Focus on these issues (e.g., concept misunderstandings, code errors).
-         - `recommendations`: Address actions like "repeat" and "review_prior" if present.
-       - Determine why the original content failed to resolve these issues.
+    1. **Analyze Issues and Current Content:**
+       - Review the `issues_analysis` to identify the significant issues the student is struggling with
+       - Consider the existing module titles to avoid duplication
+       - Use the `recommendations` to inform your approach (e.g., if "review_prior" is recommended)
 
-    2. **Regenerate Content with Improvements:**
-       - **Recommended Content**: Rewrite to address the significant issues:
-         - Provide detailed explanations (5-7 sentences) targeting each significant issue from `issues_analysis`.
-         - Include 2-3 practical examples with code snippets (if applicable) tailored to the issues.
-         - If `recommendations` includes "review_prior" and prior data is provided, briefly reintroduce relevant concepts from `Prior Recommend Lessons` (e.g., 1-2 sentences linking back).
-         - Suggest actionable steps to overcome errors or gaps (e.g., debugging tips).
-       - **Explanation**: Update to:
-         - Justify why this lesson is critical to the learning path (tie to long-term goals).
-         - Explain how the new content resolves the issues from `issues_analysis` (5-7 sentences).
-         - Maintain coherence with prior and subsequent lessons.
+    2. **Create Targeted Supplementary Modules:**
+       - Generate 1-3 new modules that directly address the significant issues identified
+       - Each module title MUST start with phrases like "Addressing:", "Resolving:", "Overcoming:", or "Deep Dive:" followed by the specific issue
+       - Each module should focus on ONE specific challenge from the issues analysis
+       - If "review_prior" is in recommendations, include a module that connects prior knowledge to current issues
 
-    3. **Design Targeted Modules:**
-       - Generate 2-3 new modules, each focusing on one significant issue from `issues_analysis`.
-       - If "review_prior" is in `recommendations`, include a brief review of relevant prior content in the first module (1-2 paragraphs).
-       - Each module should include:
-         - `theoryContent`: 3+ paragraphs with 2+ examples.
-         - `practicalGuide`: 4-5 steps and 3+ common errors/solutions.
-         - 3+ references (academic and practical mix).
-
-    4. **Maintain Timeline:**
-       - Keep `start_date` ("{recommend_lesson.start_date}") and `end_date` ("{recommend_lesson.end_date}") unchanged.
-       - Adjust `duration_notes` if needed based on new content complexity.
-
-    5. **Optimize for Learning:**
-       - Use a supportive tone (e.g., "Let’s tackle this together").
-       - Incorporate scaffolding: Start with foundational concepts (if gaps exist) before advancing.
-       - Ensure content is engaging and actionable.
+    3. **Update Recommended Content and Explanation:**
+       - Create additional content that introduces these new modules and explains how they relate to the existing content
+       - Provide a clear path for the student to follow (e.g., "After reviewing the original modules, focus on these supplementary modules")
 
     ### Output Format
     {{
-        "recommended_content": "Updated content addressing the student's specific issues...",
-        "explain": "Explanation of how this content resolves the issues...",
-        "start_date": "{recommend_lesson.start_date}",
-        "end_date": "{recommend_lesson.end_date}",
-        "duration_notes": "Updated notes on timeline...",
-        "modules": [
+        "supplementary_content": "- Point 1\\n- Point 2\\n- Point 3 (Additional content introducing the supplementary modules and their purpose...)",
+        "supplementary_explanation": "- Explanation point 1\\n- Explanation point 2\\n- Explanation point 3 (Explanation of how these modules address the specific issues...)",
+        "supplementary_modules": [
             {{
-                "title": "Module Title",
-                "objectives": ["Objective 1", "Objective 2"],
+                "title": "Extra: [Specific Issue]",
+                "objectives": ["Objective 1", "Objective 2", "Objective 3"],
                 "reading_material": {{
                     "theoryContent": [
                         {{
-                            "title": "Section Title",
+                            "title": "Understanding [Issue] Better",
                             "description": ["Para 1", "Para 2", "Para 3"],
                             "examples": [
                                 {{
-                                    "title": "Example 1",
+                                    "title": "Example: Common Mistake",
                                     "codeSnippet": "code here",
-                                    "explanation": "How this addresses the issue"
+                                    "explanation": "How this relates to the issue"
                                 }},
                                 {{
-                                    "title": "Example 2",
+                                    "title": "Example: Correct Approach",
                                     "codeSnippet": "code here",
-                                    "explanation": "Further clarification"
+                                    "explanation": "How to solve the issue"
                                 }}
                             ]
                         }}
                     ],
                     "practicalGuide": [
                         {{
-                            "steps": ["Step 1", "Step Now available for free at https://www.nostarch.com/sites/default/files/other/Alice_Excerpt.pdf", "Step 2", "Step 3", "Step 4"],
+                            "title": "Step-by-Step Solution Guide",
+                            "steps": ["Step 1", "Step 2", "Step 3", "Step 4", "Step 5"],
                             "commonErrors": ["Error 1 - solution", "Error 2 - solution", "Error 3 - solution"]
                         }}
                     ],
                     "references": [
                         {{
-                            "title": "Ref Title 1",
+                            "title": "Resource specifically targeting this issue",
                             "link": "https://example.com",
-                            "description": "Relevance to issue"
+                            "description": "How this helps with the specific issue"
                         }},
                         {{
-                            "title": "Ref Title 2",
+                            "title": "Practice exercises",
                             "link": "https://example.com",
-                            "description": "Practical support"
+                            "description": "Additional practice"
                         }},
                         {{
-                            "title": "Ref Title 3",
+                            "title": "Visual explanation",
                             "link": "https://example.com",
-                            "description": "Deep dive resource"
+                            "description": "Visual explanation of the concept"
                         }}
-                    ]
+                    ],
+                    "summaryAndReview": {{
+                        "keyPoints": ["Point 1", "Point 2", "Point 3", "Point 4", "Point 5"],
+                        "reviewQuestions": [
+                            {{
+                                "id": "Q1",
+                                "question": "Question targeting the specific issue",
+                                "answer": "Answer",
+                                "maxscore": 10,
+                                "score": null,
+                                "inputUser": null
+                            }}
+                        ]
+                    }}
                 }}
             }}
-            // Additional modules (2-3 total)
         ]
     }}
-
-    ### Important Rules
-    1. Return valid JSON matching the output format.
-    2. Do NOT modify `start_date` or `end_date`.
-    3. Address all significant issues from `issues_analysis`.
-    4. Use `Prior Recommend Lessons` only if "review_prior" is in `recommendations`.
-    5. Maintain logical progression and coherence with the learning path.
-    6. Use clear, student-friendly language.
     """
 
+    # Get response from LLM
     response = chunking_manager.call_llm_api(prompt, "You are an expert in educational content generation.")
-    updated_content = response if isinstance(response, dict) else json.loads(response)
+    supplementary_content = response if isinstance(response, dict) else json.loads(response)
 
-    # Step 3: Update recommend_lesson
+    # Update recommend_lesson with combined content
+    updated_recommended_content = f"{recommend_lesson.recommended_content}\n\n**SUPPLEMENTARY CONTENT**: {supplementary_content['supplementary_content']}"
+    updated_explanation = f"{recommend_lesson.explain}\n\n**ADDITIONAL GUIDANCE**: {supplementary_content['supplementary_explanation']}"
+
     await recommend_lessons_controller.recommend_lessons_repository.update(
         where_=[RecommendLessons.id == recommend_lesson_id],
         attributes={
-            "recommended_content": updated_content["recommended_content"],
-            "explain": updated_content["explain"],
-            "start_date": updated_content["start_date"],
-            "end_date": updated_content["end_date"],
-            "duration_notes": updated_content["duration_notes"],
-            "status": "new",
-            "progress": 0
+            "recommended_content": updated_recommended_content,
+            "explain": updated_explanation,
+            "status": "new",  # Reset status for student to work through again
+            "progress": recommend_lesson.progress  # Keep existing progress 
         },
         commit=True
     )
 
-    # Step 4: Create new modules and recommend documents
+    # Create just the new supplementary modules
     module_attributes_list = []
     recommend_documents_attributes_list = []
 
-    for module_data in updated_content["modules"]:
+    for module_data in supplementary_content["supplementary_modules"]:
+        title = module_data["title"]
+        if not title.startswith("Extra: "):
+            title = f"Extra: {title}"
         module_attr = {
             "recommend_lesson_id": recommend_lesson_id,
-            "title": module_data["title"],
+            "title": title,
             "objectives": module_data["objectives"]
         }
         module_attributes_list.append(module_attr)
@@ -909,76 +892,265 @@ async def regenerate_lesson_content(
             "content": module_data["reading_material"]
         })
 
+    # Only create new modules, don't replace existing ones
     created_modules = await modules_controller.modules_repository.create_many(
         attributes_list=module_attributes_list,
         commit=True
     )
 
+    # Link new modules to their content
     for i, module in enumerate(created_modules):
         recommend_documents_attributes_list[i]["module_id"] = module.id
 
-    await recommend_documents_controller.recommend_documents_repository.create_many(
+    # Create new recommend documents
+    created_recommend_documents = await recommend_documents_controller.recommend_documents_repository.create_many(
         attributes_list=recommend_documents_attributes_list,
         commit=True
     )
-
-    updated_content["modules"] = [
-        {**mod, "id": str(created_modules[i].id)} for i, mod in enumerate(updated_content["modules"])
+    
+    created_recommend_documents_response = [
+        {
+            "id": str(doc.id),
+            "module_id": str(doc.module_id),
+            "content": doc.content if isinstance(doc.content, str) else json.dumps(doc.content)
+        }
+        for doc in created_recommend_documents
     ]
+
+    # Return all modules including existing ones
+    all_modules = await modules_controller.modules_repository.get_many(
+        where_=[Modules.recommend_lesson_id == recommend_lesson_id]
+    )
+
+    # Format the response with all modules (both existing and new)
+    updated_content = {
+        "recommended_content": updated_recommended_content,
+        "explain": updated_explanation, 
+        "start_date": str(recommend_lesson.start_date),
+        "end_date": str(recommend_lesson.end_date),
+        "duration_notes": recommend_lesson.duration_notes,
+        "modules": [
+            {
+                "id": str(module.id),
+                "title": module.title,
+                "objectives": module.objectives,
+                "is_supplementary": module.id in [m.id for m in created_modules]  # Flag to identify new modules
+            } for module in all_modules
+        ],
+        "recommend_documents": created_recommend_documents_response
+    }
+
     return updated_content
 
+@router.get("/monitor-study-progress/course/{course_id}/recommend_lesson/{recommend_lesson_id}")
 async def monitor_study_progress(
     recommend_lesson_id: UUID,
-    student_id: UUID,
     course_id: UUID,
-    recommend_lessons_controller: RecommendLessonsController,
-    learning_path_controller: LearningPathsController,
-    lessons_controller: LessonsController,
-    student_courses_controller: StudentCoursesController,
-) -> dict:
+    token: str = Depends(oauth2_scheme),
+    recommend_lessons_controller: RecommendLessonsController = Depends(InternalProvider().get_recommendlessons_controller),
+    learning_path_controller: LearningPathsController = Depends(InternalProvider().get_learningpaths_controller),
+    lessons_controller: LessonsController = Depends(InternalProvider().get_lessons_controller),
+    student_courses_controller: StudentCoursesController = Depends(InternalProvider().get_studentcourses_controller),
+    student_controller: StudentController = Depends(InternalProvider().get_student_controller)
+):
+    # Verify token to get student_id
+    payload = verify_token(token)
+    student_id = payload.get("sub")
+    if not student_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    
+    # Get student record
+    student = await student_controller.student_repository.first(where_=[Student.id == student_id])
+    if not student:
+        raise NotFoundException(message="Your account is not allowed to access this feature.")
+    
+    # Get recommend_lesson
     recommend_lesson = await recommend_lessons_controller.recommend_lessons_repository.first(
         where_=[RecommendLessons.id == recommend_lesson_id]
     )
     if not recommend_lesson:
         raise NotFoundException(message="Recommended lesson not found.")
 
+    # Get learning path
     learning_path = await learning_path_controller.learning_paths_repository.first(
-        where_=[LearningPaths.student_id == student_id, LearningPaths.course_id == course_id],
+        where_=[LearningPaths.student_id == UUID(student_id), LearningPaths.course_id == course_id],
         order_={"desc": ["version"]}
     )
     if not learning_path:
         raise NotFoundException(message="Learning path not found.")
 
-    if recommend_lesson.progress < 80:
-        return Ok(data=None, message="Student has not met the required learning criteria to analyze their study results.")
-
     student_course = await student_courses_controller.student_courses_repository.first(
-        where_=[StudentCourses.student_id == student_id, StudentCourses.course_id == course_id]
+        where_=[StudentCourses.student_id == UUID(student_id), StudentCourses.course_id == course_id]
     )
+    
+    # Extract both issues and achievements data
     issues_summary = student_course.issues_summary if student_course and student_course.issues_summary else {}
+    achievements = student_course.achievements if student_course and hasattr(student_course, 'achievements') else {}
 
-    analysis_result = await analyze_issues(
+    # Analyze both issues and achievements
+    issues_analysis = await analyze_issues(
         recommend_lesson,
         issues_summary,
         learning_path,
         recommend_lessons_controller,
         lessons_controller
     )
-
-    if analysis_result["can_proceed"]:
-        
+    
+    achievements_analysis = await analyze_achievements(
+        recommend_lesson,
+        achievements,
+        learning_path,
+        recommend_lessons_controller,
+        lessons_controller
+    )
+    
+    # Combine both analyses into a single result
+    result = {
+        **issues_analysis,  # Include issues analysis
+        "achievements_analysis": achievements_analysis  # Add achievements analysis
+    }
+    
+    # Update lesson status if the issues analysis indicates the student can proceed
+    if issues_analysis["can_proceed"]:
         await recommend_lessons_controller.recommend_lessons_repository.update(
             where_=[RecommendLessons.id == recommend_lesson_id],
             attributes={"status": "completed", "progress": 100},
             commit=True
         )
-        return Ok(data=analysis_result, message="Lesson completed successfully. Student can proceed to the next lesson.")
+        return Ok(data=result, message="Lesson completed successfully. Student can proceed to the next lesson.")
         
-    if analysis_result["needs_repeat"]:
-        return Ok(data=analysis_result, message="Student needs to repeat the lesson due to identified issues.")
+    if issues_analysis["needs_repeat"]:
+        return Ok(data=result, message="Student needs to repeat the lesson due to identified issues.")
 
-    return Ok(data=analysis_result, message="Student needs to review prior lessons before proceeding.")
-
+    return Ok(data=result, message="Student needs to review prior lessons before proceeding.")
+async def analyze_achievements(
+    recommend_lesson: RecommendLessons,
+    achievements: dict,
+    learning_path: LearningPaths,
+    recommend_lessons_controller: RecommendLessonsController,
+    lessons_controller: LessonsController
+) -> dict:
+    """
+    Analyze the achievements data using AI to determine student progress and strengths.
+    
+    Args:
+        recommend_lesson: The recommended lesson object
+        achievements: JSON data from StudentCourses.achievements
+        learning_path: The latest learning path for the student
+        recommend_lessons_controller: Controller for recommend_lessons
+        lessons_controller: Controller for lessons
+    
+    Returns:
+        Dict with AI-driven analysis of achievements
+    """
+    result = {
+        "total_achievements": 0,
+        "recent_achievements": [],
+        "mastered_concepts": [],
+        "achievement_categories": {
+            "quiz_completion": 0,
+            "high_performance": 0,
+            "concept_mastery": 0
+        },
+        "achievement_levels": {
+            "basic": 0,
+            "intermediate": 0,
+            "advanced": 0
+        },
+        "learning_trajectory": "stable",  # Options: "improving", "stable", "struggling"
+        "strengths": [],
+        "recent_progress": []
+    }
+    
+    # If no achievements or empty, return early
+    if not achievements or "earned_achievements" not in achievements or not achievements["earned_achievements"]:
+        result["message"] = "No achievements found."
+        return result
+        
+    # Extract earned achievements
+    earned_achievements = achievements["earned_achievements"]
+    result["total_achievements"] = len(earned_achievements)
+    
+    # Sort achievements by date (most recent first)
+    sorted_achievements = sorted(
+        earned_achievements, 
+        key=lambda x: x.get("earned_date", ""),
+        reverse=True
+    )
+    
+    # Get recent achievements (last 5)
+    result["recent_achievements"] = sorted_achievements[:5]
+    
+    # Count by category and level
+    for achievement in earned_achievements:
+        # Count by type
+        achievement_type = achievement.get("type", "")
+        if achievement_type in result["achievement_categories"]:
+            result["achievement_categories"][achievement_type] += 1
+            
+        # Count by difficulty
+        difficulty = achievement.get("difficulty", "")
+        if difficulty in result["achievement_levels"]:
+            result["achievement_levels"][difficulty] += 1
+            
+        # Extract mastered concepts (from concept_mastery type)
+        if achievement_type == "concept_mastery":
+            # Add to mastered concepts if not already included
+            for topic in achievement.get("related_topics", []):
+                if topic not in result["mastered_concepts"]:
+                    result["mastered_concepts"].append(topic)
+    
+    # Determine learning trajectory based on achievement dates and types
+    # This is a simplified analysis - more complex logic could be implemented
+    recent_dates = [
+        datetime.fromisoformat(achievement.get("earned_date").replace('Z', '+00:00'))
+        for achievement in sorted_achievements[:10]
+        if achievement.get("earned_date")
+    ]
+    
+    if len(recent_dates) >= 3:
+        # Check if achievements are becoming more frequent
+        date_diffs = [
+            (recent_dates[i] - recent_dates[i+1]).total_seconds()
+            for i in range(len(recent_dates)-1)
+        ]
+        
+        avg_time_between = sum(date_diffs) / len(date_diffs)
+        
+        # Check if higher difficulty achievements are more recent
+        recent_high_difficulty = any(
+            achievement.get("difficulty") in ["intermediate", "advanced"]
+            for achievement in sorted_achievements[:3]
+        )
+        
+        if recent_high_difficulty and avg_time_between < 60*60*24*3:  # Less than 3 days between achievements
+            result["learning_trajectory"] = "improving"
+        elif not recent_high_difficulty and any(
+            "quiz_completion" in achievement.get("type", "") and 
+            any(score in achievement.get("description", "") for score in ["<50%", "(30%", "(40%"])
+            for achievement in sorted_achievements[:3]
+        ):
+            result["learning_trajectory"] = "struggling"
+    
+    # Extract strengths based on mastered concepts and high performance
+    strength_topics = set()
+    for achievement in earned_achievements:
+        if achievement.get("type") in ["concept_mastery", "high_performance"]:
+            strength_topics.update(achievement.get("related_topics", []))
+    
+    result["strengths"] = list(strength_topics)[:5]  # Top 5 strengths
+    
+    # Extract recent progress from the last few achievements
+    result["recent_progress"] = [
+        {
+            "type": achievement.get("type", ""),
+            "description": achievement.get("description", ""),
+            "date": achievement.get("earned_date", "")
+        }
+        for achievement in sorted_achievements[:3]
+    ]
+    
+    return result
 async def analyze_issues(
     recommend_lesson: RecommendLessons,
     issues_summary: dict,
@@ -1047,6 +1219,21 @@ async def analyze_issues(
     is_first_lesson = len(prior_lessons) == 0
     
     # Construct AI prompt
+    first_lesson_analysis = """
+    1. Focus ONLY on issues related to the current lesson (this is the first lesson in the path).
+    2. Look in the common_issues array for issues where related_lessons contains the current recommended lesson ID.
+    """
+    
+    subsequent_lesson_analysis = """
+    1. Analyze issues related to BOTH the current lesson AND any prior lessons.
+    2. Look in the common_issues array for issues where related_lessons contains either the current or prior recommended lesson IDs.
+    """
+    
+    relation_to_prior = "" if is_first_lesson else """
+    - Present connections as structured list items
+    - Format lesson references with clear hierarchy
+    """
+
     prompt = f"""
     ## Issues Analysis Task
     - Lesson Title: "{lesson.title}"
@@ -1056,40 +1243,37 @@ async def analyze_issues(
     - Is First Lesson in Learning Path: {is_first_lesson}
     - Prior Lessons in Learning Path: {json.dumps(prior_lessons_details, indent=2)}
 
+    ## FORMATTING REQUIREMENTS:
+    - Present ALL content in list format with bullet points or numbering
+    - Never use paragraphs - break content into structured lists
+    - Use line breaks between major points
+    - Keep individual points concise (1-2 sentences maximum)
+    - Use hierarchical structure for clarity
+    - Include bullet points (•) at the start of list items
+    - Use numbered lists (1., 2., etc.) for sequential steps
+
     ## Task Requirements
     Analyze the provided `issues_summary` to determine the student's next steps.
 
-    {
-    "For first lesson analysis:" if is_first_lesson else "For subsequent lesson analysis:"
-    }
+    {"For first lesson analysis:" if is_first_lesson else "For subsequent lesson analysis:"}
 
-    {
-    """
-    1. Focus ONLY on issues related to the current lesson (this is the first lesson in the path).
-    2. Look in the common_issues array for issues where related_lessons contains the current recommended lesson ID.
-    """ if is_first_lesson else """
-    1. Analyze issues related to BOTH the current lesson AND any prior lessons.
-    2. Look in the common_issues array for issues where related_lessons contains either the current or prior recommended lesson IDs.
-    """
-    }
+    {first_lesson_analysis if is_first_lesson else subsequent_lesson_analysis}
 
     Consider:
     1. **Severity of Issues**:
-       - Assess the frequency and type of issues (e.g., concept_misunderstanding, code_error).
-       - Identify if issues are significant (e.g., frequency >= 5 or total_issues_count >= 20).
+    - Present analysis as bulleted list points
+    - Break down frequency data into structured format
+
     2. **Impact on Long-term Goals**:
-       - Evaluate if these issues could hinder achieving the learning path objective.
-    3. **Relation to Prior Lessons**: {
-    "" if is_first_lesson else """
-       - Check if issues link to specific prior lessons (via related_lessons).
-       - Suggest revisiting specific prior lessons by name if applicable.
-    """
-    }
+    - Structure impact assessment as bullet points
+    - List specific consequences with clear formatting
+
+    3. **Relation to Prior Lessons**: {relation_to_prior}
+
     4. **Recommendations**:
-       - Provide ONLY ONE or at most TWO of these recommendations: proceed, repeat, or review_prior.
-       - If recommending two actions, "proceed" and "repeat" CANNOT be recommended simultaneously.
-       - Provide detailed reasoning for each recommendation.
-       - Use LESSON NAMES (not IDs) in your recommendations for better readability.
+    - Format each recommendation as a structured list
+    - Present reasoning as bulleted points
+    - Structure lesson references with clear formatting
 
     ## Output Format
     {{
@@ -1101,9 +1285,9 @@ async def analyze_issues(
                 {{
                     "type": "issue type",
                     "frequency": number,
-                    "description": "issue description",
+                    "description": "• Issue point 1\\n• Issue point 2",
                     "severity": "low/medium/high",
-                    "impact_on_goals": "Explanation of impact"
+                    "impact_on_goals": "• Impact 1\\n• Impact 2\\n• Impact 3"
                 }}
             ],
             "total_issues_count": number,
@@ -1113,19 +1297,20 @@ async def analyze_issues(
         "recommendations": [
             {{
                 "action": "proceed/repeat/review_prior",
-                "reason": "Detailed reasoning",
-                "details": "Specific lesson NAMES to review (not IDs)"
+                "reason": "• Reason 1\\n• Reason 2\\n• Reason 3",
+                "details": "• Lesson detail 1\\n• Lesson detail 2"
             }}
         ]
     }}
-    
+
     IMPORTANT RULES:
     1. YOU MUST RETURN THE RESPONSE IN JSON FORMAT ABOVE.
     2. NEVER return IDs of lessons in recommendations - use LESSON TITLES instead.
     3. Give ONLY ONE or at most TWO recommendations.
     4. If giving two recommendations, "proceed" and "repeat" CANNOT both be included.
+    5. ALL TEXT MUST BE FORMATTED AS LISTS WITH BULLET POINTS, NOT PARAGRAPHS.
     """
-    
+        
     print(f"AI prompt: {prompt}")
 
     # Call AI for analysis
@@ -1517,7 +1702,7 @@ async def generate_quiz(
     }
     
     # Get API key from environment variables
-    gemini_api_key = env_settings.GEMINI_API_KEY
+    gemini_api_key = os.getenv("GOOGLE_GENAI_API_KEY")
     
     # Use AIToolProvider to create the LLM model
     ai_tool_provider = AIToolProvider()
@@ -1545,26 +1730,22 @@ async def generate_quiz(
     # Initialize questions list
     all_questions = []
     
-    # Generate questions in batches by difficulty
+    # Define difficulties with their counts
     difficulties = [
         {"name": "easy", "count": request.difficulty_distribution.easy},
         {"name": "medium", "count": request.difficulty_distribution.medium},
         {"name": "hard", "count": request.difficulty_distribution.hard}
     ]
     
-    total_points = 0
-    question_count = 0
-    
-    # Generate questions for each difficulty level
-    for difficulty in difficulties:
-        if difficulty["count"] <= 0:
-            continue
-            
-        # Skip if no questions needed for this difficulty
-        difficulty_name = difficulty["name"]
-        questions_needed = difficulty["count"]
+    # Create a function to generate questions for a specific difficulty
+    async def generate_questions_for_difficulty(difficulty_data):
+        difficulty_name = difficulty_data["name"]
+        questions_needed = difficulty_data["count"]
         
-        # Build prompt for this difficulty only
+        if questions_needed <= 0:
+            return []
+            
+        # Build prompt for this difficulty level
         prompt = f"""
         ## Quiz Generation Task for {difficulty_name.upper()} Questions Only
         
@@ -1621,17 +1802,18 @@ async def generate_quiz(
             question_request = QuestionRequest(
                 content=prompt,
                 temperature=0.3,
-                max_tokens=8192  
+                max_tokens=8192
             )
             
             response = llm.invoke(question_request.content)
             
             if not response:
                 print(f"Failed to generate {difficulty_name} questions")
-                continue
+                return []
                 
             # Extract JSON from response
             response_text = response.content
+            questions_list = []
             
             try:
                 if "```json" in response_text:
@@ -1647,7 +1829,7 @@ async def generate_quiz(
                     else:
                         difficulty_data = json.loads(response_text)
                 
-                # Add questions to our list
+                # Process questions
                 if "questions" in difficulty_data and isinstance(difficulty_data["questions"], list):
                     # Validate each question before adding
                     for q in difficulty_data["questions"]:
@@ -1655,24 +1837,34 @@ async def generate_quiz(
                         if all(key in q for key in ["question_text", "question_type", "options", "correct_answer", "difficulty", "explanation", "points"]):
                             # Force difficulty to match the current batch
                             q["difficulty"] = difficulty_name
-                            all_questions.append(q)
-                            total_points += q["points"]
-                            question_count += 1
+                            questions_list.append(q)
                 
             except (json.JSONDecodeError, Exception) as e:
                 print(f"Error parsing {difficulty_name} questions: {str(e)}")
-                # Continue with other difficulties even if one fails
+                return []
+                
+            return questions_list
                 
         except Exception as e:
             print(f"Error generating {difficulty_name} questions: {str(e)}")
-            # Continue with other difficulties
+            return []
+    
+    # Run question generation for each difficulty level in parallel
+    difficulty_tasks = [generate_questions_for_difficulty(diff) for diff in difficulties]
+    difficulty_results = await asyncio.gather(*difficulty_tasks)
+    
+    # Combine all questions from different difficulty levels
+    for result in difficulty_results:
+        all_questions.extend(result)
+    
+    # Calculate total points and question count
+    total_points = sum(q["points"] for q in all_questions)
+    question_count = len(all_questions)
     
     # If we couldn't generate any questions, raise an error
     if not all_questions:
         # Clean up by deleting the created quiz
-        await recommend_quizzes_controller.recommend_quizzes_repository.delete(
-            where_=[RecommendQuizQuestion.id == created_quiz.id], commit=True
-        )
+        await recommend_quizzes_controller.recommend_quizzes_repository.delete(created_quiz.id, commit=True)
         raise ApplicationException(message="Failed to generate any quiz questions")
     
     # Update quiz with actual information

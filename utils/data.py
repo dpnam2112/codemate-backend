@@ -17,7 +17,8 @@ availableCourses = [
   {
     "courseID": "CO1027",
     "name": "Programming Fundamentals",
-    "nCredit": 3
+    "nCredit": 3,
+    "have_code": True
   },
   {
     "courseID": "CO2001",
@@ -27,7 +28,8 @@ availableCourses = [
   {
     "courseID": "CO2003",
     "name": "Data Structures and Algorithms",
-    "nCredit": 4
+    "nCredit": 4,
+    "have_code": True
   },
   {
     "courseID": "CO2007",
@@ -62,7 +64,8 @@ availableCourses = [
   {
     "courseID": "CO3005",
     "name": "Principles of Programming Languages",
-    "nCredit": 4
+    "nCredit": 4,
+    "have_code": True
   },
   {
     "courseID": "CO3093",

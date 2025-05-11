@@ -8,6 +8,7 @@ class StudentList(BaseModel):
     student_name: str
     student_email: str
     student_avatar: str
+    student_mssv: Optional[str] = None
 
 class ProfessorInformation(BaseModel):
     professor_id: UUID

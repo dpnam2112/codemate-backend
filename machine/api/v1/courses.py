@@ -67,64 +67,7 @@ async def get_courses(
         ) for course in courses
     ]
     return Ok(data=course_list, message="Successfully fetched the course list.")
-@router.patch("/{course_id}/image", response_model=Ok)
-async def update_course_image(
-    course_id: str,
-    file: UploadFile = File(...),
-    token: str = Depends(oauth2_scheme),
-    courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
-    professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
-):
-    """
-    Update course image. If an image already exists, it will be replaced.
-    """
-    # Verify user token
-    payload = verify_token(token)
-    user_id = payload.get("sub")
-    if not user_id:
-        raise BadRequestException(message="Your account is not authorized. Please log in again.")
-    professor = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
-    if not professor:
-        raise NotFoundException(message="Only professors have the permission to update course image.")
-    # Get the course
-    course = await courses_controller.courses_repository.first(where_=[Courses.id == course_id])
-    if not course:
-        raise NotFoundException(message=f"Course with ID {course_id} not found.")
-    
-    # Check if user is the professor of this course
-    if course.professor_id != professor.id:
-        raise ForbiddenException(message="You don't have permission to update this course.")
-    
-    # Check file type
-    allowed_extensions = ['.jpg', '.jpeg', '.png', '.gif']
-    file_extension = os.path.splitext(file.filename)[1].lower()
-    if file_extension not in allowed_extensions:
-        raise BadRequestException(message="Invalid file type. Only JPG, JPEG, PNG, and GIF files are allowed.")
-    
-    # Read file content
-    file_content = await file.read()
-    
-    # Extract the existing image key from the course (if it exists)
-    existing_image_key = course.image_url
-    
-    # Handle the S3 operations
-    s3_key, presigned_url = await update_course_image_s3(
-        existing_image_key, 
-        file_content,
-        f"course_{course_id}{file_extension}"
-    )
-    
-    # Update the course with the new image URL
-    await courses_controller.courses_repository.update(
-        where_=[Courses.id == course_id],
-        attributes={"image_url": s3_key},
-        commit = True
-    )
-    
-    return Ok(
-        message="Course image updated successfully.", 
-        data={"image_url": presigned_url}
-    )
+
 @router.get("/student", response_model=Ok[GetCoursesPaginatedResponse])
 async def get_student_courses(
     token: str = Depends(oauth2_scheme),
@@ -178,16 +121,37 @@ async def get_student_courses(
     )
 
     if not courses:
-        return Ok(data=[], message="No courses found.")
+        empty_response = {
+        "content": [],
+        "pageSize": page_size,
+        "currentPage": page,
+        "totalRows": 0,
+        "totalPages": 0,
+    }
+        return Ok(data=empty_response, message="No courses found.")
     
     total_page = math.ceil(len(courses) / page_size)
     content = []
     for course in courses:
-        try:
-            learning_path = await learning_paths_controller.get_learning_path(user_id=user_id, course_id=course.id)
-        except NotFoundException:
-            learning_path = None
-        course_response = GetCoursesResponse(
+        learning_path = await learning_paths_controller.get_learning_path(user_id=user_id, course_id=course.id)
+        if learning_path is None: 
+            course_response = GetCoursesResponse(
+            id=course.id,
+            name=course.name,
+            start_date=str(course.start_date),
+            end_date=str(course.end_date),
+            learning_outcomes=course.learning_outcomes or [],
+            status=course.status,
+            image_url=generate_presigned_url(course.image_url, expiration=604800) if course.image_url else "",
+            last_accessed=str(course.last_accessed),
+            nCredit=course.nCredit,
+            nSemester=course.nSemester,
+            courseID=course.courseID,
+            class_name=str(course.class_name),
+            percentage_complete=str(learning_path.progress) if learning_path else "0",
+        )
+        else:
+            course_response = GetCoursesResponse(
             id=course.id,
             name=course.name,
             start_date=str(course.start_date),
@@ -246,11 +210,141 @@ async def get_available_courses(
         raise BadRequestException(message="Your account is not authorized. Please log in again.")
     
     check_role = await admin_controller.admin_repository.exists(where_=[Admin.id == user_id])
-    if not check_role:
-        raise ForbiddenException(message="You are not allowed to access this feature.")
+    # if not check_role:
+    #     raise ForbiddenException(message="You are not allowed to access this feature.")
     courses_list = availableCourses
     return Ok(data=courses_list, message="Successfully fetched the available courses.")
 
+@router.post("/add-students", response_model=Ok[AddStudentsToCourseResponse])
+async def add_students_to_course(
+    request: AddStudentsToCourseRequest,
+    token: str = Depends(oauth2_scheme),
+    courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
+    student_courses_controller: StudentCoursesController = Depends(InternalProvider().get_studentcourses_controller),
+    student_controller: StudentController = Depends(InternalProvider().get_student_controller),
+    admin_controller: AdminController = Depends(InternalProvider().get_admin_controller),
+):
+    # Verify admin token
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+
+    # Check if user is an admin
+    user = await admin_controller.admin_repository.first(where_=[Admin.id == user_id])
+    if not user:
+        raise NotFoundException(message="Your account is not allowed to add students to courses.")
+    
+    # Validate request
+    if not request.course_id:
+        raise BadRequestException(message="Course ID is required.")
+    
+    if not request.student_ids or len(request.student_ids) == 0:
+        raise BadRequestException(message="At least one student ID is required.")
+    
+    # Check if course exists
+    course = await courses_controller.courses_repository.first(where_=[Courses.id == request.course_id])
+    if not course:
+        raise NotFoundException(message=f"Course with ID {request.course_id} not found.")
+    
+    # Get students by their MSVVs (student IDs)
+    students = await student_controller.student_repository._get_many(
+        where_=[Student.mssv.in_(request.student_ids)],
+        fields=[Student.id, Student.mssv]
+    )
+    
+    if not students:
+        raise NotFoundException(message="No valid students found with the provided IDs.")
+    
+    # Check which students are already enrolled in the course to avoid duplicates
+    existing_enrollments = await student_courses_controller.student_courses_repository._get_many(
+        where_=[
+            StudentCourses.course_id == request.course_id,
+            StudentCourses.student_id.in_([student["id"] for student in students])
+        ],
+        fields=[StudentCourses.student_id]
+    )
+    
+    # Create a set of already enrolled student IDs for quick lookup
+    enrolled_student_ids = {enrollment["student_id"] for enrollment in existing_enrollments}
+    
+    # Filter out students who are already enrolled
+    students_to_enroll = [student for student in students if student["id"] not in enrolled_student_ids]
+    
+    if not students_to_enroll:
+        # Return a success response with 0 added students if all are already enrolled
+        return Ok(
+            data={
+                "course_id": course.id,
+                "course_name": course.name,
+                "added_students_count": 0,
+                "already_enrolled_count": len(request.student_ids),
+                "student_courses_list": []
+            },
+            message="All provided students are already enrolled in this course."
+        )
+    
+    # Prepare attributes for creating new student-course relationships
+    student_courses_attributes = [
+        {
+            "student_id": student["id"],
+            "course_id": request.course_id,
+        }
+        for student in students_to_enroll
+    ]
+    
+    try:
+        # Create the student-course relationships
+        create_student_courses = await student_courses_controller.student_courses_repository.create_many(
+            attributes_list=student_courses_attributes, commit=True
+        )
+        
+        if not create_student_courses:
+            raise Exception("Failed to add students to the course - no records returned.")
+            
+        # Prepare response with safe field access
+        student_courses_response = []
+        for sc in create_student_courses:
+            # Find the matching student MSSV
+            student_mssv = None
+            for student in students_to_enroll:
+                if str(student["id"]) == str(sc.student_id):
+                    student_mssv = student["mssv"]
+                    break
+                    
+            # Create a response object with only the fields we know are safe
+            student_course_data = StudentCourseInfo(
+                student_id=str(sc.student_id),
+                student_mssv=student_mssv,
+                course_id=str(sc.course_id),
+                last_accessed=str(sc.last_accessed) if hasattr(sc, 'last_accessed') else None,
+                completed_lessons=sc.completed_lessons if hasattr(sc, 'completed_lessons') else None,
+                time_spent=str(sc.time_spent) if hasattr(sc, 'time_spent') else None,
+                percentage_done=sc.percentage_done if hasattr(sc, 'percentage_done') else None
+            )
+            student_courses_response.append(student_course_data)
+        
+        # Get the count of students who were already enrolled
+        already_enrolled_count = len(request.student_ids) - len(students_to_enroll)
+        
+        response = AddStudentsToCourseResponse(
+            course_id=str(course.id),
+            course_name=course.name,
+            added_students_count=len(create_student_courses),
+            already_enrolled_count=already_enrolled_count,
+            student_courses_list=student_courses_response
+        )
+        
+        return Ok(
+            data=response,
+            message=f"Successfully added {len(create_student_courses)} student(s) to the course. {already_enrolled_count} student(s) were already enrolled."
+        )
+        
+    except Exception as e:
+        # Simple error handling without checking for specific schema errors
+        print(f"Error adding students to course: {str(e)}")
+        raise Exception(f"Failed to add students to the course: {str(e)}")
+        
 @router.get("/admin", description="Get all courses for admin", response_model=Ok[GetAdminCoursesPaginatedResponse])
 async def get_courses(
     token: str = Depends(oauth2_scheme),
@@ -362,101 +456,64 @@ async def get_courses(
     
     return Ok(data=courses_response, message="Successfully fetched the courses.")
 
-
-@router.get("/{courseId}/students/{studentId}", response_model=Ok[GetCourseDetailResponse])
-async def get_course_for_student(
-    courseId: str,
-    studentId: str,
+@router.patch("/{course_id}/image", response_model=Ok)
+async def update_course_image(
+    course_id: str,
+    file: UploadFile = File(...),
     token: str = Depends(oauth2_scheme),
-    student_courses_controller: StudentCoursesController = Depends(InternalProvider().get_studentcourses_controller),
+    courses_controller: CoursesController = Depends(InternalProvider().get_courses_controller),
     professor_controller: ProfessorController = Depends(InternalProvider().get_professor_controller),
-    learning_paths_controller: LearningPathsController = Depends(InternalProvider().get_learningpaths_controller),
 ):
+    """
+    Update course image. If an image already exists, it will be replaced.
+    """
+    # Verify user token
     payload = verify_token(token)
     user_id = payload.get("sub")
     if not user_id:
         raise BadRequestException(message="Your account is not authorized. Please log in again.")
     professor = await professor_controller.professor_repository.first(where_=[Professor.id == user_id])
     if not professor:
-        raise ForbiddenException(message="You are not allowed to access this feature.")
-    
-    select_fields = [
-        Courses.name.label("name"),
-        Courses.id.label("id"),
-        Courses.start_date.label("start_date"),
-        Courses.end_date.label("end_date"),
-        Courses.learning_outcomes.label("learning_outcomes"),
-        Courses.status.label("status"),
-        Courses.image_url.label("image_url"),
-        Courses.nCredit.label("nCredit"),
-        Courses.nSemester.label("nSemester"),
-        Courses.courseID.label("courseID"),
-        Courses.class_name.label("class_name"),
-        Courses.courseID.label("courseID"),
-        StudentCourses.last_accessed.label("last_accessed"),
-        StudentCourses.completed_lessons.label("completed_lessons"),
-        StudentCourses.time_spent.label("time_spent"),
-        StudentCourses.percentage_done.label("percentage_done"),
-    ]
-
-    join_conditions = {
-        "courses": {"type": "left", "alias": "courses_alias"},
-    }
-
-    course = await student_courses_controller.student_courses_repository._get_many(
-        where_=[and_(StudentCourses.course_id == courseId, StudentCourses.student_id == studentId)],
-        fields=select_fields,
-        join_=join_conditions,
-    )
-    get_course = course[0] if course else None
-    try:
-        learning_path = await learning_paths_controller.get_learning_path(user_id=studentId, course_id=courseId)
-    except NotFoundException:
-        learning_path = None
-    
+        raise NotFoundException(message="Only professors have the permission to update course image.")
+    # Get the course
+    course = await courses_controller.courses_repository.first(where_=[Courses.id == course_id])
     if not course:
-        course_response = GetCourseDetailResponse(
-            course_id=courseId,
-            course_name="",
-            course_start_date="",
-            course_end_date="",
-            course_learning_outcomes=[],
-            course_status="",
-            course_image="",
-            course_nCredit=0,
-            course_nSemester=0,
-            course_courseID="",
-            course_classname="",
-            course_percentage_complete="",
-            course_last_accessed="",
-            completed_lessons=0,
-            time_spent="",
-            percentage_done=0,
-        )
-        return Ok(data=course_response, message="You are not enrolled in this course.")
-    image_url = ""
-    if get_course.image_url:
-        image_url = generate_presigned_url(get_course.image_url, expiration=604800)
-    course_response = GetCourseDetailResponse(
-        course_id=str(courseId),
-        course_name=get_course.name,
-        course_start_date=str(get_course.start_date) if get_course.start_date else "",
-        course_end_date=str(get_course.end_date) if get_course.end_date else "",
-        course_learning_outcomes=get_course.learning_outcomes or [],
-        course_status=get_course.status,
-        course_image=image_url if get_course.image_url else "",
-        course_nCredit=get_course.nCredit,
-        course_nSemester=get_course.nSemester,
-        course_courseID=get_course.courseID,
-        course_classname=get_course.class_name,
-        course_percentage_complete=str(learning_path.progress) if learning_path else "0",
-        course_last_accessed=str(get_course.last_accessed) if get_course.last_accessed else "",
-        completed_lessons=get_course.completed_lessons or 0,
-        time_spent=str(get_course.time_spent) if get_course.time_spent else "",
-        percentage_done=str(learning_path.progress) if learning_path else "0",
+        raise NotFoundException(message=f"Course with ID {course_id} not found.")
+    
+    # Check if user is the professor of this course
+    if course.professor_id != professor.id:
+        raise ForbiddenException(message="You don't have permission to update this course.")
+    
+    # Check file type
+    allowed_extensions = ['.jpg', '.jpeg', '.png', '.gif']
+    file_extension = os.path.splitext(file.filename)[1].lower()
+    if file_extension not in allowed_extensions:
+        raise BadRequestException(message="Invalid file type. Only JPG, JPEG, PNG, and GIF files are allowed.")
+    
+    # Read file content
+    file_content = await file.read()
+    
+    # Extract the existing image key from the course (if it exists)
+    existing_image_key = course.image_url
+    
+    # Handle the S3 operations
+    s3_key, presigned_url = await update_course_image_s3(
+        existing_image_key, 
+        file_content,
+        f"course_{course_id}{file_extension}"
     )
-
-    return Ok(data=course_response, message="Successfully fetched the course.")
+    
+    # Update the course with the new image URL
+    await courses_controller.courses_repository.update(
+        where_=[Courses.id == course_id],
+        attributes={"image_url": s3_key},
+        commit = True
+    )
+    
+    return Ok(
+        message="Course image updated successfully.", 
+        data={"image_url": presigned_url}
+    )
 
 @router.get("/{courseId}", response_model=Ok[GetCourseDetailResponse])
 async def get_course_for_student(
@@ -596,6 +653,7 @@ async def get_students_for_course(
         Student.name.label("name"),
         Student.email.label("email"),
         Student.avatar_url.label("avatar_url"),
+        Student.mssv.label("ms"),
     ]
 
     join_conditions = {
@@ -617,6 +675,7 @@ async def get_students_for_course(
             student_name=student.name,
             student_email=student.email,
             student_avatar=str(student.avatar_url) if student.avatar_url else "",
+            student_mssv=student.ms,
         )
         for student in students
     ]
@@ -749,6 +808,13 @@ async def create_course(
         raise BadRequestException(message="At least one course is required.")
 
     if len(request) == 1:
+        if not request[0].nSemester or not request[0].class_name:
+            raise BadRequestException(message="Semester and class name are required.")
+        checkIfCourseExists = await courses_controller.courses_repository.first(
+            where_=[Courses.courseID == request[0].courseID, Courses.nSemester == request[0].nSemester, Courses.class_name == request[0].class_name]
+        )
+        if checkIfCourseExists:
+            raise BadRequestException(message="Course already exists.")
         saveProfessorId = await professors_controller.professor_repository.first(
             Professor.mscb == request[0].professorID
         )
@@ -828,6 +894,13 @@ async def create_course(
 
         courses_attributes = []
         for course in request:
+            if not course.nSemester or not course.class_name:
+                raise BadRequestException(message="Semester and class name are required.")
+            checkIfCourseExists = await courses_controller.courses_repository.first(
+                where_=[Courses.courseID == course.courseID, Courses.nSemester == course.nSemester, Courses.class_name == course.class_name]
+            )
+            if checkIfCourseExists:
+                raise BadRequestException(message="Course already exists.")
             if not course.name:
                 raise BadRequestException(message="Course name is required.")
 
@@ -1114,3 +1187,26 @@ async def delete_course(
 
     return Ok(data=None, message="Successfully deleted the course."
 )
+
+@router.get("/issues/{course_id}")
+async def get_course_issues(
+    course_id: UUID,
+    token: str = Depends(oauth2_scheme),
+    student_courses_controller: StudentCoursesController = Depends(InternalProvider().get_studentcourses_controller),
+):
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise BadRequestException(message="Your account is not authorized. Please log in again.")
+    
+    # Get the course
+    course = await student_courses_controller.student_courses_repository.first(where_=[StudentCourses.course_id == course_id])
+    if not course:
+        raise NotFoundException(message="Student does not enroll in this course.")
+    # Get the course issues
+    
+    response = {
+        "issues_summary" : course.issues_summary
+    }
+    
+    return Ok(data=response, message="Successfully fetched the course issues.")
