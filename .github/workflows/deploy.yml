@@ -20,9 +20,19 @@ jobs:
 
       - name: Push app code to EC2
         run: |
+          # Ensure the target directory exists
+          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} 'mkdir -p ~/codemate-backend'
+      
+          # Push only clean app files, exclude dotfiles and sensitive config
           rsync -avz --delete \
             --exclude='.env' \
-            --exclude='.*' \  # exclude .git, .github, .vscode, .bashrc, etc.
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='.vscode/' \
+            --exclude='.bashrc' \
+            --exclude='.ssh/' \
+            --exclude='.profile' \
+            --exclude='.bash_history' \
             -e "ssh -i ~/.ssh/id_rsa" \
             ./ \
             ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/${{ secrets.EC2_USER }}/codemate-backend/
