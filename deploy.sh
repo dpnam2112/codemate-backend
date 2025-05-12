@@ -9,10 +9,12 @@ docker rm $APP_NAME || true
 docker rmi $APP_NAME || true
 
 echo "[+] Building image..."
-docker build -t $APP_NAME -f docker/Dockerfile .
+docker build -t $APP_NAME -f Dockerfile .
 
 echo "[+] Running container..."
 docker run -d --name $APP_NAME -p 8080:8080 $APP_NAME
 
-echo "[✓] Deployed at $(date)"
+echo "[+] Cleaning up Docker build cache..."
+docker builder prune -f
 
+echo "[✓] Deployed at $(date)"
