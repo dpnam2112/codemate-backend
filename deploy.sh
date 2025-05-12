@@ -1,15 +1,18 @@
 #!/bin/bash
 set -e
 
+APP_NAME=codemate-backend
+
 echo "[+] Stopping old container..."
-docker stop codemate-backend || true
-docker rm codemate-backend || true
-docker rmi codemate-backend || true
+docker stop $APP_NAME || true
+docker rm $APP_NAME || true
+docker rmi $APP_NAME || true
 
 echo "[+] Building image..."
-docker build -t codemate-backend -f docker/Dockerfile .
+docker build -t $APP_NAME -f Dockerfile .
 
 echo "[+] Running container..."
-docker run -d --name codemate-backend -p 8080:8080 codemate-backend
+docker run -d --name $APP_NAME -p 8080:8080 $APP_NAME
 
 echo "[✓] Deployed at $(date)"
+
