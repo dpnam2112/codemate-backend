@@ -18,9 +18,14 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Push code to EC2
+      - name: Push app code to EC2
         run: |
-          rsync -avz --delete --exclude='.env' -e "ssh -i ~/.ssh/id_rsa" ./ ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/${{ secrets.EC2_USER }}/codemate-backend/
+          rsync -avz --delete \
+            --exclude='.env' \
+            --exclude='.*' \  # exclude .git, .github, .vscode, .bashrc, etc.
+            -e "ssh -i ~/.ssh/id_rsa" \
+            ./codemate-backend/ \
+            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/${{ secrets.EC2_USER }}/codemate-backend/
 
       - name: Run deploy script on EC2
         run: |
