@@ -24,7 +24,7 @@ jobs:
             --exclude='.env' \
             --exclude='.*' \  # exclude .git, .github, .vscode, .bashrc, etc.
             -e "ssh -i ~/.ssh/id_rsa" \
-            ./codemate-backend/ \
+            ./ \
             ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/${{ secrets.EC2_USER }}/codemate-backend/
 
       - name: Run deploy script on EC2
